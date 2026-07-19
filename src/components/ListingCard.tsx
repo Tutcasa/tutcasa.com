@@ -8,7 +8,15 @@ export function ListingCard({ listing }: { listing: Listing }) {
       href={`/stays/${listing.slug}`}
       className="group overflow-hidden rounded-card bg-paper shadow-soft transition-shadow hover:shadow-lift"
     >
-      <div className={`relative h-52 ${listing.gradient}`}>
+      <div className={`relative h-52 overflow-hidden ${listing.gradient}`}>
+        {listing.photos[0] && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={listing.photos[0].url}
+            alt={listing.photos[0].alt || listing.title}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        )}
         <span className="absolute left-3 top-3 rounded-pill bg-white/90 px-3 py-1 text-xs font-bold text-ink">
           {listing.headline}
         </span>

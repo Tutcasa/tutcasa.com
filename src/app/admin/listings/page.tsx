@@ -1,5 +1,7 @@
 import { getDb } from "@/lib/db";
 import { ListingForm, type AdminListing } from "./listing-form";
+import { PhotoManager, type AdminPhoto } from "./photo-manager";
+import { addListingAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -26,17 +28,41 @@ async function allListings(): Promise<AdminListing[]> {
   }));
 }
 
+async function photosFor(listingId: string): Promise<AdminPhoto[]> {
+  const res = await getDb().query(
+    "select id, url, alt from listing_photos where listing_id=$1 order by sort",
+    [listingId],
+  );
+  return res.rows;
+}
+
 export default async function AdminListings({
   searchParams,
 }: { searchParams: Promise<{ edit?: string }> }) {
   const { edit } = await searchParams;
   const listings = await allListings();
   const editing = edit ? listings.find((l) => l.id === edit) : listings[0];
+  const photos = editing ? await photosFor(editing.id) : [];
+  const uploadsReady = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(280px,1fr)_1.4fr]">
       <div>
         <h1 className="mb-4 text-2xl font-extrabold">Stays &amp; homes</h1>
+
+        {/* add a new home */}
+        <form action={addListingAction} className="mb-4 flex gap-2">
+          <input
+            name="title"
+            required
+            placeholder="New home name…"
+            className="w-full rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-rosa"
+          />
+          <button className="whitespace-nowrap rounded-pill bg-rosa px-4 py-2 text-sm font-bold text-white">
+            + Add home
+          </button>
+        </form>
+
         <div className="grid gap-2">
           {listings.map((l) => (
             <a
@@ -59,6 +85,10 @@ export default async function AdminListings({
             </a>
           ))}
         </div>
+        <p className="mt-3 text-xs text-grey">
+          New homes start as <b>drafts</b> (hidden from guests) — publish them
+          from the edit form when ready.
+        </p>
       </div>
       <div>
         <h2 className="mb-4 text-xl font-extrabold">
@@ -67,6 +97,7 @@ export default async function AdminListings({
         {editing && (
           <div className="rounded-card bg-paper p-5 shadow-soft">
             <ListingForm key={editing.id} listing={editing} />
+            <PhotoManager listingId={editing.id} photos={photos} uploadsReady={uploadsReady} />
           </div>
         )}
       </div>

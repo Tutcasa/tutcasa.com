@@ -52,16 +52,26 @@ export default async function ListingPage({ params }: Props) {
         </span>
       </p>
 
-      {/* gallery — placeholder gradients until real photography */}
+      {/* gallery — real photos when uploaded, gradient placeholders otherwise */}
       <div className="mt-6 grid gap-2.5 overflow-hidden rounded-card sm:h-[420px] sm:grid-cols-[2fr_1fr_1fr] sm:grid-rows-2">
-        {GALLERY_LABELS.map((label, i) => (
+        {(listing.photos.length > 0
+          ? listing.photos.slice(0, 5).map((p, i) => ({ key: p.url, photo: p, label: p.alt, i }))
+          : GALLERY_LABELS.map((label, i) => ({ key: label, photo: null, label, i }))
+        ).map(({ key, photo, label, i }) => (
           <div
-            key={label}
-            className={`relative min-h-40 ${gradients[(start + i) % 6]} ${i === 0 ? "sm:row-span-2" : ""}`}
+            key={key}
+            className={`relative min-h-40 overflow-hidden ${photo ? "bg-line" : gradients[(start + i) % 6]} ${i === 0 ? "sm:row-span-2" : ""}`}
           >
-            <span className="absolute bottom-3 left-3 rounded-pill bg-white/90 px-3 py-1 text-xs font-bold text-ink">
-              {label}
-            </span>
+            {photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photo.url} alt={photo.alt || listing.title}
+                   className="absolute inset-0 h-full w-full object-cover" />
+            )}
+            {label && (
+              <span className="absolute bottom-3 left-3 rounded-pill bg-white/90 px-3 py-1 text-xs font-bold text-ink">
+                {label}
+              </span>
+            )}
           </div>
         ))}
       </div>

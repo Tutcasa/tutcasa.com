@@ -21,6 +21,8 @@ export interface Listing {
   reviewCount: number;
   /** placeholder art class until real photos land (ph-g1 … ph-g6) */
   gradient: string;
+  /** real photos (empty = gradient placeholders are shown) */
+  photos: { url: string; alt: string }[];
   /** base pricing — the pricing module turns this into an all-in quote */
   nightlyCents: number;
   cleaningCents: number;

@@ -29,13 +29,15 @@ interface ListingRow {
     currency: string;
     season: unknown;
   }[];
+  listing_photos: { url: string; alt: string; sort: number }[];
 }
 
 const SELECT = `
   id, slug, title, city, country, region, lat, lng, property_type,
   max_guests, bedrooms, bathrooms, headline, description, amenities,
   min_stay, rating_cached, review_count_cached,
-  listing_rates ( nightly_cents, cleaning_cents, tax_pct, currency, season )
+  listing_rates ( nightly_cents, cleaning_cents, tax_pct, currency, season ),
+  listing_photos ( url, alt, sort )
 `;
 
 /** Placeholder art rotation until real photos land in listing_photos. */
@@ -68,6 +70,8 @@ function toListing(row: ListingRow): Listing {
     rating: Number(row.rating_cached),
     reviewCount: row.review_count_cached,
     gradient: gradientFor(row.slug),
+    photos: [...(row.listing_photos ?? [])].sort((a, b) => a.sort - b.sort)
+      .map((p) => ({ url: p.url, alt: p.alt })),
     nightlyCents: base?.nightly_cents ?? 0,
     cleaningCents: base?.cleaning_cents ?? 0,
     taxPct: Number(base?.tax_pct ?? 0),
