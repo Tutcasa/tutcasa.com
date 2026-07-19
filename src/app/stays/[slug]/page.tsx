@@ -3,15 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getListingsRepo } from "@/modules/listings";
 import { allInNightlyCents, fmtMoney } from "@/modules/pricing";
+import { getUnavailableRanges } from "@/modules/bookings";
+import { BookingWidget } from "@/components/BookingWidget";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
-export async function generateStaticParams() {
-  const listings = await getListingsRepo().listPublished();
-  return listings.map((l) => ({ slug: l.slug }));
-}
+// Availability must always be fresh — render per-request.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
@@ -29,6 +29,7 @@ export default async function ListingPage({ params }: Props) {
   const { slug } = await params;
   const listing = await getListingsRepo().bySlug(slug);
   if (!listing) notFound();
+  const unavailable = await getUnavailableRanges(listing.id);
 
   const gradients = ["ph-g1", "ph-g2", "ph-g3", "ph-g4", "ph-g5", "ph-g6"];
   const start = gradients.indexOf(listing.gradient);
@@ -99,29 +100,15 @@ export default async function ListingPage({ params }: Props) {
           </div>
         </div>
 
-        {/* booking card — quote UI lands with the bookings module */}
+        {/* booking card */}
         <aside className="h-fit rounded-card bg-paper p-6 shadow-soft lg:sticky lg:top-24">
-          <p>
-            <span className="font-display text-3xl font-extrabold">
-              {fmtMoney(allInNightlyCents(listing))}
-            </span>{" "}
-            <span className="text-grey">/ night · all-in</span>
-          </p>
-          <p className="mt-1 text-xs text-grey">
-            Taxes &amp; cleaning included · min {listing.minStay} nights
-          </p>
-          <a
-            href={`https://wa.me/201069706782?text=${encodeURIComponent(`Hi May! I'd like to book ${listing.title} in ${listing.city} 👋`)}`}
-            target="_blank"
-            rel="noopener"
-            className="mt-5 block rounded-pill bg-rosa py-3.5 text-center font-bold text-white shadow-soft hover:bg-rosa-deep"
-          >
-            Book via May 💬
-          </a>
-          <p className="mt-3 text-center text-xs text-grey">
-            Online checkout arrives with the booking engine — until then May
-            confirms availability in minutes.
-          </p>
+          <BookingWidget
+            slug={listing.slug}
+            minStay={listing.minStay}
+            maxGuests={listing.maxGuests}
+            allInNightlyLabel={fmtMoney(allInNightlyCents(listing))}
+            unavailable={unavailable}
+          />
         </aside>
       </div>
     </div>
