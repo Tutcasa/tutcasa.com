@@ -1,5 +1,7 @@
 import type { Listing, ListingFilter } from "./types";
 import { MOCK_LISTINGS } from "./mock-data";
+import { getSupabase } from "@/lib/supabase";
+import { SupabaseListingsRepo } from "./supabase-repo";
 
 /**
  * The listings data seam. Pages and services depend on this interface
@@ -32,9 +34,10 @@ class MockListingsRepo implements ListingsRepo {
 }
 
 /**
- * Repo factory. When NEXT_PUBLIC_SUPABASE_URL is configured, this is
- * where the SupabaseListingsRepo gets returned instead.
+ * Repo factory: Supabase when configured, mock otherwise.
+ * Consumers never know the difference.
  */
 export function getListingsRepo(): ListingsRepo {
-  return new MockListingsRepo();
+  const sb = getSupabase();
+  return sb ? new SupabaseListingsRepo(sb) : new MockListingsRepo();
 }

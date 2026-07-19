@@ -80,6 +80,9 @@ create table public.listings (
   status         text not null default 'draft'
                  check (status in ('draft','published','archived')),
   owner_id       uuid references public.profiles(id) on delete set null,
+  -- denormalized review aggregates (kept fresh by trigger on reviews)
+  rating_cached       numeric(3,2) not null default 0,
+  review_count_cached int not null default 0,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now()
 );
@@ -347,6 +350,28 @@ create table public.reviews (
 );
 
 create index idx_reviews_listing on public.reviews (listing_id, status);
+
+-- keep the listings aggregates fresh
+create or replace function public.refresh_listing_rating()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare v_listing uuid;
+begin
+  v_listing := coalesce(new.listing_id, old.listing_id);
+  update public.listings l
+     set rating_cached = coalesce((select round(avg(r.rating), 2)
+                                     from public.reviews r
+                                    where r.listing_id = v_listing
+                                      and r.status = 'published'), 0),
+         review_count_cached = (select count(*) from public.reviews r
+                                 where r.listing_id = v_listing
+                                   and r.status = 'published')
+   where l.id = v_listing;
+  return null;
+end $$;
+
+create trigger trg_reviews_refresh_rating
+after insert or update or delete on public.reviews
+for each row execute function public.refresh_listing_rating();
 
 -- ---------- wishlist ----------------------------------------
 
