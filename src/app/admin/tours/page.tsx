@@ -1,5 +1,7 @@
 import { listTours } from "@/modules/tours";
 import { TourForm } from "./tour-form";
+import { deleteTourAction } from "./actions";
+import { DeleteButton } from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +46,14 @@ export default async function AdminTours({
         </h2>
         <div className="rounded-card bg-paper p-5 shadow-soft">
           <TourForm key={editing?.id ?? "new"} tour={editing} />
+          {editing && (
+            <DeleteButton
+              label="Delete this tour"
+              confirmLabel="Yes, delete permanently"
+              onDelete={deleteTourAction.bind(null, editing.id)}
+              redirectTo="/admin/tours"
+            />
+          )}
         </div>
         {editing && (
           <a href="/admin/tours" className="mt-3 inline-block text-sm font-semibold text-rosa hover:underline">

@@ -70,6 +70,40 @@ export async function uploadPhotoAction(formData: FormData): Promise<ListingForm
   return { ok: true, message: "Photo added." };
 }
 
+/**
+ * Delete a home. If it has any bookings, it is archived instead
+ * (bookings are money records — they must never lose their listing).
+ */
+export async function deleteListingAction(
+  listingId: string,
+): Promise<{ deleted: boolean; message: string }> {
+  const db = getDb();
+  const has = await db.query<{ n: string }>(
+    "select count(*) as n from bookings where listing_id=$1", [listingId]);
+  if (Number(has.rows[0].n) > 0) {
+    await db.query("update listings set status='archived' where id=$1", [listingId]);
+    revalidatePublic();
+    return { deleted: false, message: "This home has bookings, so it was archived (hidden everywhere) instead of erased." };
+  }
+  // no bookings — remove photos (storage + rows), rates, listing
+  const photos = await db.query<{ url: string }>(
+    "select url from listing_photos where listing_id=$1", [listingId]);
+  const sb = getSupabaseAdmin();
+  if (sb && photos.rowCount) {
+    const paths = photos.rows
+      .map((p) => p.url.split("/listing-photos/")[1])
+      .filter(Boolean) as string[];
+    if (paths.length) await sb.storage.from("listing-photos").remove(paths);
+  }
+  await db.query("delete from listing_photos where listing_id=$1", [listingId]);
+  await db.query("delete from listing_rates where listing_id=$1", [listingId]);
+  await db.query("delete from availability_blocks where listing_id=$1", [listingId]);
+  await db.query("delete from wishlists where listing_id=$1", [listingId]);
+  await db.query("delete from listings where id=$1", [listingId]);
+  revalidatePublic();
+  return { deleted: true, message: "Home deleted." };
+}
+
 export async function deletePhotoAction(photoId: string): Promise<void> {
   const db = getDb();
   const res = await db.query<{ url: string }>(

@@ -2,6 +2,28 @@
 
 import { revalidatePath } from "next/cache";
 import { upsertTour } from "@/modules/tours";
+import { getDb } from "@/lib/db";
+
+/**
+ * Delete a tour/park. Archived instead when bookings exist.
+ */
+export async function deleteTourAction(
+  tourId: string,
+): Promise<{ deleted: boolean; message: string }> {
+  const db = getDb();
+  const has = await db.query<{ n: string }>(
+    "select count(*) as n from tour_bookings where tour_id=$1", [tourId]);
+  if (Number(has.rows[0].n) > 0) {
+    await db.query("update tours set status='archived' where id=$1", [tourId]);
+  } else {
+    await db.query("delete from tours where id=$1", [tourId]);
+  }
+  revalidatePath("/admin/tours");
+  revalidatePath("/tours");
+  return Number(has.rows[0].n) > 0
+    ? { deleted: false, message: "This tour has bookings, so it was archived (hidden) instead of erased." }
+    : { deleted: true, message: "Tour deleted." };
+}
 
 export interface TourFormState { ok: boolean; message: string }
 

@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { getSetting } from "@/modules/settings";
 
-export function Footer() {
+export async function Footer() {
+  const contact = await getSetting("contact");
   return (
     <footer className="mt-16 bg-ink px-4 py-12 text-white/80 sm:px-6">
       <div className="mx-auto grid max-w-[1180px] gap-10 sm:grid-cols-2 lg:grid-cols-4">
@@ -34,13 +36,24 @@ export function Footer() {
           <div className="mb-3 font-display font-bold text-white">Talk to May</div>
           <p className="mb-3 text-sm">Questions? Our concierge replies in minutes.</p>
           <a
-            href="https://wa.me/201069706782"
+            href={`https://wa.me/${contact.whatsapp}`}
             target="_blank"
             rel="noopener"
             className="inline-block rounded-pill bg-[#1EBE5D] px-5 py-2.5 text-sm font-bold text-white"
           >
             WhatsApp concierge
           </a>
+          {contact.email && (
+            <p className="mt-3 text-sm">
+              <a className="hover:text-white" href={`mailto:${contact.email}`}>{contact.email}</a>
+            </p>
+          )}
+          {(contact.instagram || contact.facebook) && (
+            <p className="mt-2 flex gap-3 text-sm">
+              {contact.instagram && <a className="hover:text-white" href={contact.instagram} target="_blank" rel="noopener">Instagram</a>}
+              {contact.facebook && <a className="hover:text-white" href={contact.facebook} target="_blank" rel="noopener">Facebook</a>}
+            </p>
+          )}
         </div>
       </div>
       <div className="mx-auto mt-10 max-w-[1180px] border-t border-white/15 pt-6 text-xs text-white/50">

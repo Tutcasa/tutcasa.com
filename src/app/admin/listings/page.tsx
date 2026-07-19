@@ -1,7 +1,8 @@
 import { getDb } from "@/lib/db";
 import { ListingForm, type AdminListing } from "./listing-form";
 import { PhotoManager, type AdminPhoto } from "./photo-manager";
-import { addListingAction } from "./actions";
+import { addListingAction, deleteListingAction } from "./actions";
+import { DeleteButton } from "@/components/DeleteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +99,12 @@ export default async function AdminListings({
           <div className="rounded-card bg-paper p-5 shadow-soft">
             <ListingForm key={editing.id} listing={editing} />
             <PhotoManager listingId={editing.id} photos={photos} uploadsReady={uploadsReady} />
+            <DeleteButton
+              label="Delete this home"
+              confirmLabel="Yes, delete permanently"
+              onDelete={deleteListingAction.bind(null, editing.id)}
+              redirectTo="/admin/listings"
+            />
           </div>
         )}
       </div>
