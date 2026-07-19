@@ -3,6 +3,8 @@ import { Baloo_2, Outfit } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { ChatWithMay } from "@/components/ChatWithMay";
+import { getSetting } from "@/modules/settings";
 
 const baloo = Baloo_2({
   variable: "--font-baloo",
@@ -30,11 +32,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const contact = await getSetting("contact");
   return (
     <html
       lang="en"
@@ -44,6 +47,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <ChatWithMay whatsapp={contact.whatsapp} />
       </body>
     </html>
   );
