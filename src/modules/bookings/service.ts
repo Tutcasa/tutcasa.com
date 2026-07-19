@@ -126,6 +126,30 @@ interface BookingRow {
   created_at: string;
 }
 
+/** Admin: recent stay bookings across all listings. */
+export async function listBookings(): Promise<Booking[]> {
+  const db = getDb();
+  await db.query("select release_expired_holds()");
+  const res = await db.query<BookingRow>(
+    `select b.id, b.listing_id, l.title, l.city,
+            to_char(lower(b.stay),'YYYY-MM-DD') as check_in,
+            to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
+            b.guests, b.status, b.hold_expires_at, b.total_cents,
+            b.currency, b.price_breakdown, b.guest_name, b.guest_email,
+            b.created_at
+       from bookings b join listings l on l.id = b.listing_id
+      order by b.created_at desc limit 200`,
+  );
+  return res.rows.map((r) => ({
+    id: r.id, listingId: r.listing_id, listingTitle: r.title,
+    listingCity: r.city, checkIn: r.check_in, checkOut: r.check_out,
+    guests: r.guests, status: r.status, holdExpiresAt: r.hold_expires_at,
+    totalCents: r.total_cents, currency: r.currency,
+    priceBreakdown: r.price_breakdown, guestName: r.guest_name,
+    guestEmail: r.guest_email, createdAt: r.created_at,
+  }));
+}
+
 export async function getBooking(id: string): Promise<Booking | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const db = getDb();

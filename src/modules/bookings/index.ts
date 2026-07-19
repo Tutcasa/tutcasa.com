@@ -7,4 +7,4 @@ export type {
   ReserveResult,
   UnavailableRange,
 } from "./types";
-export { createBookingHold, getBooking, getUnavailableRanges } from "./service";
+export { createBookingHold, getBooking, getUnavailableRanges, listBookings } from "./service";
