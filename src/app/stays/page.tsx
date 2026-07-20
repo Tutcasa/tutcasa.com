@@ -4,8 +4,16 @@ import { getListingsRepo } from "@/modules/listings";
 import { ListingCard } from "@/components/ListingCard";
 
 interface Props {
-  searchParams: Promise<{ city?: string }>;
+  searchParams: Promise<{ city?: string; tag?: string }>;
 }
+
+const TAGS = [
+  ["beachfront", "🏖️ Beachfront"],
+  ["villas", "🏡 Villas"],
+  ["private-pool", "🏊 Private pool"],
+  ["family", "👨‍👩‍👧 Family"],
+  ["penthouses", "🌇 Penthouses"],
+] as const;
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { city } = await searchParams;
@@ -17,12 +25,18 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default async function StaysPage({ searchParams }: Props) {
-  const { city } = await searchParams;
+  const { city, tag } = await searchParams;
   const repo = getListingsRepo();
   const [listings, cities] = await Promise.all([
-    repo.listPublished({ city }),
+    repo.listPublished({ city, tag }),
     repo.cities(),
   ]);
+  const qs = (c?: string, t?: string) => {
+    const p = new URLSearchParams();
+    if (c) p.set("city", c);
+    if (t) p.set("tag", t);
+    return p.size ? `?${p}` : "";
+  };
 
   return (
     <div className="mx-auto max-w-[1180px] px-4 sm:px-6">
@@ -36,20 +50,38 @@ export default async function StaysPage({ searchParams }: Props) {
       </section>
 
       {/* city filter — server-rendered links, each one an indexable landing URL */}
-      <nav className="mb-8 flex flex-wrap justify-center gap-2" aria-label="Filter by city">
+      <nav className="mb-4 flex flex-wrap justify-center gap-2" aria-label="Filter by city">
         <Link
-          href="/stays"
+          href={`/stays${qs(undefined, tag)}`}
           className={`rounded-pill border-[1.5px] px-4 py-2 text-sm font-bold ${!city ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}
         >
-          All stays
+          All cities
         </Link>
         {cities.map((c) => (
           <Link
             key={c}
-            href={`/stays?city=${encodeURIComponent(c)}`}
+            href={`/stays${qs(c, tag)}`}
             className={`rounded-pill border-[1.5px] px-4 py-2 text-sm font-bold ${city === c ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}
           >
             {c}
+          </Link>
+        ))}
+      </nav>
+
+      <nav className="mb-8 flex flex-wrap justify-center gap-2" aria-label="Filter by type">
+        <Link
+          href={`/stays${qs(city, undefined)}`}
+          className={`rounded-pill border-[1.5px] px-4 py-2 text-sm font-bold ${!tag ? "border-rosa bg-rosa text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}
+        >
+          🏠 All stays
+        </Link>
+        {TAGS.map(([t, label]) => (
+          <Link
+            key={t}
+            href={`/stays${qs(city, t)}`}
+            className={`rounded-pill border-[1.5px] px-4 py-2 text-sm font-bold ${tag === t ? "border-rosa bg-rosa text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}
+          >
+            {label}
           </Link>
         ))}
       </nav>

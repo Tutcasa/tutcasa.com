@@ -89,6 +89,13 @@ export class SupabaseListingsRepo implements ListingsRepo {
       .eq("status", "published")
       .order("rating_cached", { ascending: false });
     if (filter?.city) q = q.ilike("city", filter.city);
+    switch (filter?.tag) {
+      case "beachfront":   q = q.contains("amenities", ["Beachfront access"]); break;
+      case "villas":       q = q.eq("property_type", "villa"); break;
+      case "private-pool": q = q.contains("amenities", ["Private pool"]); break;
+      case "family":       q = q.contains("amenities", ["Family friendly"]); break;
+      case "penthouses":   q = q.eq("property_type", "penthouse"); break;
+    }
     const { data, error } = await q;
     if (error) throw new Error(`listings query failed: ${error.message}`);
     return (data as unknown as ListingRow[]).map(toListing);

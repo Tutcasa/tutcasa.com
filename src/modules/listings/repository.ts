@@ -21,6 +21,13 @@ class MockListingsRepo implements ListingsRepo {
       const c = filter.city.toLowerCase();
       out = out.filter((l) => l.city.toLowerCase() === c);
     }
+    switch (filter?.tag) {
+      case "beachfront":   out = out.filter((l) => l.amenities.includes("Beachfront access")); break;
+      case "villas":       out = out.filter((l) => l.propertyType === "villa"); break;
+      case "private-pool": out = out.filter((l) => l.amenities.includes("Private pool")); break;
+      case "family":       out = out.filter((l) => l.amenities.includes("Family friendly")); break;
+      case "penthouses":   out = out.filter((l) => l.propertyType === "penthouse"); break;
+    }
     return out;
   }
 
