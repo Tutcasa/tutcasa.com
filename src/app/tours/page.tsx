@@ -1,16 +1,33 @@
+import "@/styles/demo/tours.css";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { listTours, fmtMXN } from "@/modules/tours";
+import { listTours, ADDONS, BYO_ACTS, type Tour } from "@/modules/tours";
+import { getSetting } from "@/modules/settings";
+import { DEMO_TOUR } from "@/lib/demo-parity";
+import { ToursClient, type TourCardData } from "@/components/tours/ToursClient";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Tours & Parks",
+  title: { absolute: "TutCasa — Tours & Parks" },
   description:
-    "Private tours & park tickets across the Riviera Maya & Yucatán — cenotes, Chichén Itzá, Xcaret & more, operated with our partner Amanah Vacations.",
+    "Private tours & park tickets across the Riviera Maya & Yucatan - cenotes, Chichen Itza, Xcaret & more at partner prices for TutCasa guests.",
 };
 
-const GRADS = ["ph-g6", "ph-g3", "ph-g1", "ph-g2", "ph-g4", "ph-g5"];
+function toCard(t: Tour): TourCardData {
+  const demo = DEMO_TOUR[t.slug];
+  return {
+    slug: t.slug,
+    name: t.title,
+    sub: t.subtitle ?? "",
+    dur: t.durationLabel,
+    desc: t.description,
+    priceMXN: t.priceCents > 0 ? Math.round(t.priceCents / 100) : null,
+    park: t.category === "park",
+    city: t.city ?? "Playa del Carmen",
+    g: demo?.g ?? "g1",
+    stops: demo?.stops ?? [],
+  };
+}
 
 export default async function ToursPage({
   searchParams,
@@ -18,64 +35,25 @@ export default async function ToursPage({
   searchParams: Promise<{ cat?: string }>;
 }) {
   const { cat } = await searchParams;
-  const category = cat === "parks" ? "park" : "tour";
-  const tours = await listTours({ category });
+  const [tours, contact] = await Promise.all([listTours(), getSetting("contact")]);
+
+  /* demo display order for the seeded tours; admin additions follow */
+  const sorted = [...tours].sort((a, b) => {
+    const oa = DEMO_TOUR[a.slug]?.order ?? 99;
+    const ob = DEMO_TOUR[b.slug]?.order ?? 99;
+    return oa - ob;
+  });
 
   return (
-    <div className="mx-auto max-w-[1180px] px-4 sm:px-6">
-      <section className="py-12 text-center">
-        <h1 className="text-4xl font-extrabold">
-          Tours &amp; <span className="text-rosa">Parks.</span>
-        </h1>
-        <p className="mx-auto mt-3 max-w-[52ch] text-grey">
-          Private day adventures and park tickets across the Riviera Maya —
-          every tour is just for your group.
-        </p>
-      </section>
-
-      <nav className="mb-8 flex justify-center gap-2" aria-label="Category">
-        <Link
-          href="/tours"
-          className={`rounded-pill border-[1.5px] px-5 py-2.5 text-sm font-bold ${category === "tour" ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}
-        >
-          🌴 Tours
-        </Link>
-        <Link
-          href="/tours?cat=parks"
-          className={`rounded-pill border-[1.5px] px-5 py-2.5 text-sm font-bold ${category === "park" ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}
-        >
-          🎢 Parks
-        </Link>
-      </nav>
-
-      <div className="grid gap-6 pb-12 sm:grid-cols-2 lg:grid-cols-3">
-        {tours.map((t, i) => (
-          <Link
-            key={t.id}
-            href={`/tours/${t.slug}`}
-            className="group overflow-hidden rounded-card bg-paper shadow-soft transition-shadow hover:shadow-lift"
-          >
-            <div className={`relative h-44 ${GRADS[i % GRADS.length]}`}>
-              <span className="absolute right-3 top-3 rounded-pill bg-ink/80 px-3 py-1 text-xs font-bold text-white">
-                {t.durationLabel}
-              </span>
-            </div>
-            <div className="p-4">
-              <h3 className="font-display text-lg font-bold group-hover:text-rosa">
-                {t.title}
-              </h3>
-              {t.subtitle && <p className="text-sm font-semibold text-terra">{t.subtitle}</p>}
-              <p className="mt-2 line-clamp-2 text-sm text-grey">{t.description}</p>
-              <p className="mt-3 text-sm">
-                <span className="font-display text-lg font-extrabold text-rosa">
-                  ${fmtMXN(t.priceCents)}
-                </span>{" "}
-                <span className="text-grey">/ person</span>
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
+    <div className="pg-tours">
+      <ToursClient
+        tours={sorted.map(toCard)}
+        addons={ADDONS.map((a) => ({ name: a.name, icon: a.icon, priceMXN: a.priceMXN, unit: a.unit }))}
+        byoActs={BYO_ACTS.map((a) => ({ name: a.name, icon: a.icon, priceMXN: a.priceMXN, unit: a.unit }))}
+        whatsapp={contact.whatsapp}
+        email={contact.email}
+        initialView={cat === "parks" ? "parks" : "tours"}
+      />
     </div>
   );
 }

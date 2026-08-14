@@ -1,10 +1,14 @@
+import "@/styles/demo/property.css";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getListingsRepo } from "@/modules/listings";
-import { allInNightlyCents, fmtMoney } from "@/modules/pricing";
+import { getListingsRepo, type Listing } from "@/modules/listings";
+import { allInNightlyCents } from "@/modules/pricing";
 import { getUnavailableRanges } from "@/modules/bookings";
-import { BookingWidget } from "@/components/BookingWidget";
+import { getSetting } from "@/modules/settings";
+import { T } from "@/lib/i18n";
+import { demoGradient, displayCityCountry, propertyTypeLabel } from "@/lib/demo-parity";
+import { PdGrid, type PdData } from "@/components/property/PdGrid";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,108 +22,109 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const listing = await getListingsRepo().bySlug(slug);
   if (!listing) return {};
   return {
-    title: `${listing.title} — ${listing.city}`,
-    description: `${listing.headline} ${listing.propertyType} in ${listing.city} for up to ${listing.maxGuests} guests. All-in pricing from ${fmtMoney(allInNightlyCents(listing))}/night, WhatsApp concierge included.`,
+    title: { absolute: `${listing.title} · TutCasa` },
+    description: `${listing.headline} ${listing.propertyType} in ${listing.city} for up to ${listing.maxGuests} guests. All-in pricing, WhatsApp concierge included.`,
   };
 }
 
 const GALLERY_LABELS = ["Living", "Terrace", "Bedroom", "Pool", "View"];
+const GS = ["g1", "g2", "g3", "g4", "g5", "g6"];
+
+function SimilarCard({ l }: { l: Listing }) {
+  return (
+    <Link className="sim" href={`/stays/${l.slug}`}>
+      <div className={`ph ${demoGradient(l, 6)}`}></div>
+      <div className="b">
+        <h4>{l.title}</h4>
+        <div className="m">&#128205; {displayCityCountry(l)} &middot; {l.bedrooms} bd</div>
+        <div className="pr">
+          ${Math.round(l.nightlyCents / 100).toLocaleString("en-US")}{" "}
+          <span style={{ color: "var(--grey)", fontWeight: 500, fontSize: 12 }}>/ night</span>
+        </div>
+      </div>
+    </Link>
+  );
+}
 
 export default async function ListingPage({ params }: Props) {
   const { slug } = await params;
-  const listing = await getListingsRepo().bySlug(slug);
+  const repo = getListingsRepo();
+  const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const unavailable = await getUnavailableRanges(listing.id);
+  const [unavailable, all, contact] = await Promise.all([
+    getUnavailableRanges(listing.id),
+    repo.listPublished(),
+    getSetting("contact"),
+  ]);
 
-  const gradients = ["ph-g1", "ph-g2", "ph-g3", "ph-g4", "ph-g5", "ph-g6"];
-  const start = gradients.indexOf(listing.gradient);
+  const g = demoGradient(listing, 6);
+  const start = Math.max(0, GS.indexOf(g));
+  const city = displayCityCountry(listing);
+
+  /* similar homes: same city first, then the rest (demo sort) */
+  const similar = all
+    .filter((l) => l.slug !== listing.slug)
+    .sort((a, b) => (a.city === listing.city ? 0 : 1) - (b.city === listing.city ? 0 : 1))
+    .slice(0, 4);
+
+  const data: PdData = {
+    slug: listing.slug,
+    name: listing.title,
+    city,
+    typeLabel: propertyTypeLabel(listing),
+    beds: listing.bedrooms,
+    baths: listing.bathrooms,
+    guests: listing.maxGuests,
+    priceLabel: Math.round(allInNightlyCents(listing) / 100).toLocaleString("en-US"),
+    rate: listing.rating.toFixed(2),
+    reviews: listing.reviewCount,
+    lat: listing.lat,
+    lng: listing.lng,
+    minStay: listing.minStay,
+    desc: listing.description,
+    amen: listing.amenities,
+    unavailable,
+    whatsapp: contact.whatsapp,
+  };
 
   return (
-    <div className="mx-auto max-w-[1180px] px-4 sm:px-6">
-      <div className="py-6">
-        <Link href="/stays" className="font-semibold text-grey hover:text-rosa">
-          ← Back to stays
-        </Link>
-      </div>
-
-      <h1 className="text-3xl font-extrabold sm:text-4xl">{listing.title}</h1>
-      <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <b>★ {listing.rating.toFixed(2)}</b>
-        <span className="text-grey">{listing.reviewCount} reviews</span>
-        <span className="text-grey">📍 {listing.city}</span>
-        <span className="rounded-pill border border-line bg-paper px-3 py-1 text-xs font-bold text-terra">
-          {listing.headline}
-        </span>
-      </p>
-
-      {/* gallery — real photos when uploaded, gradient placeholders otherwise */}
-      <div className="mt-6 grid gap-2.5 overflow-hidden rounded-card sm:h-[420px] sm:grid-cols-[2fr_1fr_1fr] sm:grid-rows-2">
-        {(listing.photos.length > 0
-          ? listing.photos.slice(0, 5).map((p, i) => ({ key: p.url, photo: p, label: p.alt, i }))
-          : GALLERY_LABELS.map((label, i) => ({ key: label, photo: null, label, i }))
-        ).map(({ key, photo, label, i }) => (
-          <div
-            key={key}
-            className={`relative min-h-40 overflow-hidden ${photo ? "bg-line" : gradients[(start + i) % 6]} ${i === 0 ? "sm:row-span-2" : ""}`}
-          >
-            {photo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={photo.url} alt={photo.alt || listing.title}
-                   className="absolute inset-0 h-full w-full object-cover" />
-            )}
-            {label && (
-              <span className="absolute bottom-3 left-3 rounded-pill bg-white/90 px-3 py-1 text-xs font-bold text-ink">
-                {label}
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="grid gap-10 py-10 lg:grid-cols-[1.6fr_1fr]">
-        <div>
-          <h2 className="text-xl font-extrabold">
-            Entire {listing.propertyType} · {listing.city}
-          </h2>
-          <p className="mt-1 text-grey">
-            {listing.maxGuests} guests · {listing.bedrooms} bedrooms ·{" "}
-            {listing.bathrooms} baths
-          </p>
-
-          <hr className="my-6 border-line" />
-          <h3 className="mb-2 font-display text-lg font-bold">About this place</h3>
-          <p className="max-w-[65ch] leading-relaxed">{listing.description}</p>
-
-          <hr className="my-6 border-line" />
-          <h3 className="mb-3 font-display text-lg font-bold">What this place offers</h3>
-          <ul className="grid gap-2 sm:grid-cols-2">
-            {listing.amenities.map((a) => (
-              <li key={a} className="flex items-center gap-2 text-sm">
-                <span className="text-cactus">✓</span> {a}
-              </li>
-            ))}
-          </ul>
-
-          <hr className="my-6 border-line" />
-          <h3 className="mb-3 font-display text-lg font-bold">Good to know</h3>
-          <div className="grid gap-3 text-sm sm:grid-cols-2">
-            <div><b>Minimum stay</b><br />{listing.minStay} nights</div>
-            <div><b>Check-in / out</b><br />From 3:00 PM · until 11:00 AM</div>
-            <div><b>Guests</b><br />Up to {listing.maxGuests}</div>
-            <div><b>Pricing</b><br />All-in — taxes &amp; cleaning included, no hidden fees</div>
+    <div className="pg-property">
+      <div className="pdp">
+        <Link className="pd-back" href="/stays">&larr; <T k="pd_back" /></Link>
+        <div className="pd-head">
+          <h1>{listing.title}</h1>
+          <div className="pd-sub">
+            <span>&#9733; <b>{listing.rating.toFixed(2)}</b></span><span>&middot;</span>
+            <span><b>{listing.reviewCount}</b> <T k="pd_reviews" /></span><span>&middot;</span>
+            <span>&#128205; <span>{city}</span></span>
+            <span className="pd-badge">{listing.headline}</span>
           </div>
         </div>
-
-        {/* booking card */}
-        <aside className="h-fit rounded-card bg-paper p-6 shadow-soft lg:sticky lg:top-24">
-          <BookingWidget
-            slug={listing.slug}
-            minStay={listing.minStay}
-            maxGuests={listing.maxGuests}
-            allInNightlyLabel={fmtMoney(allInNightlyCents(listing))}
-            unavailable={unavailable}
-          />
-        </aside>
+        <div className="pd-gallery">
+          {(listing.photos.length > 0
+            ? listing.photos.slice(0, 5).map((p, i) => ({ key: p.url, photo: p, label: p.alt || GALLERY_LABELS[i], i }))
+            : GALLERY_LABELS.map((label, i) => ({ key: label, photo: null, label, i }))
+          ).map(({ key, photo, label, i }) => (
+            <div key={key} className={`pdph ${photo ? "" : GS[(start + i) % 6]}`}>
+              {photo && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photo.url}
+                  alt={photo.alt || listing.title}
+                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              )}
+              <span className="pdlabel">{label}</span>
+            </div>
+          ))}
+        </div>
+        <PdGrid p={data} />
+        <div className="pd-sec">
+          <T as="h2" k="pd_similar" />
+          <div className="pd-similar">
+            {similar.map((l) => <SimilarCard key={l.slug} l={l} />)}
+          </div>
+        </div>
       </div>
     </div>
   );

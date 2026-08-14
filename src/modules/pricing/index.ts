@@ -1,46 +1,49 @@
 import type { Listing } from "@/modules/listings";
+import {
+  computeQuote,
+  defaultPricingConfig,
+  uniformNights,
+  type Quote,
+} from "./engine";
 
 /**
  * Pricing module — computes the "all-in, no hidden fees" quote.
  * The brand promise lives here: one honest number, always computed
  * server-side, never trusted from the client.
+ *
+ * The math lives in ./engine (pure, unit-tested). This file adapts the
+ * Listing shape to the engine. Until the M1 pricing config is wired to the
+ * DB (listing_pricing / listing_price_days / listing_addons), listings quote
+ * with a default config — identical numbers to the pre-M1 engine.
  */
 
-export interface Quote {
-  nights: number;
-  nightlyCents: number;
-  accommodationCents: number;
-  cleaningCents: number;
-  taxCents: number;
-  totalCents: number;
-  currency: string;
-}
+export * from "./engine";
 
 export function nightsBetween(checkIn: Date, checkOut: Date): number {
   const ms = checkOut.getTime() - checkIn.getTime();
   return Math.round(ms / 86_400_000);
 }
 
-export function quote(listing: Listing, checkIn: Date, checkOut: Date): Quote {
+export function quote(
+  listing: Listing,
+  checkIn: Date,
+  checkOut: Date,
+  guests = 1,
+): Quote {
   const nights = nightsBetween(checkIn, checkOut);
   if (nights < 1) throw new Error("INVALID_DATES");
   if (nights < listing.minStay) throw new Error("MIN_STAY_NOT_MET");
 
-  const accommodationCents = listing.nightlyCents * nights;
-  const cleaningCents = listing.cleaningCents;
-  const taxCents = Math.round(
-    (accommodationCents + cleaningCents) * (listing.taxPct / 100),
-  );
-
-  return {
-    nights,
-    nightlyCents: listing.nightlyCents,
-    accommodationCents,
-    cleaningCents,
-    taxCents,
-    totalCents: accommodationCents + cleaningCents + taxCents,
-    currency: listing.currency,
-  };
+  return computeQuote({
+    nights: uniformNights(checkIn, checkOut, listing.nightlyCents),
+    guests,
+    checkIn,
+    config: defaultPricingConfig({
+      cleaningCents: listing.cleaningCents,
+      taxPct: listing.taxPct,
+      currency: listing.currency,
+    }),
+  });
 }
 
 /** Display helper: cents → "$1,234" (whole dollars, brand style). */

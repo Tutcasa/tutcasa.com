@@ -61,6 +61,19 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
   const db = getDb();
   await db.query("select release_expired_holds()"); // lazy expiry
 
+  // Admin/iCal blocks and calendar-blocked days are not covered by the
+  // bookings exclusion constraint — reject overlaps explicitly. (The date
+  // picker already hides these; this guards direct/stale submissions.)
+  const blocked = await db.query<{ n: string }>(
+    `select count(*) as n
+       from listing_unavailable_ranges($1) r
+      where daterange(r.from_date, r.to_date) && daterange($2::date, $3::date)`,
+    [listing.id, req.checkIn, req.checkOut],
+  );
+  if (Number(blocked.rows[0].n) > 0) {
+    return { ok: false, error: "DATES_TAKEN" };
+  }
+
   try {
     const res = await db.query<{ id: string }>(
       `insert into bookings

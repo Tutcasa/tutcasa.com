@@ -1,5 +1,5 @@
 import type { Listing, ListingFilter } from "./types";
-import { MOCK_LISTINGS } from "./mock-data";
+import { MOCK_LISTINGS, UNLISTED_SLUGS } from "./mock-data";
 import { getSupabase } from "@/lib/supabase";
 import { SupabaseListingsRepo } from "./supabase-repo";
 
@@ -16,7 +16,8 @@ export interface ListingsRepo {
 
 class MockListingsRepo implements ListingsRepo {
   async listPublished(filter?: ListingFilter): Promise<Listing[]> {
-    let out = MOCK_LISTINGS;
+    // unlisted homes are bookable via direct link, never in the grid
+    let out = MOCK_LISTINGS.filter((l) => !UNLISTED_SLUGS.has(l.slug));
     if (filter?.city) {
       const c = filter.city.toLowerCase();
       out = out.filter((l) => l.city.toLowerCase() === c);

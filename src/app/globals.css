@@ -18,9 +18,11 @@
   --color-grey: #8A7A72;
   --color-line: #F0E2D2;
 
-  /* typography (variables provided by next/font in layout.tsx) */
-  --font-sans: var(--font-outfit), system-ui, sans-serif;
-  --font-display: var(--font-baloo), var(--font-outfit), system-ui, sans-serif;
+  /* typography — same Google Fonts pipeline as the approved demo,
+     loaded via <link> in layout.tsx with the literal family names the
+     verbatim design-reference CSS expects */
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-display: 'Baloo 2', 'Outfit', system-ui, sans-serif;
 
   /* radii & shadows to match the demo feel */
   --radius-card: 22px;
@@ -29,16 +31,24 @@
   --shadow-lift: 0 16px 44px rgba(58, 44, 40, 0.16);
 }
 
+/* no -webkit-font-smoothing override: the demo renders with default
+   smoothing, and side-by-side parity includes text weight */
 body {
   background: var(--color-crema);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
 }
 
+/* demo parity: no text-wrap:balance — it changes heading wrap points */
 h1, h2, h3, h4 {
   font-family: var(--font-display);
-  text-wrap: balance;
+}
+
+/* demo parity: the demo never overrides the UA's `line-height: normal`
+   on form controls; Tailwind preflight sets `inherit` (1.55), which
+   makes every button/input ~3px taller than the approved design */
+button, input, select, textarea {
+  line-height: normal;
 }
 
 /* placeholder "photo" gradients until real photography lands */

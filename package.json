@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "demo:css": "node scripts/scope-demo-css.mjs",
+    "test:pricing": "tsc src/modules/pricing/engine.ts --outDir .test-build --target es2022 --module esnext --moduleResolution bundler --strict && node --test tests/pricing.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",

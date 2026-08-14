@@ -102,10 +102,11 @@ export class SupabaseListingsRepo implements ListingsRepo {
   }
 
   async bySlug(slug: string): Promise<Listing | null> {
+    // 'unlisted' homes are bookable via direct link but never in the grid
     const { data, error } = await this.sb
       .from("listings")
       .select(SELECT)
-      .eq("status", "published")
+      .in("status", ["published", "unlisted"])
       .eq("slug", slug)
       .maybeSingle();
     if (error) throw new Error(`listing query failed: ${error.message}`);

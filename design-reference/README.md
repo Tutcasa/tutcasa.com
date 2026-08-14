@@ -4,6 +4,21 @@ These CSS files are extracted verbatim from the approved HTML demo
 (`~/Desktop/Tutcasa demo`). They are the single source of design truth
 for the platform port.
 
+## Scoped CSS pipeline (how these files reach the app)
+
+The demo reuses selector names (.g1, .casa, .page-hero, even `footer`)
+with DIFFERENT values per page, and Next.js keeps global CSS loaded
+across client navigations — so these files are never imported directly.
+`npm run demo:css` (scripts/scope-demo-css.mjs) regenerates
+`src/styles/demo/*.css`, scoping every rule to `body:has(.pg-<page>)`.
+Each route imports its own generated file and wraps its content in
+`<div className="pg-<page>">`; the layout imports `base.css` (shared
+palette/reset) and `chrome-fallback.css` (styles the header/footer on
+routes without a pg- wrapper, e.g. /admin).
+
+**If the demo's CSS changes: update the file here verbatim, then run
+`npm run demo:css`. Never edit `src/styles/demo/` by hand.**
+
 ## Port rules (learned the hard way)
 1. **Never approximate.** Reuse the demo's exact selectors, values,
    spacing, shadows and markup structure. Tailwind utilities are fine

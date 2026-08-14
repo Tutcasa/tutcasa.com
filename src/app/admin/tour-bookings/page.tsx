@@ -41,7 +41,7 @@ export default async function AdminTourBookings() {
                 <p className="mt-1 text-sm">
                   {b.guestName} · {b.guestEmail}{b.guestPhone ? ` · ${b.guestPhone}` : ""}
                 </p>
-                {b.notes && <p className="mt-1 text-sm italic text-grey">"{b.notes}"</p>}
+                {b.notes && <p className="mt-1 text-sm italic text-grey">&ldquo;{b.notes}&rdquo;</p>}
               </div>
               <div className="flex flex-col gap-2">
                 <a

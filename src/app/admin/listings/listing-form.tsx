@@ -5,30 +5,72 @@ import { saveListingAction, type ListingFormState } from "./actions";
 
 export interface AdminListing {
   id: string;
+  slug: string;
   title: string;
   headline: string;
   city: string;
+  country: string;
+  region: string;
+  propertyType: string;
   description: string;
   maxGuests: number;
   bedrooms: number;
   bathrooms: number;
   minStay: number;
   status: string;
+  sizeSqft: number | null;
+  bedTypes: { count: number; type: string }[];
+  checkinFrom: string;
+  checkoutUntil: string;
+  lat: number | null;
+  lng: number | null;
+  amenities: string[];
+  houseRules: string;
+  instantBook: boolean;
+  keepCalendarClean: boolean;
+  affiliateUrl: string;
+  notifyEmails: string[];
+  cancellationPolicy: string;
+  otherRules: string;
+  faqs: { q: string; a: string }[];
+  checkinMessage: string;
+  checkoutMessage: string;
+  privateNotes: string;
+  allowChildren: boolean;
+  allowSmoking: boolean;
+  allowParty: boolean;
+  allowPets: boolean;
   nightlyCents: number;
-  cleaningCents: number;
-  taxPct: number;
 }
 
 const initial: ListingFormState = { ok: true, message: "" };
 
+const inputCls =
+  "w-full rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-rosa";
+const sectionCls = "border-t border-line pt-4 mt-2";
+const sectionTitleCls =
+  "mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey";
+
+function Check({
+  name, label, defaultChecked,
+}: { name: string; label: string; defaultChecked: boolean }) {
+  return (
+    <label className="flex items-center gap-2 text-sm font-semibold">
+      <input type="checkbox" name={name} defaultChecked={defaultChecked}
+             className="h-4 w-4 accent-rosa" />
+      {label}
+    </label>
+  );
+}
+
 export function ListingForm({ listing }: { listing: AdminListing }) {
   const [state, action, pending] = useActionState(saveListingAction, initial);
-  const inputCls =
-    "w-full rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-rosa";
 
   return (
     <form action={action} className="grid gap-3">
       <input type="hidden" name="id" value={listing.id} />
+
+      {/* ------------------------------------------------ basics */}
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-bold">TITLE *
           <input name="title" required defaultValue={listing.title} className={inputCls} />
@@ -37,25 +79,33 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
           <input name="headline" defaultValue={listing.headline} placeholder="e.g. Oceanfront" className={inputCls} />
         </label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-bold">CITY
           <input name="city" defaultValue={listing.city} className={inputCls} />
         </label>
-        <label className="text-xs font-bold">STATUS
-          <select name="status" defaultValue={listing.status ?? "published"} className={inputCls}>
-            <option value="published">Published</option>
-            <option value="draft">Draft (hidden)</option>
-            <option value="archived">Archived</option>
+        <label className="text-xs font-bold">COUNTRY
+          <select name="country" defaultValue={listing.country} className={inputCls}>
+            <option value="MX">Mexico</option>
+            <option value="EG">Egypt</option>
+            <option value="US">USA</option>
           </select>
         </label>
-        <label className="text-xs font-bold">MIN STAY (nights)
-          <input name="minStay" type="number" min="1" defaultValue={listing.minStay} className={inputCls} />
+        <label className="text-xs font-bold">REGION / NEIGHBORHOOD
+          <input name="region" defaultValue={listing.region} placeholder="e.g. Riviera Maya" className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">TYPE
+          <select name="propertyType" defaultValue={listing.propertyType} className={inputCls}>
+            <option value="condo">Condo</option>
+            <option value="villa">Villa</option>
+            <option value="house">House</option>
+            <option value="apartment">Apartment</option>
+          </select>
         </label>
       </div>
       <label className="text-xs font-bold">DESCRIPTION
         <textarea name="description" rows={4} defaultValue={listing.description} className={inputCls} />
       </label>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-bold">MAX GUESTS
           <input name="maxGuests" type="number" min="1" defaultValue={listing.maxGuests} className={inputCls} />
         </label>
@@ -65,21 +115,112 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
         <label className="text-xs font-bold">BATHROOMS
           <input name="bathrooms" type="number" min="0" step="0.5" defaultValue={listing.bathrooms} className={inputCls} />
         </label>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <label className="text-xs font-bold">NIGHTLY (USD) *
-          <input name="nightlyUSD" type="number" min="1" step="1" required
-                 defaultValue={listing.nightlyCents / 100} className={inputCls} />
-        </label>
-        <label className="text-xs font-bold">CLEANING (USD)
-          <input name="cleaningUSD" type="number" min="0" step="1"
-                 defaultValue={listing.cleaningCents / 100} className={inputCls} />
-        </label>
-        <label className="text-xs font-bold">TAX %
-          <input name="taxPct" type="number" min="0" step="0.1"
-                 defaultValue={listing.taxPct} className={inputCls} />
+        <label className="text-xs font-bold">SIZE (ft²)
+          <input name="sizeSqft" type="number" min="0" defaultValue={listing.sizeSqft ?? ""} className={inputCls} />
         </label>
       </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">BED TYPES <span className="font-normal text-grey">(one per line, e.g. “2 x Queen”)</span>
+          <textarea name="bedTypes" rows={2} className={inputCls}
+            defaultValue={listing.bedTypes.map((b) => `${b.count} x ${b.type}`).join("\n")} />
+        </label>
+        <label className="text-xs font-bold">AMENITIES <span className="font-normal text-grey">(comma-separated)</span>
+          <textarea name="amenities" rows={2} className={inputCls}
+            defaultValue={listing.amenities.join(", ")} />
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-4">
+        <label className="text-xs font-bold">CHECK-IN FROM
+          <input name="checkinFrom" type="time" defaultValue={listing.checkinFrom} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">CHECK-OUT UNTIL
+          <input name="checkoutUntil" type="time" defaultValue={listing.checkoutUntil} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">LATITUDE
+          <input name="lat" type="number" step="any" defaultValue={listing.lat ?? ""} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">LONGITUDE
+          <input name="lng" type="number" step="any" defaultValue={listing.lng ?? ""} className={inputCls} />
+        </label>
+      </div>
+
+      {/* ------------------------------------- booking & visibility */}
+      <div className={sectionCls}>
+        <div className={sectionTitleCls}>Booking &amp; visibility</div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <label className="text-xs font-bold">STATUS
+            <select name="status" defaultValue={listing.status ?? "published"} className={inputCls}>
+              <option value="published">Published</option>
+              <option value="unlisted">Unlisted (bookable by link)</option>
+              <option value="draft">Draft (hidden)</option>
+              <option value="archived">Archived</option>
+            </select>
+          </label>
+          <label className="text-xs font-bold">MIN STAY (nights)
+            <input name="minStay" type="number" min="1" defaultValue={listing.minStay} className={inputCls} />
+          </label>
+          <label className="text-xs font-bold">AFFILIATE LINK <span className="font-normal text-grey">(books off-site)</span>
+            <input name="affiliateUrl" type="url" placeholder="https://…" defaultValue={listing.affiliateUrl} className={inputCls} />
+          </label>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          <Check name="instantBook" label="Instant booking (requests auto-accepted)" defaultChecked={listing.instantBook} />
+          <Check name="keepCalendarClean" label="Keep calendar clean (hotel mode — bookings don't block dates)" defaultChecked={listing.keepCalendarClean} />
+        </div>
+        <label className="mt-3 block text-xs font-bold">BOOKING NOTIFICATION EMAILS <span className="font-normal text-grey">(comma-separated — who hears about new bookings)</span>
+          <input name="notifyEmails" defaultValue={listing.notifyEmails.join(", ")} className={inputCls} />
+        </label>
+      </div>
+
+      {/* ------------------------------------------ rules & policies */}
+      <div className={sectionCls}>
+        <div className={sectionTitleCls}>Rules &amp; policies</div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <Check name="allowChildren" label="Children allowed" defaultChecked={listing.allowChildren} />
+          <Check name="allowPets" label="Pets allowed" defaultChecked={listing.allowPets} />
+          <Check name="allowSmoking" label="Smoking allowed" defaultChecked={listing.allowSmoking} />
+          <Check name="allowParty" label="Parties allowed" defaultChecked={listing.allowParty} />
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="text-xs font-bold">CANCELLATION POLICY
+            <textarea name="cancellationPolicy" rows={3} defaultValue={listing.cancellationPolicy} className={inputCls} />
+          </label>
+          <label className="text-xs font-bold">OTHER RULES
+            <textarea name="otherRules" rows={3} defaultValue={listing.otherRules} className={inputCls} />
+          </label>
+        </div>
+        <label className="mt-3 block text-xs font-bold">HOUSE RULES <span className="font-normal text-grey">(shown on the property page)</span>
+          <textarea name="houseRules" rows={2} defaultValue={listing.houseRules} className={inputCls} />
+        </label>
+        <label className="mt-3 block text-xs font-bold">FAQs <span className="font-normal text-grey">(one per line: “Question? :: Answer”)</span>
+          <textarea name="faqs" rows={3} className={inputCls}
+            defaultValue={listing.faqs.map((f) => `${f.q} :: ${f.a}`).join("\n")} />
+        </label>
+      </div>
+
+      {/* ------------------------------------------- guest messages */}
+      <div className={sectionCls}>
+        <div className={sectionTitleCls}>Automatic guest messages</div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-xs font-bold">CHECK-IN MESSAGE <span className="font-normal text-grey">(emailed 2 days before check-in)</span>
+            <textarea name="checkinMessage" rows={3} defaultValue={listing.checkinMessage} className={inputCls} />
+          </label>
+          <label className="text-xs font-bold">CHECK-OUT MESSAGE <span className="font-normal text-grey">(emailed 1 day before check-out)</span>
+            <textarea name="checkoutMessage" rows={3} defaultValue={listing.checkoutMessage} className={inputCls} />
+          </label>
+        </div>
+      </div>
+
+      {/* -------------------------------------------- private notes */}
+      <div className={sectionCls}>
+        <label className="text-xs font-bold">PRIVATE NOTES <span className="font-normal text-grey">(admins only — never shown to guests)</span>
+          <textarea name="privateNotes" rows={2} defaultValue={listing.privateNotes} className={inputCls} />
+        </label>
+        <p className="mt-2 text-xs text-grey">
+          Page address: <span className="font-mono">/stays/{listing.slug}</span> (fixed — changing it would break links &amp; Google)
+        </p>
+      </div>
+
       {state.message && (
         <p className={`text-sm font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</p>
       )}
@@ -89,9 +230,6 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
       >
         {pending ? "Saving…" : "Save changes"}
       </button>
-      <p className="text-xs text-grey">
-        Guests always see the all-in price: (nightly × nights + cleaning) + tax.
-      </p>
     </form>
   );
 }

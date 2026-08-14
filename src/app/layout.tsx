@@ -1,22 +1,12 @@
 import type { Metadata } from "next";
-import { Baloo_2, Outfit } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { ChatWithMay } from "@/components/ChatWithMay";
+import "@/styles/demo/base.css";
+import "@/styles/demo/chrome-fallback.css";
+import { LangProvider } from "@/lib/i18n";
+import { SiteHeader } from "@/components/site/SiteHeader";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { ChatMay } from "@/components/site/ChatMay";
 import { getSetting } from "@/modules/settings";
-
-const baloo = Baloo_2({
-  variable: "--font-baloo",
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
-
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://tutcasa.com"),
@@ -39,15 +29,23 @@ export default async function RootLayout({
 }>) {
   const contact = await getSetting("contact");
   return (
-    <html
-      lang="en"
-      className={`${baloo.variable} ${outfit.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <Header />
-        <main className="flex-1">{children}</main>
-        <Footer />
-        <ChatWithMay whatsapp={contact.whatsapp} />
+    <html lang="en">
+      <body>
+        {/* same font pipeline as the approved demo — literal family names
+            ('Outfit', 'Baloo 2') that the verbatim design-reference CSS uses */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font -- root layout covers every route; React 19 hoists this to <head> */}
+        <link
+          rel="stylesheet"
+          precedence="default"
+          href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
+        />
+        <LangProvider>
+          <SiteHeader whatsapp={contact.whatsapp} />
+          <main>{children}</main>
+          <SiteFooter whatsapp={contact.whatsapp} />
+          <ChatMay whatsapp={contact.whatsapp} />
+        </LangProvider>
       </body>
     </html>
   );

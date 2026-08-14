@@ -222,4 +222,34 @@ export const MOCK_LISTINGS: Listing[] = [
     taxPct: 12.5,
     currency: "USD",
   },
+  {
+    id: "l-jardin-verde",
+    slug: "jardin-verde",
+    title: "Jardin Verde",
+    city: "Playa del Carmen",
+    country: "MX",
+    region: "Riviera Maya",
+    lat: 20.632,
+    lng: -87.076,
+    propertyType: "condo",
+    maxGuests: 7,
+    bedrooms: 3,
+    bathrooms: 2,
+    headline: "Garden",
+    description:
+      "A leafy three-bedroom condo built around a green courtyard and pool, a short stroll from the beach and Fifth Avenue. Bright, spacious and quiet \u2014 a comfortable home base for families and groups.",
+    amenities: ["Courtyard pool", "Garden", "Full kitchen", "Air conditioning", "Wi-Fi", "Free parking", "Washer", "Smart TV", "Walk to beach", "24/7 concierge"],
+    minStay: 2,
+    rating: 4.83,
+    reviewCount: 71,
+    photos: [],
+    gradient: "ph-g3",
+    nightlyCents: 17500,
+    cleaningCents: 6000,
+    taxPct: 16,
+    currency: "USD",
+  },
 ];
+
+/** demo parity: bookable via direct link, hidden from the grid */
+export const UNLISTED_SLUGS = new Set(["jardin-verde"]);

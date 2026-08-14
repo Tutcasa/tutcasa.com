@@ -1,63 +1,72 @@
+import "@/styles/demo/our_family.css";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { T } from "@/lib/i18n";
+import { BackBar } from "@/components/site/BackBar";
 
 export const metadata: Metadata = {
-  title: "Our Family",
+  title: { absolute: "TutCasa — Our Family" },
   description:
-    "Meet the Canadian-Egyptian family behind TutCasa — hosts who own and inspect every home in the collection.",
+    "The Canadian-Egyptian family behind TutCasa — from one condo in Playa del Carmen to a curated collection of 40+ homes.",
 };
 
 export default function OurFamilyPage() {
   return (
-    <div className="mx-auto max-w-[900px] px-4 sm:px-6">
-      <section className="py-12 text-center">
-        <p className="font-mono text-xs font-bold uppercase tracking-[.2em] text-terra">Our story</p>
-        <h1 className="mt-2 text-4xl font-extrabold">
-          The family behind <span className="text-rosa">TutCasa.</span>
-        </h1>
-        <p className="mx-auto mt-4 max-w-[50ch] text-lg text-grey">
-          A Canadian–Egyptian couple who turned a love of travel into a home
-          for every kind of traveller.
-        </p>
+    <div className="pg-our_family">
+      <BackBar />
+
+      <section className="fam-hero">
+        <div className="sun"></div>
+        <div className="wrap">
+          <T as="div" className="eyebrow" k="fam_eyebrow" />
+          <T as="h1" k="fam_h1" />
+          <T as="p" k="fam_lede" />
+        </div>
       </section>
 
-      <div className="ph-g3 h-64 rounded-card" />
-
-      <section className="mx-auto max-w-[65ch] space-y-5 py-12 leading-relaxed">
-        <p>
-          TUT CASA was born from a shared vision between a Canadian–Egyptian
-          couple with a deep passion for travel and meaningful experiences.
-          What started as finding a way to rent our condo in Playa del Carmen,
-          Mexico quickly grew into something much bigger.
-        </p>
-        <p>
-          As passionate travellers, we saw an opportunity in the vacation
-          rentals market — one to deliver stays that feel effortless, elevated,
-          and truly memorable for our guests, while maximizing ROI for the
-          owners who trust us with their homes.
-        </p>
-        <p>
-          Today, TUT CASA offers a curated collection of 40+ homes in Mareazul,
-          Playa del Carmen and beyond, welcoming 200+ satisfied guests into
-          seamless, home-away-from-home experiences designed for comfort,
-          style, and unforgettable moments.
-        </p>
-      </section>
-
-      <section className="grid gap-4 pb-14 text-center sm:grid-cols-3">
-        {[["40+", "homes in the curated collection"], ["200+", "guests welcomed"], ["24/7", "family-run support"]].map(([k, v]) => (
-          <div key={v} className="rounded-card bg-paper p-6 shadow-soft">
-            <div className="font-display text-3xl font-extrabold text-rosa">{k}</div>
-            <div className="mt-1 text-sm text-grey">{v}</div>
+      <section className="story wrap">
+        <div className="story-card">
+          <div className="story-photo"></div>
+          <div className="story-body">
+            <T as="span" className="tag" k="fam_tag" />
+            <T as="h2" k="fam_story_h" />
+            <T as="p" k="fam_p1" />
+            <T as="p" k="fam_p2" />
+            <T as="p" k="fam_p3" />
+            <T as="div" className="sign" k="fam_sign" />
           </div>
-        ))}
+        </div>
       </section>
 
-      <div className="pb-16 text-center">
-        <Link href="/stays" className="rounded-pill bg-rosa px-7 py-3.5 font-bold text-white shadow-soft hover:bg-rosa-deep">
-          Meet our casas →
-        </Link>
-      </div>
+      <section className="fam-stats wrap">
+        <div className="stat-grid">
+          <div className="stat r"><b>40+</b><T k="fam_stat1" /></div>
+          <div className="stat t"><b>200+</b><T k="fam_stat2" /></div>
+          <div className="stat c"><b>100%</b><T k="fam_stat3" /></div>
+        </div>
+      </section>
+
+      <section className="values wrap">
+        <T as="div" className="sec-title" k="fam_val_title" />
+        <T as="div" className="sec-sub" k="fam_val_sub" />
+        <div className="val-grid">
+          <div className="val"><div className="ic">&#10024;</div><T as="h3" k="fam_v1_h" /><T as="p" k="fam_v1_p" /></div>
+          <div className="val"><div className="ic">&#127969;</div><T as="h3" k="fam_v2_h" /><T as="p" k="fam_v2_p" /></div>
+          <div className="val"><div className="ic">&#128200;</div><T as="h3" k="fam_v3_h" /><T as="p" k="fam_v3_p" /></div>
+        </div>
+      </section>
+
+      <section className="cta-band wrap">
+        <div className="cta-inner">
+          <span className="deco">&#127796;</span>
+          <T as="h2" k="fam_cta_h" />
+          <T as="p" k="fam_cta_p" />
+          <div className="cta-btns">
+            <Link className="btn btn-white" href="/stays"><T k="fam_cta_b1" /></Link>
+            <Link className="btn btn-ghost" href="/list-my-property"><T k="fam_cta_b2" /></Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
