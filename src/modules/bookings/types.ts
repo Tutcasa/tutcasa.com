@@ -8,6 +8,7 @@ export interface BookingRequest {
   guestName: string;
   guestEmail: string;
   guestPhone?: string;
+  couponCode?: string;
 }
 
 export interface Booking {

@@ -2,6 +2,7 @@ import "server-only";
 import { getDb } from "@/lib/db";
 import { getListingsRepo } from "@/modules/listings";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
+import { checkCoupon, redeemCoupon } from "@/modules/coupons";
 import type {
   Booking,
   BookingRequest,
@@ -56,6 +57,16 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
   }
   const q = quoted.quote;
 
+  // coupon: validated server-side; silently ignored when invalid so a stale
+  // code never blocks a booking (the guest saw the validation at checkout)
+  let couponCode: string | null = null;
+  let couponDiscountCents = 0;
+  if (req.couponCode?.trim()) {
+    const cp = await checkCoupon(req.couponCode, q.nights, q.totalCents);
+    if (cp.ok) { couponCode = cp.code; couponDiscountCents = cp.discountCents; }
+  }
+  const chargeCents = q.totalCents - couponDiscountCents;
+
   const db = getDb();
   await db.query("select release_expired_holds()"); // lazy expiry
 
@@ -76,15 +87,16 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     const res = await db.query<{ id: string }>(
       `insert into bookings
          (listing_id, guest_name, guest_email, guest_phone, stay, guests,
-          status, hold_expires_at, total_cents, currency, price_breakdown, source)
+          status, hold_expires_at, total_cents, currency, price_breakdown, source,
+          coupon_code, coupon_discount_cents)
        values ($1, $2, $3, $4, daterange($5::date, $6::date), $7,
                'pending', now() + ($8 || ' minutes')::interval,
-               $9, $10, $11, 'direct')
+               $9, $10, $11, 'direct', $12, $13)
        returning id`,
       [
         listing.id, name, email, req.guestPhone?.trim() || null,
         req.checkIn, req.checkOut, req.guests, String(HOLD_MINUTES),
-        q.totalCents, q.currency,
+        chargeCents, q.currency,
         JSON.stringify({
           nights: q.nights,
           nightlyCents: q.nightlyCents,
@@ -97,12 +109,16 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           extraGuestFeeCents: q.extraGuestFeeCents,
           cityFeeCents: q.cityFeeCents,
           securityDepositCents: q.securityDepositCents,
-          dueNowCents: q.schedule.dueNowCents,
+          couponCode,
+          couponDiscountCents,
+          dueNowCents: Math.max(0, q.schedule.dueNowCents - couponDiscountCents),
           balanceCents: q.schedule.balanceCents,
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
+        couponCode, couponDiscountCents,
       ],
     );
+    if (couponCode) await redeemCoupon(couponCode);
     return { ok: true, bookingId: res.rows[0].id };
   } catch (e) {
     const err = e as { code?: string; constraint?: string };

@@ -20,6 +20,7 @@ interface ListingRow {
   description: string | null;
   amenities: string[];
   min_stay: number;
+  featured: boolean | null;
   rating_cached: number;
   review_count_cached: number;
   listing_rates: {
@@ -35,7 +36,7 @@ interface ListingRow {
 const SELECT = `
   id, slug, title, city, country, region, lat, lng, property_type,
   max_guests, bedrooms, bathrooms, headline, description, amenities,
-  min_stay, rating_cached, review_count_cached,
+  min_stay, featured, rating_cached, review_count_cached,
   listing_rates ( nightly_cents, cleaning_cents, tax_pct, currency, season ),
   listing_photos ( url, alt, sort )
 `;
@@ -67,6 +68,7 @@ function toListing(row: ListingRow): Listing {
     description: row.description ?? "",
     amenities: row.amenities ?? [],
     minStay: row.min_stay,
+    featured: row.featured ?? false,
     rating: Number(row.rating_cached),
     reviewCount: row.review_count_cached,
     gradient: gradientFor(row.slug),

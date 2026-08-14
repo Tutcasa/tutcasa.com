@@ -11,7 +11,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
-import { reserveAction } from "@/app/stays/[slug]/actions";
+import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
 import { reserveTourAction } from "@/app/tours/[slug]/actions";
 
 export interface CheckoutLine {
@@ -71,12 +71,31 @@ export function CheckoutClient({
   const [country, setCountry] = useState("Mexico");
   const [promo, setPromo] = useState("");
   const [promoMsg, setPromoMsg] = useState(false);
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponErr, setCouponErr] = useState<string | null>(null);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const total = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
+  const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
+  const discount = Math.min(coupon?.discount ?? 0, totalBefore);
+  const total = totalBefore - discount;
   const cur = currency;
+
+  async function applyCoupon() {
+    setCouponErr(null);
+    if (!promo.trim()) return;
+    if (payload.kind !== "stay") { setPromoMsg(true); return; } // demo behavior for non-stay carts
+    setCheckingCoupon(true);
+    try {
+      const res = await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests);
+      if (res.ok) { setCoupon({ code: res.code, discount: res.discount }); setPromoMsg(false); }
+      else { setCoupon(null); setCouponErr(res.message); }
+    } finally {
+      setCheckingCoupon(false);
+    }
+  }
 
   function fmtCard(v: string) {
     const d = v.replace(/[^0-9]/g, "").slice(0, 16);
@@ -102,6 +121,7 @@ export function CheckoutClient({
           ? await reserveAction({
               listingSlug: payload.slug, checkIn: payload.ci, checkOut: payload.co,
               guests: payload.guests, guestName: name, guestEmail: email.trim(),
+              couponCode: coupon?.code,
             })
           : await reserveTourAction({
               tourSlug: payload.slug, tourDate: payload.date, groupSize: payload.groupSize,
@@ -144,19 +164,27 @@ export function CheckoutClient({
               ))}
             </div>
             <div className="co-promo">
-              <input placeholder="Loyalty coupon" value={promo} onChange={(e) => setPromo(e.target.value)} />
-              <button onClick={() => { if (promo.trim()) setPromoMsg(true); }}>Apply</button>
+              <input placeholder="Coupon code" value={promo} onChange={(e) => setPromo(e.target.value)} />
+              <button onClick={applyCoupon} disabled={checkingCoupon}>{checkingCoupon ? "Checking…" : "Apply"}</button>
             </div>
             <div style={{ fontSize: "12.5px", color: "var(--cactus)", display: promoMsg ? "block" : "none", marginBottom: 8 }}>
               Coupon saved &mdash; we&rsquo;ll validate it before charging.
             </div>
-            <div className="co-row"><span>Subtotal</span><span>${money(total)} {cur}</span></div>
+            {couponErr && (
+              <div style={{ fontSize: "12.5px", color: "var(--rosa)", fontWeight: 700, marginBottom: 8 }}>{couponErr}</div>
+            )}
+            {coupon && (
+              <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
+                <span>Coupon {coupon.code}</span><span>&minus;${money(discount)} {cur}</span>
+              </div>
+            )}
+            <div className="co-row"><span>Subtotal</span><span>${money(totalBefore)} {cur}</span></div>
             <div className="co-row big"><span>Total</span><span>${money(total)} {cur}</span></div>
             {cur === "MXN" && <div className="co-usd">&#8776; {money(Math.round(total / RATE))} USD</div>}
             {schedule && schedule.balance > 0 && (
               <>
                 <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
-                  <span>Due today</span><span>${money(schedule.dueNow)} {cur}</span>
+                  <span>Due today</span><span>${money(Math.max(0, schedule.dueNow - discount))} {cur}</span>
                 </div>
                 <div className="co-row">
                   <span>Balance{schedule.balanceBy ? ` — due by ${schedule.balanceBy}` : ""}</span>
@@ -192,7 +220,7 @@ export function CheckoutClient({
               <span>
                 {paying
                   ? "Holding your dates…"
-                  : `Pay $${money(schedule && schedule.balance > 0 ? schedule.dueNow : total)} ${cur}${schedule && schedule.balance > 0 ? " now" : ""}`}
+                  : `Pay $${money(schedule && schedule.balance > 0 ? Math.max(0, schedule.dueNow - discount) : total)} ${cur}${schedule && schedule.balance > 0 ? " now" : ""}`}
               </span>
             </button>
             <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>

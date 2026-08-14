@@ -17,6 +17,8 @@ export interface Listing {
   description: string;
   amenities: string[];
   minStay: number;
+  /** admin toggle: appears in the homepage "Popular casas" strip */
+  featured: boolean;
   rating: number;
   reviewCount: number;
   /** placeholder art class until real photos land (ph-g1 … ph-g6) */

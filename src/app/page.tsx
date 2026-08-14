@@ -11,14 +11,16 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/* The demo home features these four, in this order, with these card
-   blurbs and gradient classes (g1–g4 are the demo's palette). */
-const FEATURED: { slug: string; feature: string; g: string }[] = [
-  { slug: "spiritum-marea", feature: "walk-out pool", g: "g1" },
-  { slug: "vista-playa", feature: "ocean view", g: "g2" },
-  { slug: "casa-selva", feature: "private cenote", g: "g3" },
-  { slug: "nile-breeze", feature: "rooftop terrace", g: "g4" },
-];
+/* Card blurbs + gradients the demo uses for its known homes (g1–g4 are
+   the demo's palette). WHICH homes appear is the admin's "featured"
+   toggle; this map only styles the ones it recognizes. */
+const CARD_STYLE: Record<string, { feature: string; g: string }> = {
+  "spiritum-marea": { feature: "walk-out pool", g: "g1" },
+  "vista-playa": { feature: "ocean view", g: "g2" },
+  "casa-selva": { feature: "private cenote", g: "g3" },
+  "nile-breeze": { feature: "rooftop terrace", g: "g4" },
+  "casa-sol": { feature: "screened pool", g: "g3" },
+};
 
 function displayCity(l: Listing): string {
   return l.country === "EG" ? `${l.city}, Egypt` : l.city;
@@ -43,12 +45,11 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
 
 export default async function HomePage() {
   const listings = await getListingsRepo().listPublished();
-  const bySlug = new Map(listings.map((l) => [l.slug, l]));
-  const featured = FEATURED.map(({ slug, feature, g }) => {
-    const l = bySlug.get(slug);
-    return l ? toCard(l, feature, g) : null;
-  }).filter((c): c is CasaCardData => c !== null);
-  // if the demo's four aren't all published, fill from the top of the list
+  // the admin's "featured" toggle decides the homepage strip
+  const featured: CasaCardData[] = listings
+    .filter((l) => l.featured)
+    .map((l) => toCard(l, CARD_STYLE[l.slug]?.feature, CARD_STYLE[l.slug]?.g));
+  // never show an empty strip — fill from the top of the list
   if (featured.length < 4) {
     for (const l of listings) {
       if (featured.length >= 4) break;

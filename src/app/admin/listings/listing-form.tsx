@@ -26,6 +26,7 @@ export interface AdminListing {
   lng: number | null;
   amenities: string[];
   houseRules: string;
+  featured: boolean;
   instantBook: boolean;
   keepCalendarClean: boolean;
   affiliateUrl: string;
@@ -164,6 +165,7 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
           </label>
         </div>
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+          <Check name="featured" label="Featured on the homepage" defaultChecked={listing.featured} />
           <Check name="instantBook" label="Instant booking (requests auto-accepted)" defaultChecked={listing.instantBook} />
           <Check name="keepCalendarClean" label="Keep calendar clean (hotel mode — bookings don't block dates)" defaultChecked={listing.keepCalendarClean} />
         </div>

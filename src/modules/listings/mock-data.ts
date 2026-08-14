@@ -5,7 +5,9 @@ import type { Listing } from "./types";
  * enriched with the fields the real schema carries. Replaced by the
  * Supabase repository once the project is connected.
  */
-export const MOCK_LISTINGS: Listing[] = [
+const MOCK_FEATURED = new Set(["spiritum-marea", "vista-playa", "casa-selva", "nile-breeze"]);
+
+const RAW: Omit<Listing, "featured">[] = [
   {
     id: "l-spiritum-marea",
     slug: "spiritum-marea",
@@ -250,6 +252,11 @@ export const MOCK_LISTINGS: Listing[] = [
     currency: "USD",
   },
 ];
+
+export const MOCK_LISTINGS: Listing[] = RAW.map((l) => ({
+  ...l,
+  featured: MOCK_FEATURED.has(l.slug),
+}));
 
 /** demo parity: bookable via direct link, hidden from the grid */
 export const UNLISTED_SLUGS = new Set(["jardin-verde"]);
