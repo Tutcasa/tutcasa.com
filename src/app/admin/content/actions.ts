@@ -1,10 +1,128 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getSetting, setSetting } from "@/modules/settings";
+import {
+  getSetting,
+  setSetting,
+  type ConciergeContent,
+  type LoyaltyContent,
+  type PoliciesContent,
+  type WhyBookContent,
+} from "@/modules/settings";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export interface ContentFormState { ok: boolean; message: string }
+
+const s = (v: FormDataEntryValue | null) => String(v ?? "").trim();
+const hero = (fd: FormData) => ({
+  eyebrow: s(fd.get("eyebrow")),
+  title: s(fd.get("title")),
+  intro: s(fd.get("intro")),
+});
+const lines = (v: FormDataEntryValue | null) =>
+  String(v ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+
+/** "icon | title | text" per line */
+function parseCards(v: FormDataEntryValue | null): WhyBookContent["cards"] {
+  return lines(v).map((l) => {
+    const [icon = "", title = "", ...rest] = l.split("|").map((p) => p.trim());
+    return { icon, title, text: rest.join(" | ") };
+  }).filter((c) => c.title);
+}
+
+/** "icon | title | tag | item, item, … | note(optional)" per line */
+function parseServices(v: FormDataEntryValue | null): ConciergeContent["services"] {
+  return lines(v).map((l) => {
+    const [icon = "", title = "", tag = "", items = "", note = ""] =
+      l.split("|").map((p) => p.trim());
+    return {
+      icon, title, tag,
+      items: items.split(",").map((i) => i.trim()).filter(Boolean),
+      ...(note ? { note } : {}),
+    };
+  }).filter((sv) => sv.title);
+}
+
+/** "title :: text" per line */
+function parseSteps(v: FormDataEntryValue | null): ConciergeContent["steps"] {
+  return lines(v).map((l) => {
+    const i = l.indexOf("::");
+    return i === -1
+      ? { title: l, text: "" }
+      : { title: l.slice(0, i).trim(), text: l.slice(i + 2).trim() };
+  }).filter((st) => st.title);
+}
+
+export async function savePoliciesAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  const current = await getSetting("page_policies");
+  const sections: PoliciesContent["sections"] = current.sections.map((sec, i) => ({
+    id: sec.id,
+    title: s(formData.get(`sec_title_${i}`)) || sec.title,
+    body: String(formData.get(`sec_body_${i}`) ?? sec.body).trim(),
+  }));
+  await setSetting("page_policies", { hero: hero(formData), sections });
+  revalidatePath("/policies");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Help & policies updated — live now." };
+}
+
+export async function saveWhyAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  const cards = parseCards(formData.get("cards"));
+  if (!cards.length) return { ok: false, message: "Add at least one card (icon | title | text)." };
+  await setSetting("page_why", { hero: hero(formData), cards });
+  revalidatePath("/why-book-with-us");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Why book with us updated — live now." };
+}
+
+export async function saveConciergeAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  const services = parseServices(formData.get("services"));
+  if (!services.length) return { ok: false, message: "Add at least one service line." };
+  const value: ConciergeContent = {
+    hero: hero(formData),
+    services,
+    why: String(formData.get("why") ?? "").split(",").map((w) => w.trim()).filter(Boolean),
+    steps: parseSteps(formData.get("steps")),
+    uniqueTitle: s(formData.get("uniqueTitle")),
+    uniqueText: s(formData.get("uniqueText")),
+  };
+  await setSetting("page_concierge", value);
+  revalidatePath("/concierge");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Concierge page updated — live now." };
+}
+
+export async function saveLoyaltyAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  const value: LoyaltyContent = {
+    hero: hero(formData),
+    step1Title: s(formData.get("step1Title")),
+    step1Text: s(formData.get("step1Text")),
+    friendAmount: s(formData.get("friendAmount")),
+    friendTitle: s(formData.get("friendTitle")),
+    friendText: s(formData.get("friendText")),
+    youAmount: s(formData.get("youAmount")),
+    youTitle: s(formData.get("youTitle")),
+    youText: s(formData.get("youText")),
+    bandTitle: s(formData.get("bandTitle")),
+    bandText: s(formData.get("bandText")),
+  };
+  await setSetting("page_loyalty", value);
+  revalidatePath("/loyalty");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Loyalty page updated — live now." };
+}
 
 export async function saveContactAction(
   _prev: ContentFormState,

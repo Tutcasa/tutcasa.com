@@ -4,8 +4,9 @@
 
 import { useRef, useState } from "react";
 import { BackBar } from "@/components/site/BackBar";
+import type { LoyaltyContent } from "@/modules/settings";
 
-export function LoyaltyClient() {
+export function LoyaltyClient({ content: c }: { content: LoyaltyContent }) {
   const [sent, setSent] = useState(false);
   const lnRef = useRef<HTMLInputElement>(null);
   const leRef = useRef<HTMLInputElement>(null);
@@ -30,18 +31,18 @@ export function LoyaltyClient() {
       <BackBar />
       <div className="page-hero">
         <div className="sun"></div>
-        <div className="eyebrow">Friendship &amp; loyalty program</div>
-        <h1>Share the love, get rewarded</h1>
-        <p>Tell a friend about TutCasa and you both win. They save on their first stay, and you earn credit toward your next one &mdash; no limits, stack as many as you like.</p>
+        <div className="eyebrow">{c.hero.eyebrow}</div>
+        <h1>{c.hero.title}</h1>
+        <p>{c.hero.intro}</p>
       </div>
       <div className="loy-steps">
-        <div className="loy-s"><div className="num">1</div><h3>Refer a friend</h3><p>Send us your details and your friend&rsquo;s below. We&rsquo;ll send them a warm welcome and their coupon.</p></div>
-        <div className="loy-s"><div className="num">2</div><div className="big">$100</div><h3>Your friend saves</h3><p>They get a <b>$100 discount coupon</b> to use on their first TutCasa booking.</p></div>
-        <div className="loy-s"><div className="num">3</div><div className="big">$200</div><h3>You earn</h3><p>Once they complete a reservation, you receive a <b>$200 coupon</b> toward your next stay.</p></div>
+        <div className="loy-s"><div className="num">1</div><h3>{c.step1Title}</h3><p>{c.step1Text}</p></div>
+        <div className="loy-s"><div className="num">2</div><div className="big">{c.friendAmount}</div><h3>{c.friendTitle}</h3><p>{c.friendText}</p></div>
+        <div className="loy-s"><div className="num">3</div><div className="big">{c.youAmount}</div><h3>{c.youTitle}</h3><p>{c.youText}</p></div>
       </div>
       <div className="loy-band">
         <div className="em">&#127881;</div>
-        <div><b>No limits, fully stackable.</b><p>Refer as many friends as you like &mdash; every completed booking earns you another $200. Coupons stack on a single stay.</p></div>
+        <div><b>{c.bandTitle}</b><p>{c.bandText}</p></div>
       </div>
       <div className="loy-form">
         <div style={{ display: sent ? "none" : undefined }}>
