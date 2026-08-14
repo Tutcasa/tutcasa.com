@@ -3,6 +3,7 @@ import "./globals.css";
 import "@/styles/demo/base.css";
 import "@/styles/demo/chrome-fallback.css";
 import { LangProvider } from "@/lib/i18n";
+import { CurrencyProvider } from "@/lib/currency";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatMay } from "@/components/site/ChatMay";
@@ -41,10 +42,12 @@ export default async function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
         />
         <LangProvider>
-          <SiteHeader whatsapp={contact.whatsapp} />
-          <main>{children}</main>
-          <SiteFooter whatsapp={contact.whatsapp} />
-          <ChatMay whatsapp={contact.whatsapp} />
+          <CurrencyProvider>
+            <SiteHeader whatsapp={contact.whatsapp} />
+            <main>{children}</main>
+            <SiteFooter whatsapp={contact.whatsapp} />
+            <ChatMay whatsapp={contact.whatsapp} />
+          </CurrencyProvider>
         </LangProvider>
       </body>
     </html>

@@ -11,6 +11,7 @@ import { useRef, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
+import { useCurrency } from "@/lib/currency";
 import { useWishlist, type WishItem } from "@/lib/wishlist";
 
 export interface CasaCardData {
@@ -52,6 +53,7 @@ function Carousel({
 
 function CasaCard({ c }: { c: CasaCardData }) {
   const router = useRouter();
+  const { fromUSD } = useCurrency();
   const { has, toggle } = useWishlist();
   const on = has(c.slug);
   const item: WishItem = {
@@ -97,7 +99,7 @@ function CasaCard({ c }: { c: CasaCardData }) {
         </div>
         <p>{c.meta}</p>
         <div className="casa-pr">
-          <b>${c.price}</b> <span>/ night &middot; all-in</span>
+          <b>{fromUSD(c.price)}</b> <span>/ night &middot; all-in</span>
         </div>
       </div>
     </article>

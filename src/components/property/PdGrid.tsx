@@ -12,6 +12,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
 import { getQuoteAction, type QuoteResult } from "@/app/stays/[slug]/actions";
+import { useCurrency } from "@/lib/currency";
 
 export interface PdData {
   slug: string;
@@ -58,6 +59,7 @@ function localISO(d: Date): string {
 
 export function PdGrid({ p }: { p: PdData }) {
   const router = useRouter();
+  const { fromUSD } = useCurrency();
   const { t } = useLang();
   const [ci, setCi] = useState("");
   const [co, setCo] = useState("");
@@ -127,14 +129,14 @@ export function PdGrid({ p }: { p: PdData }) {
       const perNight = Math.round(total / quote.quote.nights / 100);
       return (
         <>
-          <div className="row"><span>${fmt(perNight)} &times; {quote.quote.nights} nights</span><span>${fmt(Math.round(total / 100))}</span></div>
+          <div className="row"><span>{fromUSD(perNight)} &times; {quote.quote.nights} nights</span><span>{fromUSD(Math.round(total / 100))}</span></div>
           <div className="row"><span>Taxes &amp; cleaning</span><span>included</span></div>
           {warn}
-          <div className="tot"><span>Total (all-in)</span><span>${fmt(Math.round(total / 100))} {quote.quote.currency}</span></div>
+          <div className="tot"><span>Total (all-in)</span><span>{fromUSD(Math.round(total / 100))}</span></div>
           {quote.quote.schedule.balanceCents > 0 && (
             <div className="row" style={{ color: "var(--cactus)" }}>
               <span>Due today</span>
-              <span>${fmt(Math.round(quote.quote.schedule.dueNowCents / 100))}</span>
+              <span>{fromUSD(Math.round(quote.quote.schedule.dueNowCents / 100))}</span>
             </div>
           )}
         </>

@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
+import { useCurrency } from "@/lib/currency";
 import { useWishlist, type WishItem } from "@/lib/wishlist";
 
 export interface StayCard {
@@ -61,6 +62,7 @@ function matchProp(p: StayCard, activeFilter: string, f: Filters): boolean {
 function StayCasa({ p }: { p: StayCard }) {
   const router = useRouter();
   const { t } = useLang();
+  const { fromUSD } = useCurrency();
   const { has, toggle } = useWishlist();
   const [idx, setIdx] = useState(0);
   const [mapOpen, setMapOpen] = useState(false);
@@ -96,7 +98,7 @@ function StayCasa({ p }: { p: StayCard }) {
         <div className="casa-top"><h4>{p.name}</h4><span className="rate">&#9733; {p.rate}</span></div>
         <div className="loc">&#128205; {p.city}</div>
         <div className="casa-meta">{p.beds} <span dangerouslySetInnerHTML={{ __html: t("st_beds") }} /> &middot; {p.tag}</div>
-        <div className="casa-pr"><b>${p.price}</b> <span dangerouslySetInnerHTML={{ __html: t("st_night") }} /></div>
+        <div className="casa-pr"><b>{fromUSD(p.price)}</b> <span dangerouslySetInnerHTML={{ __html: t("st_night") }} /></div>
         <div className="casa-actions">
           <button
             className="mini"

@@ -2,6 +2,7 @@ import { listTours } from "@/modules/tours";
 import { TourForm } from "./tour-form";
 import { deleteTourAction } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
+import { SyncButton } from "./sync-button";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export default async function AdminTours({
     <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
       <div>
         <h1 className="mb-4 text-2xl font-extrabold">Tours &amp; parks</h1>
+        <SyncButton />
         <div className="grid gap-2">
           {tours.map((t) => (
             <a

@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
+import { useCurrency, type Currency } from "@/lib/currency";
 import { useWishlist } from "@/lib/wishlist";
 import { AuthModal, type AuthMode } from "./AuthModal";
 import { TutCasaMark, LogoWord } from "./TutCasaLogo";
@@ -17,6 +18,8 @@ import { TutCasaMark, LogoWord } from "./TutCasaLogo";
 export function SiteHeader({ whatsapp }: { whatsapp: string }) {
   const pathname = usePathname();
   const { setLang, lang } = useLang();
+  const { cur, setCur } = useCurrency();
+  const [curOpen, setCurOpen] = useState(false);
   const { count } = useWishlist();
   const [langOpen, setLangOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
@@ -31,6 +34,7 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
       const el = e.target as Element | null;
       if (el?.closest?.(".lang-wrap, .acct-wrap")) return;
       setLangOpen(false);
+      setCurOpen(false);
       setAcctOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
@@ -104,6 +108,26 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
                 <a onClick={() => { setLang("en"); setLangOpen(false); }}>&#127468;&#127463; English</a>
                 <a onClick={() => { setLang("fr"); setLangOpen(false); }}>&#127467;&#127479; Fran&ccedil;ais</a>
                 <a onClick={() => { setLang("es"); setLangOpen(false); }}>&#127474;&#127485; Espa&ntilde;ol</a>
+              </div>
+            </div>
+            <div className="lang-wrap">
+              <button
+                className="lang"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurOpen((o) => !o);
+                  setLangOpen(false);
+                  setAcctOpen(false);
+                }}
+              >
+                <span>{cur}</span> <span style={{ fontSize: 10 }}>&#9662;</span>
+              </button>
+              <div className={`lang-menu${curOpen ? " open" : ""}`}>
+                {(["USD", "MXN", "CAD"] as Currency[]).map((c) => (
+                  <a key={c} onClick={() => { setCur(c); setCurOpen(false); }}>
+                    {c === "USD" ? "\u{1F1FA}\u{1F1F8}" : c === "MXN" ? "\u{1F1F2}\u{1F1FD}" : "\u{1F1E8}\u{1F1E6}"} {c}
+                  </a>
+                ))}
               </div>
             </div>
             <div className="acct-wrap">

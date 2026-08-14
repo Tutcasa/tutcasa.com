@@ -13,6 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
+import { useCurrency } from "@/lib/currency";
 
 export interface TourCardData {
   slug: string;
@@ -20,11 +21,34 @@ export interface TourCardData {
   sub: string;
   dur: string;
   desc: string;
-  priceMXN: number | null; // null = on request
+  priceMXN: number | null; // per-person fallback; null = on request
+  /** Amanah tier model: TOTAL MXN per group size (price authority) */
+  groupPrices?: Record<string, number> | null;
+  /** Amanah tour photo (absolute URL); gradient placeholder when absent */
+  img?: string | null;
   park: boolean;
   city: string; // town filter, default "Playa del Carmen"
   g: string;
   stops: [string, string, string][];
+}
+
+/** mirror of the server's tierTotalMXN — clamp to the nearest offered tier */
+function tierTotal(gp: Record<string, number> | null | undefined, pax: number): number | null {
+  if (!gp) return null;
+  const keys = Object.keys(gp).map(Number).filter((k) => k > 0).sort((a, b) => a - b);
+  if (!keys.length) return null;
+  const at = [...keys].reverse().find((k) => k <= pax) ?? keys[0];
+  return gp[String(at)] ?? null;
+}
+function tierMinPax(gp: Record<string, number> | null | undefined): number {
+  if (!gp) return 1;
+  const keys = Object.keys(gp).map(Number).filter((k) => k > 0);
+  return keys.length ? Math.min(...keys) : 1;
+}
+function tierMaxPax(gp: Record<string, number> | null | undefined): number {
+  if (!gp) return 6;
+  const keys = Object.keys(gp).map(Number).filter((k) => k > 0);
+  return keys.length ? Math.max(...keys) : 6;
 }
 
 export interface AddonData {
@@ -60,6 +84,7 @@ function TourCard({
 }) {
   const router = useRouter();
   const { t: tr } = useLang();
+  const { cur, fromMXN } = useCurrency();
   const [date, setDate] = useState("");
   const [n, setN] = useState(1);
   const [sel, setSel] = useState<string[]>([]);
@@ -74,11 +99,18 @@ function TourCard({
   const visibleAddons = addons.filter((x) => t.name.indexOf(x.name.split(" ")[0]) === -1);
   const selAddons = visibleAddons.filter((x) => sel.includes(x.name));
   const addSum = selAddons.reduce((a, x) => a + (x.priceMXN ?? 0), 0);
-  const tot = ((t.priceMXN ?? 0) + addSum) * n;
+  // Amanah tier totals are the price authority (group total, discount built
+  // in); the legacy per-person price is the fallback. Add-ons stay per person.
+  const priced = !!t.groupPrices || t.priceMXN !== null;
+  const minPax = tierMinPax(t.groupPrices);
+  const maxPax = tierMaxPax(t.groupPrices);
+  const pax = Math.min(Math.max(n, minPax), maxPax);
+  const baseTot = tierTotal(t.groupPrices, pax) ?? (t.priceMXN ?? 0) * pax;
+  const tot = baseTot + addSum * pax;
 
   function bookNow() {
     if (!date) { onToast("Please choose a tour date first."); dateRef.current?.focus(); return; }
-    const q = new URLSearchParams({ tour: t.slug, date, n: String(n) });
+    const q = new URLSearchParams({ tour: t.slug, date, n: String(pax) });
     if (sel.length) q.set("addons", JSON.stringify(sel));
     router.push("/tour-booking?" + q.toString());
   }
@@ -103,10 +135,16 @@ function TourCard({
   return (
     <div className="tt-card">
       <div className="tt-img">
-        <div className={`ph ${t.g}`}></div>
-        <span className="tt-photo">Photo</span>
+        {t.img ? (
+          <div className="ph" style={{ backgroundImage: `url(${t.img})`, backgroundSize: "cover", backgroundPosition: "center" }}></div>
+        ) : (
+          <>
+            <div className={`ph ${t.g}`}></div>
+            <span className="tt-photo">Photo</span>
+          </>
+        )}
         <span className="tt-dur">{t.dur}</span>
-        {t.priceMXN === null && <span className="tt-onreq" dangerouslySetInnerHTML={{ __html: tr("byo_onreq") }} />}
+        {!priced && <span className="tt-onreq" dangerouslySetInnerHTML={{ __html: tr("byo_onreq") }} />}
       </div>
       <div className="tt-body">
         <div className="tt-name">{t.name}</div>
@@ -127,7 +165,7 @@ function TourCard({
           </>
         )}
         <div className="tt-div"></div>
-        {t.priceMXN === null ? (
+        {!priced ? (
           <div className="tt-ctrl">
             <div className="tt-price-row">
               <div className="tt-plabel">Pricing</div>
@@ -143,17 +181,17 @@ function TourCard({
               <div className="tt-field">
                 <label>People <span className="tt-info" data-tip="For groups of more than 6, contact us to arrange your private tour.">i</span></label>
                 <div className="tt-step">
-                  <button type="button" onClick={() => setN((v) => Math.max(1, v - 1))}>&minus;</button>
-                  <div className="tt-count">{n}</div>
-                  <button type="button" onClick={() => setN((v) => Math.min(6, v + 1))}>+</button>
+                  <button type="button" onClick={() => setN(Math.max(minPax, pax - 1))}>&minus;</button>
+                  <div className="tt-count">{pax}</div>
+                  <button type="button" onClick={() => setN(Math.min(maxPax, pax + 1))}>+</button>
                 </div>
               </div>
             </div>
             <div className="tt-price-row">
               <div className="tt-plabel">Total</div>
               <div className="tt-amount">
-                <span className="tt-total">{fmtN(tot)} <span className="cur">MXN</span></span>
-                <span className="tt-per">{fmtUSD(tot)}</span>
+                <span className="tt-total">{cur === "MXN" ? <>{fmtN(tot)} <span className="cur">MXN</span></> : fromMXN(tot)}</span>
+                <span className="tt-per">{cur === "MXN" ? fmtUSD(tot) : `${fmtN(tot)} MXN`}</span>
               </div>
             </div>
             {!t.park && (

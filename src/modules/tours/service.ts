@@ -1,13 +1,16 @@
 import "server-only";
 import { getDb } from "@/lib/db";
 import { notifyTourBooking } from "@/modules/notifications";
-import type { Tour, TourBooking, TourBookingRequest, TourReserveResult } from "./types";
+import { tierTotalMXN, type Tour, type TourBooking, type TourBookingRequest, type TourReserveResult } from "./types";
 
 interface TourRow {
   id: string; slug: string; title: string; subtitle: string | null;
   partner: string; city: string | null; duration_label: string | null;
   description: string | null; highlights: string[]; price_cents: number;
   currency: string; min_group: number; max_group: number;
+  group_prices: Record<string, number> | null;
+  photo_url: string | null;
+  stops: { time: string; place: string; desc: string }[] | null;
   category: "tour" | "park"; status: Tour["status"];
 }
 
@@ -17,6 +20,8 @@ function toTour(r: TourRow): Tour {
     partner: r.partner, city: r.city, durationLabel: r.duration_label ?? "",
     description: r.description ?? "", highlights: r.highlights ?? [],
     priceCents: r.price_cents, currency: r.currency,
+    groupPrices: r.group_prices, photoUrl: r.photo_url,
+    stops: r.stops ?? [],
     minGroup: r.min_group, maxGroup: r.max_group,
     category: r.category, status: r.status,
   };
@@ -24,7 +29,7 @@ function toTour(r: TourRow): Tour {
 
 const SELECT = `id, slug, title, subtitle, partner, city, duration_label,
   description, highlights, price_cents, currency, min_group, max_group,
-  category, status`;
+  group_prices, photo_url, stops, category, status`;
 
 export async function listTours(opts?: { category?: "tour" | "park"; includeUnpublished?: boolean }): Promise<Tour[]> {
   const wh: string[] = [];
@@ -61,12 +66,14 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
   }
   const tour = await tourBySlug(req.tourSlug);
   if (!tour || tour.status !== "published") return { ok: false, error: "TOUR_NOT_FOUND" };
-  if (tour.priceCents <= 0) return { ok: false, error: "ON_REQUEST" };
+  // Amanah tier totals are the price authority; legacy per-person is the fallback
+  const tierTotal = tierTotalMXN(tour.groupPrices, req.groupSize);
+  if (tierTotal == null && tour.priceCents <= 0) return { ok: false, error: "ON_REQUEST" };
   if (req.groupSize < tour.minGroup || req.groupSize > tour.maxGroup) {
     return { ok: false, error: "INVALID_GROUP" };
   }
 
-  const total = tour.priceCents * req.groupSize;
+  const total = tierTotal != null ? Math.round(tierTotal * 100) : tour.priceCents * req.groupSize;
   const res = await getDb().query<{ id: string }>(
     `insert into tour_bookings
        (tour_id, guest_name, guest_email, guest_phone, tour_date, group_size,

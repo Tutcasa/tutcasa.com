@@ -51,3 +51,12 @@ export async function saveTourAction(
     ? { ok: true, message: id ? "Tour updated." : "Tour created." }
     : { ok: false, message: "Check the fields — title and a price of 0 or more are required." };
 }
+
+export async function syncAmanahAction(): Promise<{ ok: boolean; text: string }> {
+  const { syncAmanahTours } = await import("@/modules/tours/sync");
+  const res = await syncAmanahTours();
+  revalidatePath("/admin/tours");
+  revalidatePath("/tours");
+  revalidatePath("/");
+  return { ok: res.ok, text: res.message };
+}

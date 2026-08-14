@@ -22,10 +22,15 @@ function toCard(t: Tour): TourCardData {
     dur: t.durationLabel,
     desc: t.description,
     priceMXN: t.priceCents > 0 ? Math.round(t.priceCents / 100) : null,
+    groupPrices: t.groupPrices,
+    img: t.photoUrl,
     park: t.category === "park",
     city: t.city ?? "Playa del Carmen",
     g: demo?.g ?? "g1",
-    stops: demo?.stops ?? [],
+    // synced Amanah itineraries win; demo stops are the fallback
+    stops: t.stops.length
+      ? t.stops.map((s): [string, string, string] => [s.time, s.place, s.desc])
+      : demo?.stops ?? [],
   };
 }
 

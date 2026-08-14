@@ -13,6 +13,7 @@ import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
 import { reserveTourAction } from "@/app/tours/[slug]/actions";
+import { useCurrency } from "@/lib/currency";
 
 export interface CheckoutLine {
   n: string;
@@ -78,6 +79,7 @@ export function CheckoutClient({
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const { cur: displayCur, fromUSD, fromMXN } = useCurrency();
   const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
   const discount = Math.min(coupon?.discount ?? 0, totalBefore);
   const total = totalBefore - discount;
@@ -180,7 +182,10 @@ export function CheckoutClient({
             )}
             <div className="co-row"><span>Subtotal</span><span>${money(totalBefore)} {cur}</span></div>
             <div className="co-row big"><span>Total</span><span>${money(total)} {cur}</span></div>
-            {cur === "MXN" && <div className="co-usd">&#8776; {money(Math.round(total / RATE))} USD</div>}
+            {cur === "MXN" && displayCur === "USD" && <div className="co-usd">&#8776; {money(Math.round(total / RATE))} USD</div>}
+            {displayCur !== cur && !(cur === "MXN" && displayCur === "USD") && (
+              <div className="co-usd">&#8776; {cur === "USD" ? fromUSD(total) : fromMXN(total)}</div>
+            )}
             {schedule && schedule.balance > 0 && (
               <>
                 <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
