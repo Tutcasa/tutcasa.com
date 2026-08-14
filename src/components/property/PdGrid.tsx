@@ -71,7 +71,7 @@ export function PdGrid({ p }: { p: PdData }) {
   const today = localISO(new Date());
 
   const nights = ci && co ? Math.max(0, Math.round((+new Date(co) - +new Date(ci)) / 86400000)) : 0;
-  const quoteKey = `${ci}|${co}`;
+  const quoteKey = `${ci}|${co}|${guests}`;
   const quote = quoteFor?.key === quoteKey ? quoteFor.res : null;
 
   const blocked = (iso: string) => p.unavailable.some((r) => iso >= r.from && iso < r.to);
@@ -79,12 +79,12 @@ export function PdGrid({ p }: { p: PdData }) {
 
   useEffect(() => {
     if (!ci || !co || co <= ci || nights < p.minStay) return;
-    const key = `${ci}|${co}`;
+    const key = `${ci}|${co}|${guests}`;
     startQuote(async () => {
-      const res = await getQuoteAction(p.slug, ci, co);
+      const res = await getQuoteAction(p.slug, ci, co, guests);
       setQuoteFor({ key, res });
     });
-  }, [ci, co, nights, p.minStay, p.slug]);
+  }, [ci, co, nights, p.minStay, p.slug, guests]);
 
   function pdG(d: number) {
     const next = Math.max(1, Math.min(p.guests, guests + d));
@@ -131,6 +131,12 @@ export function PdGrid({ p }: { p: PdData }) {
           <div className="row"><span>Taxes &amp; cleaning</span><span>included</span></div>
           {warn}
           <div className="tot"><span>Total (all-in)</span><span>${fmt(Math.round(total / 100))} {quote.quote.currency}</span></div>
+          {quote.quote.schedule.balanceCents > 0 && (
+            <div className="row" style={{ color: "var(--cactus)" }}>
+              <span>Due today</span>
+              <span>${fmt(Math.round(quote.quote.schedule.dueNowCents / 100))}</span>
+            </div>
+          )}
         </>
       );
     }

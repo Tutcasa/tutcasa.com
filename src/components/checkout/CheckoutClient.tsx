@@ -23,7 +23,15 @@ export interface CheckoutLine {
 export type CheckoutPayload =
   | { kind: "stay"; slug: string; ci: string; co: string; guests: number }
   | { kind: "tour"; slug: string; date: string; groupSize: number; notes?: string }
-  | { kind: "none" }; // demo-style preview confirm (gift cards, acts-only carts)
+  | { kind: "none" }; // demo-style preview confirm (acts-only carts)
+
+/** Deposit split + security-deposit info, display units. */
+export interface CheckoutSchedule {
+  dueNow: number;
+  balance: number;
+  balanceBy?: string; // YYYY-MM-DD
+  securityDeposit?: number;
+}
 
 const RATE = 17;
 const money = (n: number) => Number(n).toLocaleString("en-US");
@@ -47,11 +55,13 @@ export function CheckoutClient({
   currency,
   dates,
   payload,
+  schedule,
 }: {
   lines: CheckoutLine[];
   currency: "USD" | "MXN";
   dates?: string;
   payload: CheckoutPayload;
+  schedule?: CheckoutSchedule;
 }) {
   const [email, setEmail] = useState("");
   const [ccName, setCcName] = useState("");
@@ -143,6 +153,22 @@ export function CheckoutClient({
             <div className="co-row"><span>Subtotal</span><span>${money(total)} {cur}</span></div>
             <div className="co-row big"><span>Total</span><span>${money(total)} {cur}</span></div>
             {cur === "MXN" && <div className="co-usd">&#8776; {money(Math.round(total / RATE))} USD</div>}
+            {schedule && schedule.balance > 0 && (
+              <>
+                <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
+                  <span>Due today</span><span>${money(schedule.dueNow)} {cur}</span>
+                </div>
+                <div className="co-row">
+                  <span>Balance{schedule.balanceBy ? ` — due by ${schedule.balanceBy}` : ""}</span>
+                  <span>${money(schedule.balance)} {cur}</span>
+                </div>
+              </>
+            )}
+            {schedule?.securityDeposit ? (
+              <div style={{ fontSize: "12.5px", color: "var(--grey, #8a7a72)", marginTop: 6 }}>
+                + ${money(schedule.securityDeposit)} {cur} refundable security deposit, returned after checkout.
+              </div>
+            ) : null}
           </div>
           <div className="co-card">
             <h3>Payment</h3>
@@ -163,7 +189,11 @@ export function CheckoutClient({
               <div style={{ color: "var(--rosa)", fontSize: "13px", fontWeight: 700, marginBottom: 10 }}>{error}</div>
             )}
             <button className="co-pay" onClick={pay} disabled={paying}>
-              <span>{paying ? "Holding your dates…" : `Pay $${money(total)} ${cur}`}</span>
+              <span>
+                {paying
+                  ? "Holding your dates…"
+                  : `Pay $${money(schedule && schedule.balance > 0 ? schedule.dueNow : total)} ${cur}${schedule && schedule.balance > 0 ? " now" : ""}`}
+              </span>
             </button>
             <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
             <div className="co-note">Preview mode: this shows the full checkout flow. The live Stripe charge is switched on at the backend step &mdash; no real payment is taken here.</div>

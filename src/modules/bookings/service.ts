@@ -1,7 +1,7 @@
 import "server-only";
 import { getDb } from "@/lib/db";
 import { getListingsRepo } from "@/modules/listings";
-import { quote } from "@/modules/pricing";
+import { resolveStayQuote } from "@/modules/pricing/resolve";
 import type {
   Booking,
   BookingRequest,
@@ -48,15 +48,13 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     return { ok: false, error: "TOO_MANY_GUESTS" };
   }
 
-  let q;
-  try {
-    q = quote(listing, checkIn, checkOut);
-  } catch (e) {
-    return {
-      ok: false,
-      error: (e as Error).message === "MIN_STAY_NOT_MET" ? "MIN_STAY_NOT_MET" : "INVALID_DATES",
-    };
+  // full price model: base/seasonal rates + per-date overrides + the
+  // admin's fee/discount/deposit configuration
+  const quoted = await resolveStayQuote(req.listingSlug, req.checkIn, req.checkOut, req.guests);
+  if (!quoted.ok) {
+    return { ok: false, error: quoted.error === "LISTING_NOT_FOUND" ? "LISTING_NOT_FOUND" : quoted.error };
   }
+  const q = quoted.quote;
 
   const db = getDb();
   await db.query("select release_expired_holds()"); // lazy expiry
@@ -93,6 +91,15 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           accommodationCents: q.accommodationCents,
           cleaningCents: q.cleaningCents,
           taxCents: q.taxCents,
+          weekendUpliftCents: q.weekendUpliftCents,
+          lengthDiscountCents: q.lengthDiscountCents,
+          earlyBirdDiscountCents: q.earlyBirdDiscountCents,
+          extraGuestFeeCents: q.extraGuestFeeCents,
+          cityFeeCents: q.cityFeeCents,
+          securityDepositCents: q.securityDepositCents,
+          dueNowCents: q.schedule.dueNowCents,
+          balanceCents: q.schedule.balanceCents,
+          balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
       ],
     );

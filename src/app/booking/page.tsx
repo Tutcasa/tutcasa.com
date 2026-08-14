@@ -1,9 +1,7 @@
 import "@/styles/demo/checkout.css";
 import type { Metadata } from "next";
-import { getListingsRepo } from "@/modules/listings";
-import { quote, nightsBetween } from "@/modules/pricing";
-import { displayCityCountry } from "@/lib/demo-parity";
-import { CheckoutClient, type CheckoutLine, type CheckoutPayload } from "@/components/checkout/CheckoutClient";
+import { resolveStayQuote } from "@/modules/pricing/resolve";
+import { CheckoutClient, type CheckoutLine, type CheckoutPayload, type CheckoutSchedule } from "@/components/checkout/CheckoutClient";
 
 export const dynamic = "force-dynamic";
 
@@ -31,25 +29,41 @@ export default async function BookingCheckoutPage({
   let dates: string | undefined;
   let payload: CheckoutPayload = { kind: "none" };
 
+  let schedule: CheckoutSchedule | undefined;
+
   if (q.stay && q.ci && q.co) {
-    // stay checkout — price is ALWAYS recomputed server-side
-    const listing = await getListingsRepo().bySlug(q.stay);
+    // stay checkout — price is ALWAYS recomputed server-side from the
+    // stored rates + the admin's full pricing configuration
     const guests = Math.max(1, parseInt(q.guests ?? "2", 10) || 2);
-    if (listing) {
-      try {
-        const qt = quote(listing, new Date(`${q.ci}T00:00:00Z`), new Date(`${q.co}T00:00:00Z`));
-        const nights = nightsBetween(new Date(`${q.ci}T00:00:00Z`), new Date(`${q.co}T00:00:00Z`));
-        lines = [{
-          n: `${listing.title} — ${displayCityCountry(listing).split(",")[0]}`,
-          m: `${nights} nights · ${guests} guests · ${q.ci} → ${q.co}`,
-          a: Math.round(qt.totalCents / 100),
-        }];
-        currency = "USD";
-        dates = `${q.ci} → ${q.co}`;
-        payload = { kind: "stay", slug: listing.slug, ci: q.ci, co: q.co, guests };
-      } catch {
-        // invalid dates / min-stay — fall through to the empty cart
-      }
+    const res = await resolveStayQuote(q.stay, q.ci, q.co, guests);
+    if (res.ok) {
+      const qt = res.quote;
+      const d = (c: number) => Math.round(c / 100);
+      lines = [{
+        n: `${res.listing.title} — ${res.listing.city}`,
+        m: `${qt.nights} nights · ${guests} guests · ${q.ci} → ${q.co}`,
+        a: d(qt.accommodationCents),
+      }];
+      if (qt.lengthDiscountCents > 0) lines.push({
+        n: qt.lengthDiscountKind === "monthly" ? "Monthly stay discount" : "Weekly stay discount",
+        m: "", a: -d(qt.lengthDiscountCents),
+      });
+      if (qt.earlyBirdDiscountCents > 0) lines.push({ n: "Early-bird discount", m: "", a: -d(qt.earlyBirdDiscountCents) });
+      if (qt.extraGuestFeeCents > 0) lines.push({ n: "Extra guests", m: "", a: d(qt.extraGuestFeeCents) });
+      if (qt.cleaningCents > 0) lines.push({ n: "Cleaning fee", m: "", a: d(qt.cleaningCents) });
+      if (qt.cityFeeCents > 0) lines.push({ n: "City fee", m: "", a: d(qt.cityFeeCents) });
+      // tax as the closing line, sized so the lines sum exactly to the total
+      const soFar = lines.reduce((a, l) => a + l.a, 0);
+      lines.push({ n: "Taxes", m: "", a: d(qt.totalCents) - soFar });
+      currency = "USD";
+      dates = `${q.ci} → ${q.co}`;
+      payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests };
+      schedule = {
+        dueNow: d(qt.schedule.dueNowCents),
+        balance: d(qt.schedule.balanceCents),
+        balanceBy: qt.schedule.balanceDueDate?.toISOString().slice(0, 10),
+        securityDeposit: qt.securityDepositCents > 0 ? d(qt.securityDepositCents) : undefined,
+      };
     }
   } else if (q.items) {
     // demo cart contract (gift cards): display-only, no charge is taken
@@ -69,7 +83,7 @@ export default async function BookingCheckoutPage({
 
   return (
     <div className="pg-checkout">
-      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} />
+      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} schedule={schedule} />
     </div>
   );
 }
