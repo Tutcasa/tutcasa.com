@@ -61,6 +61,11 @@ export function BookingRow({
         <td className="p-3">
           {b.guestName}
           <div className="text-xs text-grey">{b.guestEmail}</div>
+          {b.source === "amanah" && (
+            <span className="mt-1 inline-block rounded-pill bg-terra/15 px-2 py-0.5 text-[10px] font-bold uppercase text-terra">
+              Amanah Vacations{b.partnerRef ? ` · ${b.partnerRef}` : ""}
+            </span>
+          )}
         </td>
         <td className="p-3 font-bold">{money(b.totalCents)}</td>
         <td className="p-3">
