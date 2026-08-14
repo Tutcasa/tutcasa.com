@@ -40,7 +40,17 @@ export default async function ToursPage({
   searchParams: Promise<{ cat?: string }>;
 }) {
   const { cat } = await searchParams;
-  const [tours, contact] = await Promise.all([listTours(), getSetting("contact")]);
+  const [tours, contact, addonsSetting] = await Promise.all([
+    listTours(),
+    getSetting("contact"),
+    getSetting("tour_addons"),
+  ]);
+
+  // synced Amanah activities (priced only) win; the demo catalog is the
+  // fallback until the first sync runs
+  const pickerAddons = addonsSetting.items.length
+    ? addonsSetting.items.map((a) => ({ name: a.name, icon: a.icon, priceMXN: a.priceMXN, unit: a.unit }))
+    : ADDONS.filter((a) => a.priceMXN != null).map((a) => ({ name: a.name, icon: a.icon, priceMXN: a.priceMXN, unit: a.unit }));
 
   /* demo display order for the seeded tours; admin additions follow */
   const sorted = [...tours].sort((a, b) => {
@@ -53,8 +63,8 @@ export default async function ToursPage({
     <div className="pg-tours">
       <ToursClient
         tours={sorted.map(toCard)}
-        addons={ADDONS.map((a) => ({ name: a.name, icon: a.icon, priceMXN: a.priceMXN, unit: a.unit }))}
-        byoActs={BYO_ACTS.map((a) => ({ name: a.name, icon: a.icon, priceMXN: a.priceMXN, unit: a.unit }))}
+        addons={pickerAddons}
+        byoActs={pickerAddons}
         whatsapp={contact.whatsapp}
         email={contact.email}
         initialView={cat === "parks" ? "parks" : "tours"}

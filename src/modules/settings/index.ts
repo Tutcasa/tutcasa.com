@@ -62,6 +62,11 @@ export interface LoyaltyContent {
   bandText: string;
 }
 
+/** Synced from amanahvacations.com — the tour add-ons picker catalog. */
+export interface TourAddonsSetting {
+  items: { name: string; icon: string; priceMXN: number; unit: string }[];
+}
+
 const DEFAULTS: {
   contact: ContactSettings;
   investor: InvestorSettings;
@@ -69,9 +74,11 @@ const DEFAULTS: {
   page_why: WhyBookContent;
   page_concierge: ConciergeContent;
   page_loyalty: LoyaltyContent;
+  tour_addons: TourAddonsSetting;
 } = {
   contact: { whatsapp: "201069706782", email: "", instagram: "", facebook: "" },
   investor: { deck_url: "", deck_name: "" },
+  tour_addons: { items: [] },
 
   page_policies: {
     hero: {

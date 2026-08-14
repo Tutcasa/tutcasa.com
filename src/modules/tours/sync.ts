@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "@/lib/db";
+import { setSetting } from "@/modules/settings";
 
 /**
  * Amanah tours sync — mirrors amanahvacations.com/api/tours into the
@@ -26,6 +27,33 @@ interface FeedTour {
   img: string | null;
   stops: FeedStop[];
 }
+interface FeedPark {
+  id: string;
+  name: string;
+  sub: string;
+  dur: string;
+  priceMXN: number;
+  img: string | null;
+  desc: string;
+}
+interface FeedAddon {
+  id: string;
+  name: string;
+  emoji: string;
+  priceMXN: number | null;
+  unit: string;
+  onRequest: boolean;
+}
+
+/** Amanah park id → TutCasa slug (keeps the seeded slugs stable) */
+const PARK_SLUG: Record<string, string> = {
+  xcaret: "xcaret-park",
+  xelha: "xel-ha-park",
+  xplor: "xplor-park",
+  xplorfuego: "xplor-fuego-park",
+  xsenses: "xenses-park",
+  monkey: "monkey-sanctuary",
+};
 
 export interface SyncResult {
   ok: boolean;
@@ -35,7 +63,7 @@ export interface SyncResult {
 }
 
 export async function syncAmanahTours(): Promise<SyncResult> {
-  let feed: { tours: FeedTour[] };
+  let feed: { tours: FeedTour[]; parks?: FeedPark[]; addons?: FeedAddon[] };
   try {
     const res = await fetch(FEED_URL, { cache: "no-store" });
     if (!res.ok) return { ok: false, message: `Amanah feed returned HTTP ${res.status}.` };
@@ -83,10 +111,56 @@ export async function syncAmanahTours(): Promise<SyncResult> {
     [keys],
   );
 
+  // ---------- parks (live Amanah rate card, images included) ----------
+  let parksUpserted = 0;
+  const parkSlugs: string[] = [];
+  for (const p of feed.parks ?? []) {
+    if (!p.id || !p.name || !(p.priceMXN > 0)) continue;
+    const slug = PARK_SLUG[p.id] ?? `${p.id.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-park`;
+    parkSlugs.push(slug);
+    await db.query(
+      `insert into tours (slug, title, subtitle, partner, city, duration_label,
+                          description, price_cents, currency, category, status,
+                          photo_url, source, synced_at)
+       values ($1,$2,$3,'amanah','Playa del Carmen',$4,$5,$6,'MXN','park','published',
+               $7,'amanah', now())
+       on conflict (slug) do update set
+         title=$2, subtitle=$3, duration_label=$4, description=$5,
+         price_cents=$6, photo_url=$7, source='amanah', synced_at=now(),
+         status='published'`,
+      [slug, p.name, p.sub || null, p.dur || null, p.desc || null,
+       Math.round(p.priceMXN * 100), p.img],
+    );
+    parksUpserted++;
+  }
+  let parksArchived = 0;
+  if (parkSlugs.length) {
+    const gone = await db.query(
+      `update tours set status='archived', synced_at=now()
+        where category='park' and status='published' and not (slug = any($1))
+        returning slug`,
+      [parkSlugs],
+    );
+    parksArchived = gone.rowCount ?? 0;
+  }
+
+  // ---------- add-on activities picker (priced only — no on-request) ----------
+  const pickerItems = (feed.addons ?? [])
+    .filter((a) => !a.onRequest && a.priceMXN != null && a.priceMXN > 0)
+    .map((a) => ({
+      name: a.name,
+      icon: a.emoji,
+      priceMXN: a.priceMXN as number,
+      unit: a.unit || "/person",
+    }));
+  if (pickerItems.length) {
+    await setSetting("tour_addons", { items: pickerItems });
+  }
+
   return {
     ok: true,
-    message: `Synced ${upserted} tours from Amanah${archivedRes.rowCount ? `, archived ${archivedRes.rowCount} removed` : ""}.`,
+    message: `Synced ${upserted} tours, ${parksUpserted} parks and ${pickerItems.length} activities from Amanah${archivedRes.rowCount || parksArchived ? `; archived ${(archivedRes.rowCount ?? 0) + parksArchived} removed` : ""}.`,
     upserted,
-    archived: archivedRes.rowCount ?? 0,
+    archived: (archivedRes.rowCount ?? 0) + parksArchived,
   };
 }
