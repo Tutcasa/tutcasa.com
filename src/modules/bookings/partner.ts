@@ -165,6 +165,145 @@ export async function confirmPartnerHold(
   return { ok: false, error: "HOLD_EXPIRED" };
 }
 
+/* ------------------------------------------------------------------ */
+/* Request-to-book flow: guest requests on Amanah WITHOUT payment; the */
+/* dates are held for 72h while the owner approves (admin Confirm) or  */
+/* declines (admin Cancel). Amanah polls the status endpoint and       */
+/* collects payment only after approval.                               */
+/* ------------------------------------------------------------------ */
+
+const REQUEST_HOLD_HOURS = 72;
+
+export type PartnerRequestResult =
+  | {
+      ok: true;
+      requestId: string;
+      status: "pending";
+      expiresAt: string;
+      quote: { nights: number; currency: string; total: number };
+    }
+  | { ok: false; error: "NOT_FOUND" | "INVALID_DATES" | "MIN_STAY_NOT_MET" | "MAX_GUESTS_EXCEEDED" | "DATES_TAKEN" | "INVALID_CONTACT" };
+
+export async function createPartnerRequest(input: {
+  slug: string;
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+  partnerRef?: string;
+  guestName: string;
+  guestEmail: string;
+  guestWhatsapp?: string;
+  notes?: string;
+}): Promise<PartnerRequestResult> {
+  const name = input.guestName?.trim();
+  const email = input.guestEmail?.trim();
+  if (!name || !email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return { ok: false, error: "INVALID_CONTACT" };
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  if (!input.checkIn || input.checkIn < today) return { ok: false, error: "INVALID_DATES" };
+
+  const quoted = await resolveStayQuote(input.slug, input.checkIn, input.checkOut, Math.max(1, input.guests));
+  if (!quoted.ok) {
+    if (quoted.error === "LISTING_NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
+    return { ok: false, error: quoted.error };
+  }
+  if (input.guests > quoted.listing.maxGuests) return { ok: false, error: "MAX_GUESTS_EXCEEDED" };
+  const q = quoted.quote;
+
+  const db = getDb();
+  await db.query("select release_expired_holds()");
+  const blocked = await db.query<{ n: string }>(
+    `select count(*) as n
+       from listing_unavailable_ranges($1) r
+      where daterange(r.from_date, r.to_date) && daterange($2::date, $3::date)`,
+    [quoted.listing.id, input.checkIn, input.checkOut],
+  );
+  if (Number(blocked.rows[0].n) > 0) return { ok: false, error: "DATES_TAKEN" };
+
+  try {
+    const res = await db.query<{ id: string; hold_expires_at: string }>(
+      `insert into bookings
+         (listing_id, guest_name, guest_email, guest_phone, stay, guests, status,
+          hold_expires_at, total_cents, currency, price_breakdown, source,
+          partner_ref, notes)
+       values ($1, $2, $3, $4, daterange($5::date, $6::date), $7, 'pending',
+               now() + interval '${REQUEST_HOLD_HOURS} hours', $8, $9, $10,
+               'amanah', $11, $12)
+       returning id, hold_expires_at`,
+      [
+        quoted.listing.id, name, email, input.guestWhatsapp?.trim() || null,
+        input.checkIn, input.checkOut, input.guests,
+        q.totalCents, q.currency,
+        JSON.stringify({
+          nights: q.nights,
+          nightlyCents: q.nightlyCents,
+          accommodationCents: q.accommodationCents,
+          cleaningCents: q.cleaningCents,
+          taxCents: q.taxCents,
+          lengthDiscountCents: q.lengthDiscountCents,
+          extraGuestFeeCents: q.extraGuestFeeCents,
+          cityFeeCents: q.cityFeeCents,
+          securityDepositCents: q.securityDepositCents,
+          partnerFullPayment: true,
+          partnerRequest: true, // awaiting owner approval — Amanah pays after
+        }),
+        input.partnerRef?.trim() || null,
+        input.notes?.trim() || null,
+      ],
+    );
+    return {
+      ok: true,
+      requestId: res.rows[0].id,
+      status: "pending",
+      expiresAt: new Date(res.rows[0].hold_expires_at).toISOString(),
+      quote: { nights: q.nights, currency: q.currency, total: Math.round(q.totalCents / 100) },
+    };
+  } catch (e) {
+    const err = e as { code?: string; constraint?: string };
+    if (err.code === "23P01" && err.constraint === "no_double_booking") {
+      return { ok: false, error: "DATES_TAKEN" };
+    }
+    throw e;
+  }
+}
+
+export interface PartnerBookingStatus {
+  ok: true;
+  bookingId: string;
+  /** pending = awaiting owner approval; confirmed = approved (collect payment);
+      cancelled = declined or expired */
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  partnerRef: string | null;
+  total: number;
+  currency: string;
+  amountPaid: number;
+  expiresAt: string | null;
+}
+
+export async function getPartnerBookingStatus(id: string): Promise<PartnerBookingStatus | null> {
+  if (!UUID.test(id)) return null;
+  const db = getDb();
+  await db.query("select release_expired_holds()"); // expired requests read as cancelled
+  const res = await db.query(
+    `select id, status, partner_ref, total_cents, currency, amount_paid_cents, hold_expires_at
+       from bookings where id=$1 and source='amanah'`,
+    [id],
+  );
+  const b = res.rows[0];
+  if (!b) return null;
+  return {
+    ok: true,
+    bookingId: b.id,
+    status: b.status,
+    partnerRef: b.partner_ref,
+    total: Math.round(b.total_cents / 100),
+    currency: b.currency,
+    amountPaid: Math.round((b.amount_paid_cents ?? 0) / 100),
+    expiresAt: b.hold_expires_at ? new Date(b.hold_expires_at).toISOString() : null,
+  };
+}
+
 /** Idempotent — releasing an unknown/expired/already-released hold is fine. */
 export async function releasePartnerHold(holdId: string): Promise<void> {
   if (!UUID.test(holdId)) return;
