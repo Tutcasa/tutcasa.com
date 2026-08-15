@@ -25,7 +25,12 @@ export type PartnerHoldResult =
       expiresAt: string;
       quote: { nights: number; currency: string; total: number };
     }
-  | { ok: false; error: "NOT_FOUND" | "INVALID_DATES" | "MIN_STAY_NOT_MET" | "MAX_GUESTS_EXCEEDED" | "DATES_TAKEN" };
+  | {
+      ok: false;
+      error: "NOT_FOUND" | "INVALID_DATES" | "MIN_STAY_NOT_MET" | "MAX_GUESTS_EXCEEDED" | "DATES_TAKEN" | "REQUEST_TO_BOOK";
+      /** on REQUEST_TO_BOOK: where the guest can send a booking request instead */
+      requestUrl?: string;
+    };
 
 export async function createPartnerHold(input: {
   slug: string;
@@ -44,6 +49,13 @@ export async function createPartnerHold(input: {
     return { ok: false, error: quoted.error };
   }
   if (input.guests > quoted.listing.maxGuests) return { ok: false, error: "MAX_GUESTS_EXCEEDED" };
+
+  // Request-to-book homes need the owner's approval before any money moves —
+  // they can never be sold instantly through a partner. The guest requests
+  // via TutCasa instead (admin toggle: "Instant booking" on the listing).
+  if (!quoted.listing.instantBook) {
+    return { ok: false, error: "REQUEST_TO_BOOK", requestUrl: `/stays/${quoted.listing.slug}` };
+  }
   const q = quoted.quote;
 
   const db = getDb();

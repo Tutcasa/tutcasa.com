@@ -27,7 +27,7 @@ export type StayQuoteResult =
   | {
       ok: true;
       quote: Quote;
-      listing: { id: string; slug: string; title: string; city: string; maxGuests: number };
+      listing: { id: string; slug: string; title: string; city: string; maxGuests: number; instantBook: boolean };
     }
   | { ok: false; error: StayQuoteError };
 
@@ -48,6 +48,7 @@ export async function resolveStayQuote(
   const db = getDb();
   const listingRes = await db.query(
     `select l.id, l.slug, l.title, l.city, l.max_guests, l.min_stay,
+            coalesce(l.instant_book,false) as instant_book,
             p.weekend_pct, p.weekend_cents, p.weekly_nightly_cents,
             p.monthly_nightly_cents, p.extra_guest_cents, p.extra_guest_after,
             p.cleaning_fee_mode, p.city_fee_cents, p.city_fee_mode,
@@ -133,6 +134,6 @@ export async function resolveStayQuote(
   return {
     ok: true,
     quote,
-    listing: { id: L.id, slug: L.slug, title: L.title, city: L.city, maxGuests: L.max_guests },
+    listing: { id: L.id, slug: L.slug, title: L.title, city: L.city, maxGuests: L.max_guests, instantBook: L.instant_book },
   };
 }

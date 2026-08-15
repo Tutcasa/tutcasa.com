@@ -31,6 +31,7 @@ export async function POST(req: Request) {
   if (res.ok) return NextResponse.json(res, { status: 201, headers: NO_STORE });
   const status =
     res.error === "NOT_FOUND" ? 404 :
-    res.error === "DATES_TAKEN" ? 409 : 422;
+    res.error === "DATES_TAKEN" ? 409 :
+    res.error === "REQUEST_TO_BOOK" ? 403 : 422;
   return NextResponse.json(res, { status, headers: NO_STORE });
 }
