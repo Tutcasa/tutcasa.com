@@ -84,12 +84,18 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
         <label className="text-xs font-bold">CITY
           <input name="city" defaultValue={listing.city} className={inputCls} />
         </label>
-        <label className="text-xs font-bold">COUNTRY
-          <select name="country" defaultValue={listing.country} className={inputCls}>
+        <label className="text-xs font-bold">COUNTRY <span className="font-normal text-grey">(2-letter code)</span>
+          <input name="country" defaultValue={listing.country} maxLength={2}
+                 list="tc-countries" className={`${inputCls} uppercase`}
+                 pattern="[A-Za-z]{2}" title="Two-letter country code, e.g. MX" />
+          <datalist id="tc-countries">
             <option value="MX">Mexico</option>
             <option value="EG">Egypt</option>
             <option value="US">USA</option>
-          </select>
+            <option value="CA">Canada</option>
+            <option value="DO">Dominican Republic</option>
+            <option value="CR">Costa Rica</option>
+          </datalist>
         </label>
         <label className="text-xs font-bold">REGION / NEIGHBORHOOD
           <input name="region" defaultValue={listing.region} placeholder="e.g. Riviera Maya" className={inputCls} />

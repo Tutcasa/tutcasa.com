@@ -1,6 +1,7 @@
 import { listBookings } from "@/modules/bookings";
 import { getDb } from "@/lib/db";
 import { BookingRow, type ListingOption } from "./booking-row";
+import { NewBookingForm } from "./new-booking-form";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,8 @@ export default async function AdminBookings({
   return (
     <div>
       <h1 className="mb-4 text-2xl font-extrabold">Stay bookings</h1>
+
+      <NewBookingForm listings={listings} />
 
       <div className="mb-4 flex flex-wrap gap-1.5">
         {FILTERS.map((f) => {

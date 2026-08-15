@@ -160,6 +160,7 @@ interface BookingRow {
   guest_name: string;
   guest_email: string;
   source: string;
+  invoice_no: number | null;
   partner_ref: string | null;
   created_at: string;
 }
@@ -174,7 +175,7 @@ export async function listBookings(): Promise<Booking[]> {
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
             b.guests, b.status, b.hold_expires_at, b.total_cents,
             b.currency, b.price_breakdown, b.guest_name, b.guest_email,
-            b.source, b.partner_ref, b.created_at
+            b.source, b.partner_ref, b.invoice_no, b.created_at
        from bookings b join listings l on l.id = b.listing_id
       order by b.created_at desc limit 200`,
   );
@@ -183,7 +184,7 @@ export async function listBookings(): Promise<Booking[]> {
     listingCity: r.city, checkIn: r.check_in, checkOut: r.check_out,
     guests: r.guests, status: r.status, holdExpiresAt: r.hold_expires_at,
     totalCents: r.total_cents, currency: r.currency,
-    source: r.source, partnerRef: r.partner_ref,
+    source: r.source, partnerRef: r.partner_ref, invoiceNo: String(r.invoice_no ?? ''),
     priceBreakdown: r.price_breakdown, guestName: r.guest_name,
     guestEmail: r.guest_email, createdAt: r.created_at,
   }));
@@ -199,7 +200,7 @@ export async function getBooking(id: string): Promise<Booking | null> {
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
             b.guests, b.status, b.hold_expires_at, b.total_cents,
             b.currency, b.price_breakdown, b.guest_name, b.guest_email,
-            b.source, b.partner_ref, b.created_at
+            b.source, b.partner_ref, b.invoice_no, b.created_at
        from bookings b join listings l on l.id = b.listing_id
       where b.id = $1`,
     [id],
@@ -220,6 +221,7 @@ export async function getBooking(id: string): Promise<Booking | null> {
     currency: r.currency,
     source: r.source,
     partnerRef: r.partner_ref,
+    invoiceNo: String(r.invoice_no ?? ''),
     priceBreakdown: r.price_breakdown,
     guestName: r.guest_name,
     guestEmail: r.guest_email,

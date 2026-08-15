@@ -239,3 +239,46 @@ test("uniformNights produces one entry per night with correct dates", () => {
     ["2026-08-14", "2026-08-15", "2026-08-16"],
   );
 });
+
+test("fixed weekend nightly replaces the rate (wins over pct)", () => {
+  const q = computeQuote(
+    base({ config: defaultPricingConfig({ weekendPct: 50, weekendCents: 15_000 }) }),
+  );
+  // Fri 10000 + Sat 15000 + Sun 15000
+  assert.equal(q.accommodationCents, 40_000);
+  assert.equal(q.weekendUpliftCents, 10_000);
+});
+
+test("fixed weekly nightly re-prices a 7+ stay (never an increase)", () => {
+  const q = computeQuote(
+    base({
+      nights: uniformNights(D("2026-09-07"), D("2026-09-14"), 10_000),
+      checkIn: D("2026-09-07"),
+      config: defaultPricingConfig({ weeklyDiscountPct: 5, weeklyNightlyCents: 9_000 }),
+    }),
+  );
+  assert.equal(q.lengthDiscountKind, "weekly");
+  assert.equal(q.lengthDiscountCents, 7_000); // 70000 - 9000*7
+  assert.equal(q.totalCents, 63_000);
+  // a replacement HIGHER than the rate never increases the price
+  const higher = computeQuote(
+    base({
+      nights: uniformNights(D("2026-09-07"), D("2026-09-14"), 10_000),
+      checkIn: D("2026-09-07"),
+      config: defaultPricingConfig({ weeklyNightlyCents: 12_000 }),
+    }),
+  );
+  assert.equal(higher.lengthDiscountCents, 0);
+});
+
+test("fixed monthly nightly wins over weekly at 30+ nights", () => {
+  const q = computeQuote(
+    base({
+      nights: uniformNights(D("2026-09-01"), D("2026-10-01"), 10_000),
+      checkIn: D("2026-09-01"),
+      config: defaultPricingConfig({ weeklyNightlyCents: 9_000, monthlyNightlyCents: 8_000 }),
+    }),
+  );
+  assert.equal(q.lengthDiscountKind, "monthly");
+  assert.equal(q.lengthDiscountCents, 60_000); // 300000 - 8000*30
+});

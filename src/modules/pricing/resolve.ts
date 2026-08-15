@@ -48,7 +48,8 @@ export async function resolveStayQuote(
   const db = getDb();
   const listingRes = await db.query(
     `select l.id, l.slug, l.title, l.city, l.max_guests, l.min_stay,
-            p.weekend_pct, p.extra_guest_cents, p.extra_guest_after,
+            p.weekend_pct, p.weekend_cents, p.weekly_nightly_cents,
+            p.monthly_nightly_cents, p.extra_guest_cents, p.extra_guest_after,
             p.cleaning_fee_mode, p.city_fee_cents, p.city_fee_mode,
             p.security_deposit_cents, p.weekly_discount_pct,
             p.monthly_discount_pct, p.early_bird_pct, p.early_bird_min_days,
@@ -111,6 +112,9 @@ export async function resolveStayQuote(
       taxPct: Number(base.tax_pct),
       currency: base.currency,
       weekendPct: Number(L.weekend_pct ?? 0),
+      weekendCents: L.weekend_cents ?? 0,
+      weeklyNightlyCents: L.weekly_nightly_cents ?? 0,
+      monthlyNightlyCents: L.monthly_nightly_cents ?? 0,
       extraGuestCents: L.extra_guest_cents ?? 0,
       extraGuestAfter: L.extra_guest_after ?? 0,
       cleaningFeeMode: (L.cleaning_fee_mode ?? "single") as FeeMode,

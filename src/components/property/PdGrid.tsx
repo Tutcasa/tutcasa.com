@@ -51,7 +51,6 @@ const REVIEW_POOL = [
   { n: "David", c: "#E8703A", d: "January 2026", t: "Great for our group of six. Kitchen had everything and the pool was perfect after a day exploring." },
 ];
 
-const fmt = (n: number) => Number(n).toLocaleString("en-US");
 
 function localISO(d: Date): string {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];

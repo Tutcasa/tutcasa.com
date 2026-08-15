@@ -49,7 +49,10 @@ export function BookingRow({
   return (
     <>
       <tr className="border-b border-line/60">
-        <td className="p-3 font-mono text-xs">{b.id.slice(0, 8).toUpperCase()}</td>
+        <td className="p-3 font-mono text-xs">
+          {b.invoiceNo ? <b>#{b.invoiceNo}</b> : b.id.slice(0, 8).toUpperCase()}
+          <div className="text-[10px] text-grey">{b.id.slice(0, 8).toUpperCase()}</div>
+        </td>
         <td className="p-3 font-semibold">
           {b.listingTitle}
           <div className="text-xs font-normal text-grey">{b.listingCity}</div>

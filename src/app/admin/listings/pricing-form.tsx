@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   savePricingAction,
   addSeasonAction,
@@ -13,6 +13,9 @@ export interface AdminPricing {
   cleaningCents: number;
   taxPct: number;
   weekendPct: number;
+  weekendCents: number;
+  weeklyNightlyCents: number;
+  monthlyNightlyCents: number;
   extraGuestCents: number;
   extraGuestAfter: number;
   cleaningFeeMode: string;
@@ -42,6 +45,30 @@ const inputCls =
 const sectionTitleCls =
   "mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey";
 
+/** spec: "fixed amount OR a percentage" — one value input + a mode select */
+function ModalPrice({
+  label, hint, modeName, valueName, pctLabel, fixedLabel, pct, cents,
+}: {
+  label: string; hint: string; modeName: string; valueName: string;
+  pctLabel: string; fixedLabel: string; pct: number; cents: number;
+}) {
+  const [mode, setMode] = useState(cents > 0 ? "fixed" : "pct");
+  return (
+    <label className="text-xs font-bold">{label} <span className="font-normal text-grey">({hint})</span>
+      <div className="flex gap-1.5">
+        <input name={valueName} type="number" min="0" step="0.5"
+               key={mode} defaultValue={mode === "fixed" ? cents / 100 : pct}
+               className={inputCls} />
+        <select name={modeName} value={mode} onChange={(e) => setMode(e.target.value)}
+                className={`${inputCls} w-auto`}>
+          <option value="pct">{pctLabel}</option>
+          <option value="fixed">{fixedLabel}</option>
+        </select>
+      </div>
+    </label>
+  );
+}
+
 export function PricingForm({
   listingId, pricing, seasons,
 }: { listingId: string; pricing: AdminPricing; seasons: AdminSeason[] }) {
@@ -61,10 +88,10 @@ export function PricingForm({
               <input name="nightlyUSD" type="number" min="1" step="1" required
                      defaultValue={pricing.nightlyCents / 100} className={inputCls} />
             </label>
-            <label className="text-xs font-bold">WEEKEND MARKUP % <span className="font-normal text-grey">(Sat &amp; Sun nights)</span>
-              <input name="weekendPct" type="number" min="0" step="0.5"
-                     defaultValue={pricing.weekendPct} className={inputCls} />
-            </label>
+            <ModalPrice label="WEEKEND PRICE" hint="Sat & Sun nights"
+              modeName="weekendMode" valueName="weekendValue"
+              pctLabel="% extra" fixedLabel="fixed $/night"
+              pct={pricing.weekendPct} cents={pricing.weekendCents} />
             <label className="text-xs font-bold">TAX %
               <input name="taxPct" type="number" min="0" step="0.1"
                      defaultValue={pricing.taxPct} className={inputCls} />
@@ -113,14 +140,14 @@ export function PricingForm({
         <div>
           <div className={sectionTitleCls}>Discounts</div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="text-xs font-bold">7+ NIGHTS DISCOUNT %
-              <input name="weeklyDiscountPct" type="number" min="0" max="100" step="0.5"
-                     defaultValue={pricing.weeklyDiscountPct} className={inputCls} />
-            </label>
-            <label className="text-xs font-bold">30+ NIGHTS DISCOUNT %
-              <input name="monthlyDiscountPct" type="number" min="0" max="100" step="0.5"
-                     defaultValue={pricing.monthlyDiscountPct} className={inputCls} />
-            </label>
+            <ModalPrice label="7+ NIGHTS PRICE" hint="whole stay"
+              modeName="weeklyMode" valueName="weeklyValue"
+              pctLabel="% discount" fixedLabel="fixed $/night"
+              pct={pricing.weeklyDiscountPct} cents={pricing.weeklyNightlyCents} />
+            <ModalPrice label="30+ NIGHTS PRICE" hint="whole stay"
+              modeName="monthlyMode" valueName="monthlyValue"
+              pctLabel="% discount" fixedLabel="fixed $/night"
+              pct={pricing.monthlyDiscountPct} cents={pricing.monthlyNightlyCents} />
             <label className="text-xs font-bold">EARLY-BIRD DISCOUNT %
               <input name="earlyBirdPct" type="number" min="0" max="100" step="0.5"
                      defaultValue={pricing.earlyBirdPct} className={inputCls} />

@@ -30,8 +30,14 @@ export interface NightRate {
 }
 
 export interface PricingConfig {
-  /** extra % added to Sat/Sun nights (0 = off) */
+  /** extra % added to Sat/Sun nights (0 = off; ignored when weekendCents set) */
   weekendPct: number;
+  /** FIXED replacement nightly for Sat/Sun nights (0 = off; wins over weekendPct) */
+  weekendCents: number;
+  /** FIXED replacement nightly for 7+ night stays (0 = off; wins over weeklyDiscountPct) */
+  weeklyNightlyCents: number;
+  /** FIXED replacement nightly for 30+ night stays (0 = off; wins over monthlyDiscountPct) */
+  monthlyNightlyCents: number;
   /** fee per guest per night, charged for guests beyond extraGuestAfter */
   extraGuestCents: number;
   /** guests included before the extra-guest fee applies */
@@ -118,6 +124,9 @@ export function defaultPricingConfig(
 ): PricingConfig {
   return {
     weekendPct: 0,
+    weekendCents: 0,
+    weeklyNightlyCents: 0,
+    monthlyNightlyCents: 0,
     extraGuestCents: 0,
     extraGuestAfter: 0,
     cleaningCents: 0,
@@ -167,31 +176,41 @@ export function computeQuote(input: QuoteInput): Quote {
   if (guests < 1) throw new Error("INVALID_GUESTS");
   const bookedAt = input.bookedAt ?? new Date();
 
-  // 1. accommodation with weekend markup
+  // 1. accommodation with weekend pricing — a fixed weekend nightly
+  //    (replacement price) wins over the percentage markup
   let accommodationCents = 0;
   let weekendUpliftCents = 0;
   for (const night of nights) {
     let rate = night.nightlyCents;
-    if (config.weekendPct > 0 && isWeekendNight(night.date)) {
-      const uplift = Math.round(rate * (config.weekendPct / 100));
-      weekendUpliftCents += uplift;
-      rate += uplift;
+    if (isWeekendNight(night.date)) {
+      if (config.weekendCents > 0) {
+        weekendUpliftCents += config.weekendCents - rate;
+        rate = config.weekendCents;
+      } else if (config.weekendPct > 0) {
+        const uplift = Math.round(rate * (config.weekendPct / 100));
+        weekendUpliftCents += uplift;
+        rate += uplift;
+      }
     }
     accommodationCents += rate;
   }
 
-  // 2. length-of-stay discount (monthly wins over weekly)
+  // 2. length-of-stay pricing (monthly wins over weekly). Fixed mode = the
+  //    whole stay re-priced at the replacement nightly (never an increase);
+  //    otherwise the percentage discount applies.
   let lengthDiscountCents = 0;
   let lengthDiscountKind: Quote["lengthDiscountKind"] = null;
-  if (n >= 30 && config.monthlyDiscountPct > 0) {
-    lengthDiscountCents = Math.round(
-      accommodationCents * (config.monthlyDiscountPct / 100),
-    );
+  const lengthFixed = (replacementCents: number) =>
+    Math.max(0, accommodationCents - replacementCents * n);
+  if (n >= 30 && (config.monthlyNightlyCents > 0 || config.monthlyDiscountPct > 0)) {
+    lengthDiscountCents = config.monthlyNightlyCents > 0
+      ? lengthFixed(config.monthlyNightlyCents)
+      : Math.round(accommodationCents * (config.monthlyDiscountPct / 100));
     lengthDiscountKind = "monthly";
-  } else if (n >= 7 && config.weeklyDiscountPct > 0) {
-    lengthDiscountCents = Math.round(
-      accommodationCents * (config.weeklyDiscountPct / 100),
-    );
+  } else if (n >= 7 && (config.weeklyNightlyCents > 0 || config.weeklyDiscountPct > 0)) {
+    lengthDiscountCents = config.weeklyNightlyCents > 0
+      ? lengthFixed(config.weeklyNightlyCents)
+      : Math.round(accommodationCents * (config.weeklyDiscountPct / 100));
     lengthDiscountKind = "weekly";
   }
 

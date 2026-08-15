@@ -35,6 +35,7 @@ export interface Booking {
   /** 'direct' | 'amanah' | channel sources — partner bookings show a badge */
   source: string;
   partnerRef: string | null;
+  invoiceNo: string;
   createdAt: string;
 }
 

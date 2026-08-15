@@ -213,7 +213,7 @@ export async function saveListingAction(
       id, title,
       String(formData.get("headline") ?? ""),
       String(formData.get("city") ?? ""),
-      String(formData.get("country") ?? "MX"),
+      String(formData.get("country") ?? "MX").trim().toUpperCase().slice(0, 2) || "MX",
       orNull(formData.get("region")),
       String(formData.get("propertyType") ?? "condo"),
       String(formData.get("description") ?? ""),
@@ -270,6 +270,17 @@ export async function savePricingAction(
     return { ok: false, message: "Deposit % must be between 1 and 100." };
   }
 
+  // weekend / weekly / monthly each come as a (mode, value) pair —
+  // "% of nightly" or a fixed replacement nightly in USD (spec: "fixed
+  // amount OR a percentage"). The unused column of the pair is zeroed.
+  const modal = (mode: FormDataEntryValue | null, value: FormDataEntryValue | null) =>
+    String(mode) === "fixed"
+      ? { pct: 0, cents: usd(value) }
+      : { pct: num(value), cents: 0 };
+  const weekend = modal(formData.get("weekendMode"), formData.get("weekendValue"));
+  const weekly = modal(formData.get("weeklyMode"), formData.get("weeklyValue"));
+  const monthly = modal(formData.get("monthlyMode"), formData.get("monthlyValue"));
+
   const db = getDb();
   await db.query(
     `update listing_rates set nightly_cents=$2, cleaning_cents=$3, tax_pct=$4
@@ -278,29 +289,31 @@ export async function savePricingAction(
      num(formData.get("taxPct"))],
   );
   await db.query(
-    `insert into listing_pricing (listing_id, weekend_pct, extra_guest_cents,
-       extra_guest_after, cleaning_fee_mode, city_fee_cents, city_fee_mode,
-       security_deposit_cents, weekly_discount_pct, monthly_discount_pct,
+    `insert into listing_pricing (listing_id, weekend_pct, weekend_cents,
+       extra_guest_cents, extra_guest_after, cleaning_fee_mode, city_fee_cents,
+       city_fee_mode, security_deposit_cents, weekly_discount_pct,
+       weekly_nightly_cents, monthly_discount_pct, monthly_nightly_cents,
        early_bird_pct, early_bird_min_days, deposit_pct, second_payment_days,
        dynamic_pricing)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
      on conflict (listing_id) do update set
-       weekend_pct=$2, extra_guest_cents=$3, extra_guest_after=$4,
-       cleaning_fee_mode=$5, city_fee_cents=$6, city_fee_mode=$7,
-       security_deposit_cents=$8, weekly_discount_pct=$9,
-       monthly_discount_pct=$10, early_bird_pct=$11, early_bird_min_days=$12,
-       deposit_pct=$13, second_payment_days=$14, dynamic_pricing=$15`,
+       weekend_pct=$2, weekend_cents=$3, extra_guest_cents=$4,
+       extra_guest_after=$5, cleaning_fee_mode=$6, city_fee_cents=$7,
+       city_fee_mode=$8, security_deposit_cents=$9, weekly_discount_pct=$10,
+       weekly_nightly_cents=$11, monthly_discount_pct=$12,
+       monthly_nightly_cents=$13, early_bird_pct=$14, early_bird_min_days=$15,
+       deposit_pct=$16, second_payment_days=$17, dynamic_pricing=$18`,
     [
       id,
-      num(formData.get("weekendPct")),
+      weekend.pct, weekend.cents,
       usd(formData.get("extraGuestUSD")),
       num(formData.get("extraGuestAfter")),
       String(formData.get("cleaningFeeMode") ?? "single"),
       usd(formData.get("cityFeeUSD")),
       String(formData.get("cityFeeMode") ?? "single"),
       usd(formData.get("securityDepositUSD")),
-      num(formData.get("weeklyDiscountPct")),
-      num(formData.get("monthlyDiscountPct")),
+      weekly.pct, weekly.cents,
+      monthly.pct, monthly.cents,
       num(formData.get("earlyBirdPct")),
       num(formData.get("earlyBirdMinDays")),
       depositPct,

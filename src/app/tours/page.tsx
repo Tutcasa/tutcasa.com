@@ -1,6 +1,6 @@
 import "@/styles/demo/tours.css";
 import type { Metadata } from "next";
-import { listTours, ADDONS, BYO_ACTS, type Tour } from "@/modules/tours";
+import { listTours, ADDONS, type Tour } from "@/modules/tours";
 import { getSetting } from "@/modules/settings";
 import { DEMO_TOUR } from "@/lib/demo-parity";
 import { ToursClient, type TourCardData } from "@/components/tours/ToursClient";

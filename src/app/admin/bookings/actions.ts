@@ -43,6 +43,87 @@ const isOverlap = (e: unknown) =>
   typeof e === "object" && e !== null && (e as { code?: string }).code === "23P01";
 
 /**
+ * Create a booking by hand — phone/WhatsApp/walk-in reservations (the old
+ * site's "internal calendar where I can make bookings"). Price auto-quotes
+ * from the full pricing model when the total is left blank; the admin can
+ * override it. Manual bookings never auto-expire.
+ */
+export async function createManualBookingAction(
+  _prev: BookingFormState,
+  formData: FormData,
+): Promise<BookingFormState> {
+  const listingId = String(formData.get("listingId") ?? "");
+  const checkIn = String(formData.get("checkIn") ?? "");
+  const checkOut = String(formData.get("checkOut") ?? "");
+  const guests = Number(formData.get("guests") ?? 0);
+  const guestName = String(formData.get("guestName") ?? "").trim();
+  const guestEmail = String(formData.get("guestEmail") ?? "").trim();
+  const status = String(formData.get("status")) === "pending" ? "pending" : "confirmed";
+  const totalRaw = String(formData.get("totalUSD") ?? "").trim();
+
+  if (!listingId || !guestName) return { ok: false, message: "Pick a home and enter the guest's name." };
+  if (!checkIn || !checkOut || checkOut <= checkIn) {
+    return { ok: false, message: "Check-out must be after check-in." };
+  }
+  if (guests < 1) return { ok: false, message: "At least one guest." };
+
+  const db = getDb();
+  const listing = await db.query<{ slug: string }>(
+    "select slug from listings where id=$1", [listingId]);
+  if (!listing.rows[0]) return { ok: false, message: "That home no longer exists." };
+
+  // auto-quote with the real pricing model; a typed total overrides it
+  const { resolveStayQuote } = await import("@/modules/pricing/resolve");
+  const quoted = await resolveStayQuote(listing.rows[0].slug, checkIn, checkOut, guests);
+  let totalCents: number;
+  let breakdown: object | null = null;
+  if (totalRaw !== "") {
+    const t = Number(totalRaw);
+    if (!Number.isFinite(t) || t < 0) return { ok: false, message: "The total must be a number (or blank to auto-price)." };
+    totalCents = Math.round(t * 100);
+    if (quoted.ok) breakdown = { ...quoted.quote, schedule: undefined, adminOverride: true };
+  } else if (quoted.ok) {
+    const q = quoted.quote;
+    totalCents = q.totalCents;
+    breakdown = {
+      nights: q.nights, nightlyCents: q.nightlyCents,
+      accommodationCents: q.accommodationCents, cleaningCents: q.cleaningCents,
+      taxCents: q.taxCents, lengthDiscountCents: q.lengthDiscountCents,
+      extraGuestFeeCents: q.extraGuestFeeCents, cityFeeCents: q.cityFeeCents,
+    };
+  } else {
+    const why = quoted.error === "DATES_TAKEN"
+      ? "Those dates are already booked or blocked."
+      : quoted.error === "MIN_STAY_NOT_MET"
+        ? "Below this home's minimum stay — type a total to override the auto-price, or extend the dates."
+        : "Couldn't auto-price those dates — check them, or type a total.";
+    if (quoted.error !== "MIN_STAY_NOT_MET" || totalRaw === "") {
+      return { ok: false, message: why };
+    }
+    totalCents = 0; // unreachable (totalRaw handled above) — keeps TS happy
+  }
+
+  try {
+    await db.query(
+      `insert into bookings
+         (listing_id, guest_name, guest_email, guest_phone, stay, guests,
+          status, total_cents, currency, price_breakdown, source, payment_provider)
+       values ($1,$2,$3,$4, daterange($5::date,$6::date,'[)'), $7, $8, $9,'USD',$10,'manual')`,
+      [listingId, guestName, guestEmail || "manual@tutcasa.com",
+       String(formData.get("guestPhone") ?? "").trim() || null,
+       checkIn, checkOut, guests, status, totalCents,
+       breakdown ? JSON.stringify(breakdown) : null],
+    );
+  } catch (e) {
+    if (isOverlap(e)) return { ok: false, message: "Those dates collide with another booking on that home." };
+    throw e;
+  }
+  revalidate();
+  revalidatePath("/stays");
+  return { ok: true, message: `Booking created (${status}) — ${checkIn} → ${checkOut}.` };
+}
+
+/**
  * Edit a booking — guest details, dates, party size, total, or even the home
  * itself (feature-spec parity with the old WpRentals admin).
  */

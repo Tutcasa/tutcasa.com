@@ -34,6 +34,9 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const saved = window.localStorage.getItem("tc_currency");
+    // hydrate the persisted choice after mount — server always renders USD,
+    // so reading localStorage during render would mismatch hydration
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === "USD" || saved === "MXN" || saved === "CAD") setCurState(saved);
   }, []);
 
