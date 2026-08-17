@@ -40,6 +40,7 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
     rate: l.rating.toFixed(2),
     tag: l.headline,
     g: grad,
+    photo: l.photos[0]?.url ?? null,
   };
 }
 

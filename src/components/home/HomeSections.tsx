@@ -23,6 +23,8 @@ export interface CasaCardData {
   rate: string;
   tag: string;
   g: string; // g1…g4
+  /** first real photo — card shows it instead of the gradient when present */
+  photo?: string | null;
 }
 
 function Carousel({
@@ -70,7 +72,10 @@ function CasaCard({ c }: { c: CasaCardData }) {
   // an onClick, not a wrapping <a>.
   return (
     <article className="casa" onClick={() => router.push(`/stays/${c.slug}`)}>
-      <div className={`casa-ph ${c.g}`}>
+      <div
+        className={`casa-ph ${c.g}`}
+        style={c.photo ? { backgroundImage: `url(${c.photo})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      >
         <span className="tag">{c.tag}</span>
         <span
           className={`fav${on ? " on" : ""}`}

@@ -25,6 +25,8 @@ export interface StayCard {
   lng: number;
   g: string; // g1…g4
   tag: string;
+  /** real photo URLs — when present the card shows them instead of gradients */
+  photos: string[];
 }
 
 /* filter chips: label i18n key, filter token, icon (demo FILTERS) */
@@ -67,7 +69,8 @@ function StayCasa({ p }: { p: StayCard }) {
   const [idx, setIdx] = useState(0);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const n = 5;
+  const hasPhotos = p.photos.length > 0;
+  const n = hasPhotos ? p.photos.length : 5;
   const base = parseInt(p.g.slice(1), 10) - 1;
   const g = "g" + (((base + idx) % 6) + 1);
   const on = has(p.slug);
@@ -75,7 +78,10 @@ function StayCasa({ p }: { p: StayCard }) {
 
   return (
     <article className="casa">
-      <div className={`casa-ph ${g}`}>
+      <div
+        className={`casa-ph ${hasPhotos ? "g1" : g}`}
+        style={hasPhotos ? { backgroundImage: `url(${p.photos[idx % n]})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+      >
         <span className="tag">{p.tag}</span>
         <span
           className={`fav${on ? " on" : ""}`}

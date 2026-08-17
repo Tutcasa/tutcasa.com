@@ -25,6 +25,7 @@ function toCard(l: Listing): StayCard {
     lng: l.lng,
     g: demoGradient(l, 4),
     tag: l.headline,
+    photos: l.photos.map((ph) => ph.url),
   };
 }
 

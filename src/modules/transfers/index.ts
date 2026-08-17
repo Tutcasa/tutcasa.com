@@ -196,6 +196,10 @@ export async function setTransferStatus(
   status: "confirmed" | "need_details" | "done",
   note?: string,
 ): Promise<boolean> {
+  // non-UUID ids must be a clean 404, not a Postgres cast error (500)
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(transferId)) {
+    return false;
+  }
   const res = await getDb().query(
     `update transfers set status=$2,
             amanah_note = case when $2 = 'need_details' then $3 else amanah_note end
