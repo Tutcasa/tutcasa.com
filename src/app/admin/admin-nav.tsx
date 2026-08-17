@@ -7,6 +7,7 @@ const NAV = [
   { href: "/admin", label: "Overview", icon: "\u{1F4CA}" },
   { href: "/admin/bookings", label: "Stay bookings", icon: "\u{1F4C5}" },
   { href: "/admin/tour-bookings", label: "Tour bookings", icon: "\u{1F3DD}\u{FE0F}" },
+  { href: "/admin/transfers", label: "Airport transfers", icon: "\u{1F690}" },
   { href: "/admin/invoices", label: "Invoices", icon: "\u{1F9FE}" },
   { href: "/admin/orders", label: "Payments & orders", icon: "\u{1F4B3}" },
   { href: "/admin/coupons", label: "Coupons", icon: "\u{1F3F7}\u{FE0F}" },

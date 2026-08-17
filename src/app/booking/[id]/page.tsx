@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getBooking } from "@/modules/bookings";
 import { fmtMoney } from "@/modules/pricing";
+import { transferForBooking } from "@/modules/transfers";
+import { TransferSection } from "./transfer-section";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,8 @@ export default async function BookingPage({
   const { id } = await params;
   const booking = await getBooking(id);
   if (!booking) notFound();
+  const transfer = await transferForBooking(id);
+  const amanahWhatsapp = process.env.AMANAH_WHATSAPP ?? "+529903516948";
 
   const ui = STATUS_UI[booking.status];
   const b = booking.priceBreakdown;
@@ -80,23 +84,46 @@ export default async function BookingPage({
         </div>
 
         <div className="mt-5 rounded-xl border border-line p-4 text-sm">
-          <div className="flex justify-between">
-            <span>{fmtMoney(b.nightlyCents)} × {b.nights} nights</span>
-            <span>{fmtMoney(b.accommodationCents)}</span>
-          </div>
-          <div className="mt-1 flex justify-between">
-            <span>Cleaning</span><span>{fmtMoney(b.cleaningCents)}</span>
-          </div>
-          <div className="mt-1 flex justify-between">
-            <span>Taxes</span><span>{fmtMoney(b.taxCents)}</span>
-          </div>
-          <div className="mt-2 flex justify-between border-t border-line pt-2 font-display text-base font-extrabold">
+          {/* manual/imported bookings may not carry a stored breakdown */}
+          {b && (
+            <>
+              <div className="flex justify-between">
+                <span>{fmtMoney(b.nightlyCents)} × {b.nights} nights</span>
+                <span>{fmtMoney(b.accommodationCents)}</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span>Cleaning</span><span>{fmtMoney(b.cleaningCents)}</span>
+              </div>
+              <div className="mt-1 flex justify-between">
+                <span>Taxes</span><span>{fmtMoney(b.taxCents)}</span>
+              </div>
+            </>
+          )}
+          <div className={`flex justify-between font-display text-base font-extrabold ${b ? "mt-2 border-t border-line pt-2" : ""}`}>
             <span>Total — all-in</span>
             <span>{fmtMoney(booking.totalCents)}</span>
           </div>
         </div>
 
         <p className="mt-4 text-sm text-grey">{ui.note}</p>
+
+        {(booking.status === "confirmed" || booking.status === "pending") && (
+          <TransferSection
+            bookingId={booking.id}
+            guestName={booking.guestName}
+            checkIn={booking.checkIn}
+            amanahWhatsapp={amanahWhatsapp}
+            refCode={`TC-${booking.invoiceNo}`}
+            transfer={transfer ? {
+              travelDate: transfer.travelDate,
+              flightNumber: transfer.flightNumber,
+              passengers: transfer.passengers,
+              babySeat: transfer.babySeat,
+              status: transfer.status,
+              amanahNote: transfer.amanahNote,
+            } : null}
+          />
+        )}
 
         {booking.status === "pending" && (
           <>
