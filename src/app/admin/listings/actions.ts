@@ -207,7 +207,8 @@ export async function saveListingAction(
        notify_emails=$25, cancellation_policy=$26, other_rules=$27,
        faqs=$28, checkin_message=$29, checkout_message=$30,
        private_notes=$31, allow_children=$32, allow_smoking=$33,
-       allow_party=$34, allow_pets=$35, featured=$36
+       allow_party=$34, allow_pets=$35, featured=$36,
+       rating_cached=$37, review_count_cached=$38
      where id=$1`,
     [
       id, title,
@@ -245,6 +246,8 @@ export async function saveListingAction(
       on(formData.get("allowParty")),
       on(formData.get("allowPets")),
       on(formData.get("featured")),
+      Math.min(5, Math.max(0, num(formData.get("rating")))),
+      Math.max(0, num(formData.get("reviewCount"))),
     ],
   );
 

@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
 import { useCurrency } from "@/lib/currency";
@@ -20,6 +21,7 @@ export interface StayCard {
   tokens: string[];
   beds: number;
   rate: string;
+  reviews: number;
   price: number;
   lat: number;
   lng: number;
@@ -78,10 +80,24 @@ function StayCasa({ p }: { p: StayCard }) {
 
   return (
     <article className="casa">
-      <div
-        className={`casa-ph ${hasPhotos ? "g1" : g}`}
-        style={hasPhotos ? { backgroundImage: `url(${p.photos[idx % n]})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-      >
+      <div className={`casa-ph ${hasPhotos ? "g1" : g}`} style={{ position: "relative", overflow: "hidden" }}>
+        {hasPhotos && (
+          <>
+            <Image
+              src={p.photos[idx % n]}
+              alt={p.name}
+              fill
+              sizes="(max-width: 700px) 100vw, 380px"
+              style={{ objectFit: "cover" }}
+              priority={false}
+            />
+            {/* preload neighbours so arrows feel instant */}
+            <div style={{ display: "none" }} aria-hidden>
+              <Image src={p.photos[(idx + 1) % n]} alt="" width={16} height={12} sizes="380px" />
+              <Image src={p.photos[(idx - 1 + n) % n]} alt="" width={16} height={12} sizes="380px" />
+            </div>
+          </>
+        )}
         <span className="tag">{p.tag}</span>
         <span
           className={`fav${on ? " on" : ""}`}
@@ -101,7 +117,7 @@ function StayCasa({ p }: { p: StayCard }) {
         </span>
       </div>
       <div className="casa-b">
-        <div className="casa-top"><h4>{p.name}</h4><span className="rate">&#9733; {p.rate}</span></div>
+        <div className="casa-top"><h4 className="casa-title-clamp" title={p.name}>{p.name}</h4><span className="rate">{p.reviews > 0 ? <>&#9733; {p.rate}</> : "New"}</span></div>
         <div className="loc">&#128205; {p.city}</div>
         <div className="casa-meta">{p.beds} <span dangerouslySetInnerHTML={{ __html: t("st_beds") }} /> &middot; {p.tag}</div>
         <div className="casa-pr"><b>{fromUSD(p.price)}</b> <span dangerouslySetInnerHTML={{ __html: t("st_night") }} /></div>

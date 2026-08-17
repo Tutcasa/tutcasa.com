@@ -234,9 +234,9 @@ export function PdGrid({ p }: { p: PdData }) {
           <div className="pd-map-note">Approximate location in {p.city}. Exact address is shared after booking is confirmed.</div>
         </div>
         <div className="pd-sec">
-          <h2>&#9733; {p.rate} &middot; {p.reviews} <span dangerouslySetInnerHTML={{ __html: t("pd_reviews") }} /></h2>
+          <h2>{p.reviews > 0 ? <>&#9733; {p.rate} &middot; {p.reviews} <span dangerouslySetInnerHTML={{ __html: t("pd_reviews") }} /></> : "New listing — reviews coming soon"}</h2>
           <div className="pd-rev-head">
-            <div className="pd-rev-score">&#9733; {p.rate}</div>
+            <div className="pd-rev-score">{p.reviews > 0 ? <>&#9733; {p.rate}</> : "New"}</div>
             <div className="pd-rev-bars">
               {([["Cleanliness", 4.9], ["Location", 4.9], ["Check-in", 4.8], ["Value", 4.9]] as const).map(([label, v]) => (
                 <div className="pd-bar" key={label}>

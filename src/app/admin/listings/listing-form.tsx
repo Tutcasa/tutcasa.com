@@ -41,6 +41,8 @@ export interface AdminListing {
   allowSmoking: boolean;
   allowParty: boolean;
   allowPets: boolean;
+  rating: number;
+  reviewCount: number;
   nightlyCents: number;
 }
 
@@ -124,6 +126,14 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
         </label>
         <label className="text-xs font-bold">SIZE (ft²)
           <input name="sizeSqft" type="number" min="0" defaultValue={listing.sizeSqft ?? ""} className={inputCls} />
+        </label>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">RATING <span className="font-normal text-grey">(from Airbnb/Google, e.g. 4.92 — shows &ldquo;New&rdquo; while reviews are 0)</span>
+          <input name="rating" type="number" min="0" max="5" step="0.01" defaultValue={listing.rating || ""} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">NUMBER OF REVIEWS
+          <input name="reviewCount" type="number" min="0" defaultValue={listing.reviewCount || ""} className={inputCls} />
         </label>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

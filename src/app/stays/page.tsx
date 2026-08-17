@@ -20,6 +20,7 @@ function toCard(l: Listing): StayCard {
     tokens: stayTokens(l),
     beds: l.bedrooms,
     rate: l.rating.toFixed(2),
+    reviews: l.reviewCount,
     price: Math.round(l.nightlyCents / 100),
     lat: l.lat,
     lng: l.lng,

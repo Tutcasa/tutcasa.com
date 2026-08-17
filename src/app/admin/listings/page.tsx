@@ -37,6 +37,7 @@ async function allListings(): Promise<AdminListing[]> {
             coalesce(l.allow_smoking,false) as allow_smoking,
             coalesce(l.allow_party,false) as allow_party,
             coalesce(l.allow_pets,false) as allow_pets,
+            l.rating_cached, l.review_count_cached,
             coalesce(r.nightly_cents,0) as nightly_cents
        from listings l
        left join listing_rates r on r.listing_id = l.id and r.season is null
@@ -58,7 +59,8 @@ async function allListings(): Promise<AdminListing[]> {
     checkinMessage: r.checkin_message, checkoutMessage: r.checkout_message,
     privateNotes: r.private_notes, allowChildren: r.allow_children,
     allowSmoking: r.allow_smoking, allowParty: r.allow_party,
-    allowPets: r.allow_pets, nightlyCents: r.nightly_cents,
+    allowPets: r.allow_pets, rating: Number(r.rating_cached),
+    reviewCount: r.review_count_cached, nightlyCents: r.nightly_cents,
   }));
 }
 

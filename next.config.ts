@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    // listing photos live in Supabase storage; tour/park photos on Amanah
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
+      { protocol: "https", hostname: "amanahvacations.com" },
+      { protocol: "https", hostname: "tutcasa.com" },
+    ],
+  },
   async headers() {
     // Client-preview deployments must never be indexed — a public copy of
     // the site on vercel.app would compete with tutcasa.com in Google.

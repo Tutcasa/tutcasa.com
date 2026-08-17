@@ -1,6 +1,7 @@
 import "@/styles/demo/property.css";
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getListingsRepo, type Listing } from "@/modules/listings";
 import { allInNightlyCents } from "@/modules/pricing";
@@ -33,7 +34,11 @@ const GS = ["g1", "g2", "g3", "g4", "g5", "g6"];
 function SimilarCard({ l }: { l: Listing }) {
   return (
     <Link className="sim" href={`/stays/${l.slug}`}>
-      <div className={`ph ${demoGradient(l, 6)}`}></div>
+      <div className={`ph ${demoGradient(l, 6)}`} style={l.photos[0] ? { position: "relative", overflow: "hidden" } : undefined}>
+        {l.photos[0] && (
+          <Image src={l.photos[0].url} alt={l.title} fill sizes="300px" style={{ objectFit: "cover" }} />
+        )}
+      </div>
       <div className="b">
         <h4>{l.title}</h4>
         <div className="m">&#128205; {displayCityCountry(l)} &middot; {l.bedrooms} bd</div>

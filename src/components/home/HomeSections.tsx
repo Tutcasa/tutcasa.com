@@ -9,6 +9,7 @@
 
 import { useRef, type ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { T } from "@/lib/i18n";
 import { useCurrency } from "@/lib/currency";
@@ -72,10 +73,10 @@ function CasaCard({ c }: { c: CasaCardData }) {
   // an onClick, not a wrapping <a>.
   return (
     <article className="casa" onClick={() => router.push(`/stays/${c.slug}`)}>
-      <div
-        className={`casa-ph ${c.g}`}
-        style={c.photo ? { backgroundImage: `url(${c.photo})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
-      >
+      <div className={`casa-ph ${c.g}`} style={c.photo ? { position: "relative", overflow: "hidden" } : undefined}>
+        {c.photo && (
+          <Image src={c.photo} alt={c.name} fill sizes="(max-width: 700px) 90vw, 360px" style={{ objectFit: "cover" }} />
+        )}
         <span className="tag">{c.tag}</span>
         <span
           className={`fav${on ? " on" : ""}`}

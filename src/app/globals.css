@@ -58,3 +58,14 @@ button, input, select, textarea {
 .ph-g4 { background: linear-gradient(135deg, #57b88a, #6fc3df); }
 .ph-g5 { background: linear-gradient(135deg, #8f6fd6, #6fa3e0); }
 .ph-g6 { background: linear-gradient(135deg, #e8703a, #f5a623); }
+
+/* --- real-catalog card polish (imported homes have long titles) --- */
+.casa .casa-b { display: flex; flex-direction: column; }
+.casa .casa-title-clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.casa .casa-actions { margin-top: auto; }
+.casa .casa-pr { margin-top: 6px; }
