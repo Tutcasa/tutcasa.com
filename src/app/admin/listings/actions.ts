@@ -447,6 +447,48 @@ export async function addBlockAction(
   return { ok: true, message: "Dates blocked." };
 }
 
+/* ------------------------------------------------------------------ */
+/* iCal channel sync (M4)                                              */
+/* ------------------------------------------------------------------ */
+
+export async function addIcalFeedAction(
+  _prev: ListingFormState,
+  formData: FormData,
+): Promise<ListingFormState> {
+  const id = String(formData.get("id") ?? "");
+  const url = String(formData.get("url") ?? "").trim();
+  if (!id || !/^https?:\/\//i.test(url)) {
+    return { ok: false, message: "Paste the calendar's full https:// address." };
+  }
+  await getDb().query(
+    `insert into listing_ical_feeds (listing_id, url, source) values ($1,$2,$3)`,
+    [id, url, String(formData.get("source") ?? "airbnb")],
+  );
+  // pull it right away so the admin sees the result immediately
+  const { syncIcalFeeds } = await import("@/modules/ical");
+  const res = await syncIcalFeeds(id);
+  revalidatePublic();
+  return res.ok
+    ? { ok: true, message: `Calendar connected — ${res.imported} busy ranges imported.` }
+    : { ok: false, message: `Connected, but the first sync failed: ${res.errors[0] ?? "unknown error"}` };
+}
+
+export async function deleteIcalFeedAction(feedId: string): Promise<void> {
+  const db = getDb();
+  // removing a feed frees the dates it was blocking
+  await db.query(
+    `delete from availability_blocks
+      where reason='ical' and external_ref like $1`, [`${feedId}:%`]);
+  await db.query("delete from listing_ical_feeds where id=$1", [feedId]);
+  revalidatePublic();
+}
+
+export async function syncIcalNowAction(listingId: string): Promise<void> {
+  const { syncIcalFeeds } = await import("@/modules/ical");
+  await syncIcalFeeds(listingId);
+  revalidatePublic();
+}
+
 export async function deleteBlockAction(blockId: string): Promise<void> {
   // manual blocks only — iCal blocks are managed by the sync (M4)
   await getDb().query(

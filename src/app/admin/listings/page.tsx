@@ -1,7 +1,8 @@
+import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
 import { ListingForm, type AdminListing } from "./listing-form";
 import { PricingForm, type AdminPricing, type AdminSeason } from "./pricing-form";
-import { CalendarEditor, type AdminDay, type AdminBlock } from "./calendar-editor";
+import { CalendarEditor, type AdminDay, type AdminBlock, type AdminIcalFeed } from "./calendar-editor";
 import { AddonsEditor, type AdminAddon } from "./addons-editor";
 import { PhotoManager, type AdminPhoto } from "./photo-manager";
 import { addListingAction, deleteListingAction } from "./actions";
@@ -111,12 +112,15 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
 
 async function calendarFor(listingId: string): Promise<{
   startMonth: string; days: Record<string, AdminDay>; blocks: AdminBlock[]; todayYmd: string;
+  exportUrl: string; icalFeeds: AdminIcalFeed[];
 }> {
   const db = getDb();
   const today = new Date();
   const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
   const end = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + CALENDAR_MONTHS, 1));
-  const [rates, overrides, blockRes, bookingRes] = await Promise.all([
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") ?? "https"}://${h.get("host") ?? "tutcasa-platform.vercel.app"}`;
+  const [rates, overrides, blockRes, bookingRes, tokenRes, feedsRes] = await Promise.all([
     db.query(
       `select nightly_cents, season is null as is_base,
               to_char(lower(season),'YYYY-MM-DD') as from_day,
@@ -140,6 +144,10 @@ async function calendarFor(listingId: string): Promise<{
          from bookings
         where listing_id=$1 and status in ('pending','confirmed')
           and upper(stay) >= current_date`, [listingId]),
+    db.query(`select ical_token from listings where id=$1`, [listingId]),
+    db.query(
+      `select id, url, source, active, last_synced_at, last_status
+         from listing_ical_feeds where listing_id=$1 order by created_at`, [listingId]),
   ]);
 
   const base = rates.rows.find((r) => r.is_base)?.nightly_cents ?? 0;
@@ -182,6 +190,11 @@ async function calendarFor(listingId: string): Promise<{
       from: b.from_day, to: b.to_day,
     })),
     todayYmd: today.toISOString().slice(0, 10),
+    exportUrl: `${origin}/api/ical/${tokenRes.rows[0]?.ical_token}.ics`,
+    icalFeeds: feedsRes.rows.map((f) => ({
+      id: f.id, url: f.url, source: f.source, active: f.active,
+      lastSyncedAt: f.last_synced_at, lastStatus: f.last_status,
+    })),
   };
 }
 
@@ -308,7 +321,9 @@ export default async function AdminListings({
                 <CalendarEditor key={editing.id} listingId={editing.id}
                   startMonth={calendarData.startMonth} monthCount={CALENDAR_MONTHS}
                   days={calendarData.days} blocks={calendarData.blocks}
-                  todayYmd={calendarData.todayYmd} />
+                  todayYmd={calendarData.todayYmd}
+                  exportUrl={calendarData.exportUrl}
+                  icalFeeds={calendarData.icalFeeds} />
               )}
               {tab === "extras" && addons && (
                 <AddonsEditor key={editing.id} listingId={editing.id} addons={addons} />

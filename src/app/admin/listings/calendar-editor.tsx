@@ -6,6 +6,9 @@ import {
   clearCalendarDaysAction,
   addBlockAction,
   deleteBlockAction,
+  addIcalFeedAction,
+  deleteIcalFeedAction,
+  syncIcalNowAction,
   type ListingFormState,
 } from "./actions";
 
@@ -27,6 +30,15 @@ export interface AdminBlock {
   source: string;
 }
 
+export interface AdminIcalFeed {
+  id: string;
+  url: string;
+  source: string;
+  active: boolean;
+  lastSyncedAt: string | null;
+  lastStatus: string | null;
+}
+
 const initial: ListingFormState = { ok: true, message: "" };
 const inputCls =
   "w-full rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-rosa";
@@ -38,7 +50,7 @@ function ymd(d: Date): string {
 }
 
 export function CalendarEditor({
-  listingId, startMonth, monthCount, days, blocks, todayYmd,
+  listingId, startMonth, monthCount, days, blocks, todayYmd, exportUrl, icalFeeds,
 }: {
   listingId: string;
   /** YYYY-MM of the first month shown */
@@ -47,13 +59,18 @@ export function CalendarEditor({
   days: Record<string, AdminDay>;
   blocks: AdminBlock[];
   todayYmd: string;
+  /** this listing's iCal export feed (paste into Airbnb/VRBO) */
+  exportUrl: string;
+  icalFeeds: AdminIcalFeed[];
 }) {
   const [monthIdx, setMonthIdx] = useState(0);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [copied, setCopied] = useState(false);
   const [applyState, applyAction, applyPending] = useActionState(applyCalendarDaysAction, initial);
   const [clearState, clearAction, clearPending] = useActionState(clearCalendarDaysAction, initial);
   const [blockState, blockAction, blockPending] = useActionState(addBlockAction, initial);
+  const [feedState, feedAction, feedPending] = useActionState(addIcalFeedAction, initial);
   const [deleting, startDelete] = useTransition();
 
   const month = useMemo(() => {
@@ -223,6 +240,82 @@ export function CalendarEditor({
         {blockState.message && (
           <p className={`mt-2 text-sm font-semibold ${blockState.ok ? "text-cactus" : "text-rosa-deep"}`}>{blockState.message}</p>
         )}
+      </div>
+
+      {/* ---------------------------------- channel sync (iCal) */}
+      <div className="rounded-card border-[1.5px] border-line bg-white p-4">
+        <div className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey">
+          Channel sync (iCal) — Airbnb, VRBO &amp; friends
+        </div>
+
+        <div className="mb-4">
+          <div className="text-xs font-bold">EXPORT — paste this address into the channel&rsquo;s &ldquo;import calendar&rdquo; box</div>
+          <div className="mt-1 flex gap-2">
+            <input readOnly value={exportUrl} className={`${inputCls} font-mono text-xs`} onFocus={(e) => e.target.select()} />
+            <button type="button"
+              onClick={async () => {
+                await navigator.clipboard.writeText(exportUrl);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              className={`whitespace-nowrap rounded-pill border-[1.5px] px-4 py-2 text-sm font-bold ${copied ? "border-cactus text-cactus" : "border-line text-grey hover:border-rosa hover:text-rosa"}`}>
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          </div>
+          <p className="mt-1 text-xs text-grey">
+            Publishes busy dates only (bookings &amp; blocks) — never guest details.
+          </p>
+        </div>
+
+        <div className="text-xs font-bold">IMPORT — connect this home&rsquo;s calendars from other channels</div>
+        {icalFeeds.length > 0 && (
+          <div className="mt-2 grid gap-2">
+            {icalFeeds.map((f) => (
+              <div key={f.id} className="flex items-center justify-between gap-3 rounded-xl border-[1.5px] border-line px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <span className="rounded-pill bg-cielo/15 px-2 py-0.5 text-[10px] font-bold uppercase text-cielo">{f.source}</span>
+                  <span className="ml-2 break-all font-mono text-xs text-grey">{f.url.slice(0, 60)}{f.url.length > 60 ? "…" : ""}</span>
+                  <div className="text-[11px] text-grey">
+                    {f.lastStatus ?? "never synced"}{f.lastSyncedAt ? ` · ${new Date(f.lastSyncedAt).toLocaleString()}` : ""}
+                  </div>
+                </div>
+                <button type="button" disabled={deleting}
+                  onClick={() => startDelete(() => deleteIcalFeedAction(f.id))}
+                  className="text-xs font-bold text-grey hover:text-rosa-deep disabled:opacity-50">
+                  Disconnect
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <form action={feedAction} className="mt-2 grid gap-2 sm:grid-cols-[2fr_140px_auto]">
+          <input type="hidden" name="id" value={listingId} />
+          <input name="url" type="url" required placeholder="https://…/calendar.ics from Airbnb / VRBO" className={inputCls} />
+          <select name="source" className={inputCls}>
+            <option value="airbnb">Airbnb</option>
+            <option value="vrbo">VRBO</option>
+            <option value="booking">Booking.com</option>
+            <option value="other">Other</option>
+          </select>
+          <button disabled={feedPending}
+            className="rounded-pill border-[1.5px] border-rosa px-4 py-2 text-sm font-bold text-rosa hover:bg-rosa hover:text-white disabled:opacity-50">
+            {feedPending ? "Connecting…" : "+ Connect"}
+          </button>
+        </form>
+        {feedState.message && (
+          <p className={`mt-2 text-sm font-semibold ${feedState.ok ? "text-cactus" : "text-rosa-deep"}`}>{feedState.message}</p>
+        )}
+        {icalFeeds.length > 0 && (
+          <button type="button" disabled={deleting}
+            onClick={() => startDelete(() => syncIcalNowAction(listingId))}
+            className="mt-3 rounded-pill border-[1.5px] border-line px-4 py-2 text-sm font-bold text-grey hover:border-ink hover:text-ink disabled:opacity-50">
+            Sync all now
+          </button>
+        )}
+        <p className="mt-2 text-xs text-grey">
+          Imported dates block this home everywhere instantly (site, admin,
+          partner bookings). Feeds also refresh automatically on a schedule.
+        </p>
       </div>
     </div>
   );
