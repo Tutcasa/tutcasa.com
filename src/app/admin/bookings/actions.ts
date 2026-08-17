@@ -35,6 +35,11 @@ export async function setBookingStatusAction(
       where id=$1`,
     [id, to],
   );
+  if (to === "confirmed") {
+    // M3: acceptance email with the invoice link (guest + team copy)
+    const { fireAutomations } = await import("@/modules/emails/dispatch");
+    fireAutomations(["guest_booking_confirmed"], id);
+  }
   revalidate();
 }
 

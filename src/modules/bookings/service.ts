@@ -3,6 +3,7 @@ import { getDb } from "@/lib/db";
 import { getListingsRepo } from "@/modules/listings";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
 import { checkCoupon, redeemCoupon } from "@/modules/coupons";
+import { fireAutomations } from "@/modules/emails/dispatch";
 import type {
   Booking,
   BookingRequest,
@@ -119,6 +120,8 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
       ],
     );
     if (couponCode) await redeemCoupon(couponCode);
+    // M3: request-received emails (guest + team) — never blocks the booking
+    fireAutomations(["guest_booking_request", "admin_new_booking"], res.rows[0].id);
     return { ok: true, bookingId: res.rows[0].id };
   } catch (e) {
     const err = e as { code?: string; constraint?: string };

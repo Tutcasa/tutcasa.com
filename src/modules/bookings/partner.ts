@@ -154,7 +154,12 @@ export async function confirmPartnerHold(
      Math.max(0, Math.round((input.amountPaid ?? 0) * 100)),
      input.notes?.trim() || null],
   );
-  if (res.rows[0]) return { ok: true, bookingId: res.rows[0].id };
+  if (res.rows[0]) {
+    // M3: team gets the payment record; guest emails stay with Amanah
+    const { fireAutomations } = await import("@/modules/emails/dispatch");
+    fireAutomations(["admin_payment_receipt"], res.rows[0].id);
+    return { ok: true, bookingId: res.rows[0].id };
+  }
 
   // idempotency: a webhook retry on an already-confirmed hold gets the same id
   const existing = await db.query<{ id: string; status: string }>(
@@ -252,6 +257,9 @@ export async function createPartnerRequest(input: {
         input.notes?.trim() || null,
       ],
     );
+    // M3: team hears about the incoming partner request (guest emails = Amanah)
+    const { fireAutomations } = await import("@/modules/emails/dispatch");
+    fireAutomations(["admin_new_booking"], res.rows[0].id);
     return {
       ok: true,
       requestId: res.rows[0].id,
@@ -267,6 +275,8 @@ export async function createPartnerRequest(input: {
     throw e;
   }
 }
+
+/* NOTE: createPartnerRequest also notifies the team (below, after insert). */
 
 export interface PartnerBookingStatus {
   ok: true;

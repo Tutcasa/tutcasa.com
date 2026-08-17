@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/sync-tours", "schedule": "0 6 * * *" },
-    { "path": "/api/sync-ical", "schedule": "30 6 * * *" }
+    { "path": "/api/sync-ical", "schedule": "30 6 * * *" },
+    { "path": "/api/email-dispatch", "schedule": "0 7 * * *" }
   ]
 }
