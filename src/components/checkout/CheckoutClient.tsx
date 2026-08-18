@@ -8,7 +8,7 @@
  * exactly like the demo — no charge is taken (Stripe connects later).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
@@ -78,6 +78,16 @@ export function CheckoutClient({
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // a saved referral coupon (from an /invite/CODE link) fills in automatically
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("tc_ref_coupon");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time read of an external store (localStorage) on mount
+      if (saved && payload.kind === "stay") setPromo((p) => p || saved);
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const { cur: displayCur, fromUSD, fromMXN } = useCurrency();
   const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);

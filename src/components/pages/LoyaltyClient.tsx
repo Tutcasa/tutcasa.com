@@ -2,10 +2,88 @@
 
 /** Loyalty page body ported 1:1 from the demo's Loyalty.html. */
 
-import { useRef, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { BackBar } from "@/components/site/BackBar";
 import { submitReferralLead } from "@/app/leads-actions";
+import { createReferralAction } from "@/app/growth-actions";
 import type { LoyaltyContent } from "@/modules/settings";
+
+/** "Get your invite link" — one shareable link per referrer; friends who book
+    through it get $100 off, and the referrer earns $200 per confirmed stay. */
+function InviteLink() {
+  const [state, action, pending] = useActionState(createReferralAction, {
+    ok: true, message: "",
+  });
+  const [copied, setCopied] = useState(false);
+
+  function copy() {
+    if (!state.link) return;
+    void navigator.clipboard?.writeText(state.link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="loy-form" style={{ marginBottom: 26 }}>
+      {state.ok && state.link ? (
+        <div className="loy-ok" style={{ display: "block" }}>
+          <div className="c">&#128279;</div>
+          <h3>Your invite link is ready!</h3>
+          <p>Share it anywhere &mdash; WhatsApp, Instagram, group chats. We also emailed it to you.</p>
+          <div
+            style={{
+              display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap",
+              alignItems: "center", marginTop: 14,
+            }}
+          >
+            <code
+              style={{
+                background: "#FFF3E9", borderRadius: 12, padding: "10px 16px",
+                fontSize: 14, fontWeight: 700, wordBreak: "break-all",
+              }}
+            >
+              {state.link}
+            </code>
+            <button className="btn-rosa" onClick={copy}>
+              {copied ? "Copied! ✓" : "Copy link"}
+            </button>
+          </div>
+          <p style={{ marginTop: 12, fontSize: 13.5 }}>
+            Every friend who books through it gets <b>$100 off</b> &mdash; and you earn{" "}
+            <b>$200</b> each time a booking is confirmed. No limits.
+          </p>
+        </div>
+      ) : (
+        <>
+          <h2>Get your personal invite link</h2>
+          <div className="lead">
+            The fastest way to share the love &mdash; one link, unlimited friends,
+            $200 for you every time one of them books.
+          </div>
+          <form action={action}>
+            <div className="loy-col">
+              <div>
+                <div className="lf"><label>Your name *</label><input name="name" required /></div>
+              </div>
+              <div>
+                <div className="lf"><label>Your email *</label><input name="email" type="email" required /></div>
+              </div>
+            </div>
+            <button className="btn-rosa" style={{ width: "100%", marginTop: 8 }} disabled={pending}>
+              {pending ? "Creating your link…" : "Get my invite link →"}
+            </button>
+          </form>
+          {!state.ok && state.message && (
+            <div style={{ marginTop: 10, color: "var(--rosa)", fontWeight: 700, fontSize: 13.5 }}>
+              {state.message}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 export function LoyaltyClient({ content: c }: { content: LoyaltyContent }) {
   const [sent, setSent] = useState(false);
@@ -49,6 +127,7 @@ export function LoyaltyClient({ content: c }: { content: LoyaltyContent }) {
         <div className="em">&#127881;</div>
         <div><b>{c.bandTitle}</b><p>{c.bandText}</p></div>
       </div>
+      <InviteLink />
       <div className="loy-form">
         <div style={{ display: sent ? "none" : undefined }}>
           <h2>Start sharing the love</h2>

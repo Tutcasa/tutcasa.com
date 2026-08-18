@@ -39,6 +39,9 @@ export async function setBookingStatusAction(
     // M3: acceptance email with the invoice link (guest + team copy)
     const { fireAutomations } = await import("@/modules/emails/dispatch");
     fireAutomations(["guest_booking_confirmed"], id);
+    // loyalty: if the booking used a referral coupon, reward the referrer
+    const { rewardReferrerForBooking } = await import("@/modules/growth");
+    void rewardReferrerForBooking(id).catch(() => {});
   }
   revalidate();
 }

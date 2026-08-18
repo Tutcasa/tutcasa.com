@@ -2,6 +2,7 @@ import "@/styles/demo/index.css";
 import { getListingsRepo, type Listing } from "@/modules/listings";
 import { listTours } from "@/modules/tours";
 import { HomeHero } from "@/components/home/HomeHero";
+import { NewsletterBand } from "@/components/home/NewsletterBand";
 import {
   PopularCasas,
   PopularExperiences,
@@ -88,6 +89,7 @@ export default async function HomePage() {
       <PopularExperiences items={expItems} />
       <FamiliaBand />
       <LovedByGuests />
+      <NewsletterBand />
     </div>
   );
 }
