@@ -124,12 +124,19 @@ export function PdGrid({ p }: { p: PdData }) {
       ? <div className="row" style={{ color: "var(--rosa)" }}>Minimum stay is {p.minStay} nights</div>
       : null;
     if (quote?.ok) {
-      const total = quote.quote.totalCents;
-      const perNight = Math.round(total / quote.quote.nights / 100);
+      const q = quote.quote;
+      const total = q.totalCents;
+      const d = (c: number) => fromUSD(Math.round(c / 100));
+      const netAccom = q.accommodationCents - q.lengthDiscountCents - q.earlyBirdDiscountCents;
       return (
         <>
-          <div className="row"><span>{fromUSD(perNight)} &times; {quote.quote.nights} nights</span><span>{fromUSD(Math.round(total / 100))}</span></div>
-          <div className="row"><span>Taxes &amp; cleaning</span><span>included</span></div>
+          <div className="row"><span>{d(Math.round(q.accommodationCents / q.nights))} &times; {q.nights} nights</span><span>{d(q.accommodationCents)}</span></div>
+          {q.lengthDiscountCents > 0 && <div className="row" style={{ color: "var(--cactus)" }}><span>Stay discount</span><span>&minus;{d(q.lengthDiscountCents)}</span></div>}
+          {q.earlyBirdDiscountCents > 0 && <div className="row" style={{ color: "var(--cactus)" }}><span>Early-bird discount</span><span>&minus;{d(q.earlyBirdDiscountCents)}</span></div>}
+          {q.extraGuestFeeCents > 0 && <div className="row"><span>Extra guests</span><span>{d(q.extraGuestFeeCents)}</span></div>}
+          {q.cleaningCents > 0 && <div className="row"><span>Cleaning fee</span><span>{d(q.cleaningCents)}</span></div>}
+          {q.cityFeeCents > 0 && <div className="row"><span>City fee</span><span>{d(q.cityFeeCents)}</span></div>}
+          <div className="row"><span>Taxes</span><span>{d(total - netAccom - q.extraGuestFeeCents - q.cleaningCents - q.cityFeeCents)}</span></div>
           {warn}
           <div className="tot"><span>Total (all-in)</span><span>{fromUSD(Math.round(total / 100))}</span></div>
           {quote.quote.schedule.balanceCents > 0 && (
@@ -234,9 +241,9 @@ export function PdGrid({ p }: { p: PdData }) {
           <div className="pd-map-note">Approximate location in {p.city}. Exact address is shared after booking is confirmed.</div>
         </div>
         <div className="pd-sec">
-          <h2>{p.reviews > 0 ? <>&#9733; {p.rate} &middot; {p.reviews} <span dangerouslySetInnerHTML={{ __html: t("pd_reviews") }} /></> : "New listing — reviews coming soon"}</h2>
+          {p.reviews > 0 && <h2>&#9733; {p.rate} &middot; {p.reviews} <span dangerouslySetInnerHTML={{ __html: t("pd_reviews") }} /></h2>}
           <div className="pd-rev-head">
-            <div className="pd-rev-score">{p.reviews > 0 ? <>&#9733; {p.rate}</> : "New"}</div>
+            <div className="pd-rev-score">{p.reviews > 0 ? <>&#9733; {p.rate}</> : ""}</div>
             <div className="pd-rev-bars">
               {([["Cleanliness", 4.9], ["Location", 4.9], ["Check-in", 4.8], ["Value", 4.9]] as const).map(([label, v]) => (
                 <div className="pd-bar" key={label}>

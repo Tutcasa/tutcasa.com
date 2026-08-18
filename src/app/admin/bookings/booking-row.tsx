@@ -64,6 +64,8 @@ export function BookingRow({
         <td className="p-3">
           {b.guestName}
           <div className="text-xs text-grey">{b.guestEmail}</div>
+          {b.guestPhone && <div className="text-xs text-grey">{b.guestPhone}</div>}
+          <div className="text-[10px] text-grey">requested {new Date(b.createdAt).toLocaleString()}</div>
           {b.source === "amanah" && (
             <span className="mt-1 inline-block rounded-pill bg-terra/15 px-2 py-0.5 text-[10px] font-bold uppercase text-terra">
               Amanah Vacations{b.partnerRef ? ` · ${b.partnerRef}` : ""}

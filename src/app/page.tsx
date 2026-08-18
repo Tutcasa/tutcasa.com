@@ -1,5 +1,6 @@
 import "@/styles/demo/index.css";
 import { getListingsRepo, type Listing } from "@/modules/listings";
+import { listTours } from "@/modules/tours";
 import { HomeHero } from "@/components/home/HomeHero";
 import {
   PopularCasas,
@@ -45,7 +46,19 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
 }
 
 export default async function HomePage() {
-  const listings = await getListingsRepo().listPublished();
+  const [listings, tours] = await Promise.all([
+    getListingsRepo().listPublished(),
+    listTours({ category: "tour" }),
+  ]);
+  const expItems = tours
+    .filter((t) => t.photoUrl)
+    .slice(0, 6)
+    .map((t) => ({
+      name: t.title,
+      sub: `${t.durationLabel || "Full day"} · ${t.city ?? "Riviera Maya"}`,
+      img: t.photoUrl,
+      priceLabel: t.priceCents > 0 ? `from $${Math.round(t.priceCents / 100).toLocaleString("en-US")} MXN` : "on request",
+    }));
   // the admin's "featured" toggle decides the homepage strip
   const featured: CasaCardData[] = listings
     .filter((l) => l.featured)
@@ -72,7 +85,7 @@ export default async function HomePage() {
       </section>
 
       <PopularCasas casas={featured} />
-      <PopularExperiences />
+      <PopularExperiences items={expItems} />
       <FamiliaBand />
       <LovedByGuests />
     </div>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { fmtMoney } from "@/modules/pricing";
+import { InvoiceActions } from "./invoice-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -178,7 +179,7 @@ export default async function InvoicePage({
         )}
         {inv.securityDepositCents > 0 && (
           <p className="mt-3 text-xs text-grey">
-            A refundable security deposit of {money(inv.securityDepositCents)} applies and is returned after checkout.
+            A security deposit of {money(inv.securityDepositCents)} applies.
           </p>
         )}
 

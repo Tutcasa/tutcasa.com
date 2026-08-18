@@ -88,7 +88,7 @@ const DEFAULTS: {
     },
     sections: [
       { id: "deposit", title: "💳 Reservation deposit", body: "To confirm your dates we ask for a deposit, with the balance due before arrival:\n- Condos & Villas — 50% deposit to reserve. The remaining balance is due 30 days before arrival, and finalised 15 days prior.\n- Hotels — 50% deposit to reserve, with the balance due 15 days before arrival." },
-      { id: "security", title: "🔑 Refundable security deposit", body: "A refundable security deposit is held against accidental damage. It’s fully returned after check-out once the home has been inspected and everything is in order." },
+      { id: "security", title: "🔑 Security deposit", body: "A security deposit is held against accidental damage during your stay." },
       { id: "keys", title: "🗝️ Keys & access", body: "- Most homes use a secure key box or digital lock — we send the code and directions before you arrive.\n- Lost keys or remotes are charged at $100 to cover replacement." },
       { id: "restrictions", title: "⚠️ Restrictions", body: "- No parties or events without prior written approval.\n- No smoking indoors.\n- Please respect the maximum guest count on your reservation and quiet hours in the community." },
       { id: "cancellation", title: "📅 Cancellation policy", body: "Condos & Villas\n- 30+ days before arrival — full refund.\n- Between 30 and 7 days — 50% refund.\n- 7 days or less — non-refundable.\nHotels\n- 15+ days before arrival — full refund.\n- Within 15 days — one night is charged, the rest refunded." },

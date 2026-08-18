@@ -75,7 +75,7 @@ function CasaCard({ c }: { c: CasaCardData }) {
     <article className="casa" onClick={() => router.push(`/stays/${c.slug}`)}>
       <div className={`casa-ph ${c.g}`} style={c.photo ? { position: "relative", overflow: "hidden" } : undefined}>
         {c.photo && (
-          <Image src={c.photo} alt={c.name} fill sizes="(max-width: 700px) 90vw, 360px" style={{ objectFit: "cover" }} />
+          <Image src={c.photo} alt="" fill sizes="(max-width: 700px) 90vw, 360px" style={{ objectFit: "cover" }} />
         )}
         <span className="tag">{c.tag}</span>
         <span
@@ -147,7 +147,42 @@ export function PopularCasas({ casas }: { casas: CasaCardData[] }) {
   );
 }
 
-export function PopularExperiences() {
+export interface ExpCardData {
+  name: string;
+  sub: string;
+  img: string | null;
+  priceLabel: string;
+}
+
+export function PopularExperiences({ items = [] }: { items?: ExpCardData[] }) {
+  const router = useRouter();
+  if (items.length > 0) {
+    return (
+      <section className="pop-sec wrap">
+        <div className="sec-head">
+          <div>
+            <div className="eyebrow">&#127880; <T k="home_eyb_book" /></div>
+            <T as="h2" className="sec-title" k="home_pop_exp" />
+          </div>
+          <Link className="sec-link" href="/tours"><T k="home_seeall_exp" /></Link>
+        </div>
+        <Carousel kind="exp">
+          {items.map((e, i) => (
+            <article className="exp" key={i} onClick={() => router.push("/tours")} style={{ cursor: "pointer" }}>
+              <div className={`exp-ph e${(i % 4) + 1}`} style={e.img ? { position: "relative", overflow: "hidden" } : undefined}>
+                {e.img && <Image src={e.img} alt="" fill sizes="300px" style={{ objectFit: "cover" }} />}
+                <span className="exp-price" style={{ position: "absolute" }}>{e.priceLabel}</span>
+              </div>
+              <div className="exp-b">
+                <h4>{e.name}</h4>
+                <p>{e.sub}</p>
+              </div>
+            </article>
+          ))}
+        </Carousel>
+      </section>
+    );
+  }
   return (
     <section className="pop-sec wrap">
       <div className="sec-head">

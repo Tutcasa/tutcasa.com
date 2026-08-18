@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // photo uploads go through a server action; the 1MB default rejects
+    // real photos with an opaque "page couldn't load" error
+    serverActions: { bodySizeLimit: "12mb" },
+  },
   images: {
     // listing photos live in Supabase storage; tour/park photos on Amanah
     remotePatterns: [

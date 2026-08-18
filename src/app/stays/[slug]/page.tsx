@@ -36,7 +36,7 @@ function SimilarCard({ l }: { l: Listing }) {
     <Link className="sim" href={`/stays/${l.slug}`}>
       <div className={`ph ${demoGradient(l, 6)}`} style={l.photos[0] ? { position: "relative", overflow: "hidden" } : undefined}>
         {l.photos[0] && (
-          <Image src={l.photos[0].url} alt={l.title} fill sizes="300px" style={{ objectFit: "cover" }} />
+          <Image src={l.photos[0].url} alt="" fill sizes="300px" style={{ objectFit: "cover" }} />
         )}
       </div>
       <div className="b">

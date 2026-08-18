@@ -32,6 +32,7 @@ export interface Booking {
   };
   guestName: string;
   guestEmail: string;
+  guestPhone: string | null;
   /** 'direct' | 'amanah' | channel sources — partner bookings show a badge */
   source: string;
   partnerRef: string | null;

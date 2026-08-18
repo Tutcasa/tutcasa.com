@@ -100,13 +100,14 @@ export async function syncAmanahTours(): Promise<SyncResult> {
     upserted++;
   }
 
-  // Amanah is the authority for the whole 'tour' category: anything not in
-  // the feed — old seeds included — is archived (hidden, never deleted;
-  // bookings keep their reference). Parks stay TutCasa-managed.
+  // Amanah is the authority ONLY for its own rows (source='amanah'):
+  // its tours that vanish from the feed are archived. TutCasa-added tours
+  // (source='local' — e.g. Egypt) are never touched by the sync.
   const keys = feed.tours.map((t) => t.key).filter(Boolean);
   const archivedRes = await db.query(
     `update tours set status='archived', synced_at=now()
-      where category='tour' and status='published' and not (slug = any($1))
+      where source='amanah' and category='tour' and status='published'
+        and not (slug = any($1))
       returning slug`,
     [keys],
   );

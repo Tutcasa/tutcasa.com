@@ -27,5 +27,12 @@ export async function saveTransferAction(
 export async function cancelTransferAction(transferId: string): Promise<void> {
   await getDb().query(
     "update transfers set status='cancelled' where id=$1", [transferId]);
+  // alert Amanah so the job is closed on their side too
+  const { transferForBooking, pushToAmanah } = await import("@/modules/transfers");
+  const row = await getDb().query("select booking_id from transfers where id=$1", [transferId]);
+  if (row.rows[0]) {
+    const t = await transferForBooking(row.rows[0].booking_id);
+    if (t) await pushToAmanah(t).catch(() => {});
+  }
   revalidatePath("/admin/transfers");
 }

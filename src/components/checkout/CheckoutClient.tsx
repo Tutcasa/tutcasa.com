@@ -199,7 +199,7 @@ export function CheckoutClient({
             )}
             {schedule?.securityDeposit ? (
               <div style={{ fontSize: "12.5px", color: "var(--grey, #8a7a72)", marginTop: 6 }}>
-                + ${money(schedule.securityDeposit)} {cur} refundable security deposit, returned after checkout.
+                + ${money(schedule.securityDeposit)} {cur} security deposit.
               </div>
             ) : null}
           </div>

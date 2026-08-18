@@ -130,7 +130,7 @@ export function PricingForm({
               <input name="extraGuestAfter" type="number" min="0"
                      defaultValue={pricing.extraGuestAfter} className={inputCls} />
             </label>
-            <label className="text-xs font-bold">SECURITY DEPOSIT (USD) <span className="font-normal text-grey">(refundable)</span>
+            <label className="text-xs font-bold">SECURITY DEPOSIT (USD)
               <input name="securityDepositUSD" type="number" min="0" step="1"
                      defaultValue={pricing.securityDepositCents / 100} className={inputCls} />
             </label>

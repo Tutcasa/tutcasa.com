@@ -85,7 +85,7 @@ function StayCasa({ p }: { p: StayCard }) {
           <>
             <Image
               src={p.photos[idx % n]}
-              alt={p.name}
+              alt=""
               fill
               sizes="(max-width: 700px) 100vw, 380px"
               style={{ objectFit: "cover" }}
@@ -117,7 +117,7 @@ function StayCasa({ p }: { p: StayCard }) {
         </span>
       </div>
       <div className="casa-b">
-        <div className="casa-top"><h4 className="casa-title-clamp" title={p.name}>{p.name}</h4><span className="rate">{p.reviews > 0 ? <>&#9733; {p.rate}</> : "New"}</span></div>
+        <div className="casa-top"><h4 className="casa-title-clamp" title={p.name}>{p.name}</h4>{p.reviews > 0 && <span className="rate">&#9733; {p.rate}</span>}</div>
         <div className="loc">&#128205; {p.city}</div>
         <div className="casa-meta">{p.beds} <span dangerouslySetInnerHTML={{ __html: t("st_beds") }} /> &middot; {p.tag}</div>
         <div className="casa-pr"><b>{fromUSD(p.price)}</b> <span dangerouslySetInnerHTML={{ __html: t("st_night") }} /></div>
