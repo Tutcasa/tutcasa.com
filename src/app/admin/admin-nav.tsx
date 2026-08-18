@@ -15,6 +15,7 @@ const NAV = [
   { href: "/admin/listings", label: "Stays & homes", icon: "\u{1F3E0}" },
   { href: "/admin/tours", label: "Tours & parks", icon: "\u{1F3A1}" },
   { href: "/admin/content", label: "Content & info", icon: "\u{1F4DD}" },
+  { href: "/admin/leads", label: "Leads", icon: "\u{1F4E5}" },
   { href: "/admin/emails", label: "Email automations", icon: "\u{1F4E8}" },
   { href: "/admin/notifications", label: "Notifications log", icon: "\u{2709}\u{FE0F}" },
 ];

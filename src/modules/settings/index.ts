@@ -62,6 +62,11 @@ export interface LoyaltyContent {
   bandText: string;
 }
 
+export interface FaqContent {
+  hero: PageHero;
+  items: { q: string; a: string }[];
+}
+
 /** Synced from amanahvacations.com — the tour add-ons picker catalog. */
 export interface TourAddonsSetting {
   items: { name: string; icon: string; priceMXN: number; unit: string }[];
@@ -74,11 +79,29 @@ const DEFAULTS: {
   page_why: WhyBookContent;
   page_concierge: ConciergeContent;
   page_loyalty: LoyaltyContent;
+  page_faq: FaqContent;
   tour_addons: TourAddonsSetting;
 } = {
   contact: { whatsapp: "201069706782", email: "", instagram: "", facebook: "" },
   investor: { deck_url: "", deck_name: "" },
   tour_addons: { items: [] },
+
+  page_faq: {
+    hero: {
+      eyebrow: "Answers, upfront",
+      title: "Frequently asked questions",
+      intro: "Everything guests ask us most — and if your question isn't here, May is one message away on WhatsApp.",
+    },
+    items: [
+      { q: "How do I book a home?", a: "Pick your dates on the home's page and book instantly, or send a request — the owner confirms within hours. Your dates are locked while you complete payment." },
+      { q: "How does payment work?", a: "A deposit confirms your booking and the balance is due before arrival — the exact split is shown before you pay. We accept cards, PayPal, Zelle and bank transfer." },
+      { q: "Is the airport pickup really free?", a: "Yes — every booking includes a free arrival transfer from the airport, arranged with our partner Amanah Vacations. Add your flight details after booking and your driver will be waiting." },
+      { q: "What is the security deposit?", a: "A security deposit is held against accidental damage during your stay. The amount is shown on the home's page before you book." },
+      { q: "Can I cancel my booking?", a: "Each home shows its cancellation policy before you book — most offer a full refund up to 30 days before arrival. See Help & policies for the details." },
+      { q: "Are the tours really cheaper?", a: "Tours and parks are at partner prices through Amanah Vacations — the same private tours, at prices the big platforms don't get." },
+      { q: "Who do I talk to during my stay?", a: "May — our concierge on WhatsApp. Restaurant tips, early check-in, tour bookings, anything. Real person, minutes to reply, from your first message to your last night." },
+    ],
+  },
 
   page_policies: {
     hero: {

@@ -4,6 +4,7 @@
 
 import { useRef, useState } from "react";
 import { BackBar } from "@/components/site/BackBar";
+import { submitReferralLead } from "@/app/leads-actions";
 import type { LoyaltyContent } from "@/modules/settings";
 
 export function LoyaltyClient({ content: c }: { content: LoyaltyContent }) {
@@ -24,6 +25,10 @@ export function LoyaltyClient({ content: c }: { content: LoyaltyContent }) {
       }
     }
     setSent(true);
+    void submitReferralLead({
+      name: lnRef.current?.value ?? "", email: leRef.current?.value ?? "", phone: lp,
+      friendName: fnRef.current?.value ?? "", friendEmail: feRef.current?.value ?? "", friendPhone: fp,
+    });
   }
 
   return (

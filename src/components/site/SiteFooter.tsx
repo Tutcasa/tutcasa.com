@@ -46,6 +46,7 @@ export function SiteFooter({ whatsapp }: { whatsapp: string }) {
           </div>
           <div className="foot-col">
             <T as="h5" k="foot_support" />
+            <Link href="/faq">FAQ</Link>
             <Link href="/policies"><T k="foot_help" /></Link>
             <Link href="/contact"><T k="foot_contact" /></Link>
             <Link href="/contact">Partnerships &amp; collaborations</Link>

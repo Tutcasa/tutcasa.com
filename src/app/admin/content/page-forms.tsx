@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type {
+  FaqContent,
   ConciergeContent,
   LoyaltyContent,
   PoliciesContent,
@@ -12,6 +13,7 @@ import {
   saveWhyAction,
   saveConciergeAction,
   saveLoyaltyAction,
+  saveFaqAction,
   type ContentFormState,
 } from "./actions";
 
@@ -156,6 +158,20 @@ export function LoyaltyForm({ content }: { content: LoyaltyContent }) {
       </div>
       <label className="text-xs font-bold">BANNER TEXT
         <input name="bandText" defaultValue={content.bandText} className={inputCls} />
+      </label>
+      <SaveRow state={state} pending={pending} />
+    </form>
+  );
+}
+
+export function FaqForm({ content }: { content: FaqContent }) {
+  const [state, action, pending] = useActionState(saveFaqAction, initial);
+  return (
+    <form action={action} className="grid gap-4">
+      <Hero hero={content.hero} />
+      <label className="text-xs font-bold">QUESTIONS <span className="font-normal text-grey">(one per line: Question? :: Answer)</span>
+        <textarea name="items" rows={12} className={inputCls}
+          defaultValue={content.items.map((f) => `${f.q} :: ${f.a}`).join("\n")} />
       </label>
       <SaveRow state={state} pending={pending} />
     </form>

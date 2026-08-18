@@ -101,6 +101,24 @@ export async function saveConciergeAction(
   return { ok: true, message: "Concierge page updated — live now." };
 }
 
+export async function saveFaqAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  const items = lines(formData.get("items"))
+    .filter((l) => l.includes("::"))
+    .map((l) => {
+      const i = l.indexOf("::");
+      return { q: l.slice(0, i).trim(), a: l.slice(i + 2).trim() };
+    })
+    .filter((f) => f.q && f.a);
+  if (!items.length) return { ok: false, message: "Add at least one question (Question? :: Answer)." };
+  await setSetting("page_faq", { hero: hero(formData), items });
+  revalidatePath("/faq");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "FAQ updated — live now." };
+}
+
 export async function saveLoyaltyAction(
   _prev: ContentFormState,
   formData: FormData,

@@ -5,6 +5,7 @@
 import { useRef, useState } from "react";
 import { T, useLang } from "@/lib/i18n";
 import { BackBar } from "@/components/site/BackBar";
+import { submitListPropertyLead } from "@/app/leads-actions";
 
 export function ListPropertyClient() {
   const { t } = useLang();
@@ -55,6 +56,12 @@ export function ListPropertyClient() {
     }
     setErr(false);
     setSent(true);
+    void submitListPropertyLead({
+      name: f.name, email: f.email, phone: f.phone,
+      city: f.loc, propertyType: f.type, bedrooms: f.beds,
+      message: `baths ${f.baths} · sleeps ${f.guests} · target rate ${f.rate || "?"} · already listed: ${f.listed} · amenities: ${amenities.join(", ") || "—"}
+${f.msg}`,
+    });
     setTimeout(() => okRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 30);
   }
 

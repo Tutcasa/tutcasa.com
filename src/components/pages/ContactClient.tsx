@@ -4,6 +4,7 @@
 
 import { useState } from "react";
 import { BackBar } from "@/components/site/BackBar";
+import { submitContactLead } from "@/app/leads-actions";
 
 export function ContactClient({ whatsapp, email }: { whatsapp: string; email: string }) {
   const [sent, setSent] = useState(false);
@@ -13,12 +14,13 @@ export function ContactClient({ whatsapp, email }: { whatsapp: string; email: st
   const [subj, setSubj] = useState("A booking or reservation");
   const [msg, setMsg] = useState("");
 
-  function submit() {
+  async function submit() {
     if (!name.trim() || !mail.trim() || !msg.trim()) {
       alert("Please add your name, email and a short message.");
       return;
     }
-    setSent(true);
+    setSent(true); // demo-style instant confirmation; the save is fire-and-forget
+    void submitContactLead({ name, email: mail, phone, message: `[${subj}] ${msg}` });
   }
 
   const contactEmail = email || "hello@tutcasa.com";
