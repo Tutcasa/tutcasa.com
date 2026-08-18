@@ -29,6 +29,7 @@ export interface AdminListing {
   houseRules: string;
   featured: boolean;
   instantBook: boolean;
+  selfCheckIn: boolean;
   keepCalendarClean: boolean;
   affiliateUrl: string;
   notifyEmails: string[];
@@ -187,6 +188,7 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
         <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
           <Check name="featured" label="Featured on the homepage" defaultChecked={listing.featured} />
           <Check name="instantBook" label="Instant booking (requests auto-accepted)" defaultChecked={listing.instantBook} />
+          <Check name="selfCheckIn" label="Self check-in (lockbox / smart lock)" defaultChecked={listing.selfCheckIn} />
           <Check name="keepCalendarClean" label="Keep calendar clean (hotel mode — bookings don't block dates)" defaultChecked={listing.keepCalendarClean} />
         </div>
         <label className="mt-3 block text-xs font-bold">BOOKING NOTIFICATION EMAILS <span className="font-normal text-grey">(comma-separated — who hears about new bookings)</span>

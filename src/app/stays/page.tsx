@@ -18,6 +18,13 @@ function toCard(l: Listing): StayCard {
     name: l.title,
     city: displayCity(l),
     tokens: stayTokens(l),
+    type: l.propertyType,
+    guests: l.maxGuests,
+    // haystack for keyword amenity filters (amenities are free text)
+    hay: [l.amenities.join(" "), l.headline, l.description].join(" ").toLowerCase(),
+    instant: l.instantBook,
+    selfCi: l.selfCheckIn,
+    pets: l.allowPets,
     beds: l.bedrooms,
     rate: l.rating.toFixed(2),
     reviews: l.reviewCount,

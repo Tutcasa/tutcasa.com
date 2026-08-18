@@ -7,7 +7,7 @@ import type { Listing } from "./types";
  */
 const MOCK_FEATURED = new Set(["spiritum-marea", "vista-playa", "casa-selva", "nile-breeze"]);
 
-const RAW: Omit<Listing, "featured">[] = [
+const RAW: Omit<Listing, "featured" | "instantBook" | "selfCheckIn" | "allowPets">[] = [
   {
     id: "l-spiritum-marea",
     slug: "spiritum-marea",
@@ -256,6 +256,9 @@ const RAW: Omit<Listing, "featured">[] = [
 export const MOCK_LISTINGS: Listing[] = RAW.map((l) => ({
   ...l,
   featured: MOCK_FEATURED.has(l.slug),
+  instantBook: true,
+  selfCheckIn: false,
+  allowPets: false,
 }));
 
 /** demo parity: bookable via direct link, hidden from the grid */

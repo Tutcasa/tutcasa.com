@@ -254,7 +254,8 @@ export async function saveListingAction(
        property_type=$7, description=$8, max_guests=$9, bedrooms=$10,
        bathrooms=$11, min_stay=$12, status=$13, size_sqft=$14,
        bed_types=$15, checkin_from=$16, checkout_until=$17,
-       lat=$18, lng=$19, address=$39, amenities=$20, house_rules=$21,
+       lat=$18, lng=$19, address=$39, self_check_in=$40,
+       amenities=$20, house_rules=$21,
        instant_book=$22, keep_calendar_clean=$23, affiliate_url=$24,
        notify_emails=$25, cancellation_policy=$26, other_rules=$27,
        faqs=$28, checkin_message=$29, checkout_message=$30,
@@ -300,6 +301,7 @@ export async function saveListingAction(
       Math.min(5, Math.max(0, num(formData.get("rating")))),
       Math.max(0, num(formData.get("reviewCount"))),
       address,
+      on(formData.get("selfCheckIn")),
     ],
   );
 

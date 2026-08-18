@@ -19,6 +19,10 @@ export interface Listing {
   minStay: number;
   /** admin toggle: appears in the homepage "Popular casas" strip */
   featured: boolean;
+  /** guest booking-option filters */
+  instantBook: boolean;
+  selfCheckIn: boolean;
+  allowPets: boolean;
   rating: number;
   reviewCount: number;
   /** placeholder art class until real photos land (ph-g1 … ph-g6) */

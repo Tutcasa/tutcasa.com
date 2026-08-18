@@ -19,6 +19,12 @@ export interface StayCard {
   name: string;
   city: string; // display city, e.g. "Nuba, Egypt"
   tokens: string[];
+  type: string; // property_type: condo, villa, …
+  guests: number; // max guests
+  hay: string; // lowercase amenities+headline+description for keyword filters
+  instant: boolean;
+  selfCi: boolean;
+  pets: boolean;
   beds: number;
   rate: string;
   reviews: number;
@@ -52,14 +58,48 @@ const VIBE_TOK: Record<string, string> = {
   relax: "private pool", family: "family", "big group": "villas", romantic: "penthouses",
 };
 
-interface Filters { price: number; beds: number; toks: string[] }
-const NO_FILTERS: Filters = { price: 600, beds: 0, toks: [] };
+/* keyword sets for the amenity checkboxes — matched against each card's
+   free-text amenities/description haystack */
+const AMENS: { k: string; words: string[] }[] = [
+  { k: "st_am_pool", words: ["pool", "alberca", "piscina"] },
+  { k: "st_am_jacuzzi", words: ["jacuzzi", "hot tub"] },
+  { k: "st_am_gym", words: ["gym", "fitness"] },
+  { k: "st_am_beach", words: ["beach", "ocean", "oceanfront"] },
+  { k: "st_am_tennis", words: ["tennis", "pickleball"] },
+  { k: "st_am_kitchen", words: ["kitchen", "cocina"] },
+  { k: "st_am_washer", words: ["washer", "dryer", "laundry", "lavadora"] },
+  { k: "st_am_parking", words: ["parking"] },
+];
+const HOME_TYPES = ["condo", "villa", "house", "apartment", "penthouse"];
+const GUEST_STEPS = [0, 2, 4, 6, 8, 12];
+
+interface Filters {
+  price: number; beds: number; toks: string[];
+  type: string; guests: number; city: string;
+  amens: string[]; opts: string[];
+}
+const NO_FILTERS: Filters = {
+  price: 600, beds: 0, toks: [],
+  type: "any", guests: 0, city: "any",
+  amens: [], opts: [],
+};
+const freshFilters = (toks: string[] = []): Filters => ({ ...NO_FILTERS, toks, amens: [], opts: [] });
 
 function matchProp(p: StayCard, activeFilter: string, f: Filters): boolean {
   if (activeFilter !== "all" && !p.tokens.includes(activeFilter)) return false;
   if (p.price > f.price) return false;
   if (f.beds && p.beds < f.beds) return false;
   for (const t of f.toks) if (!p.tokens.includes(t)) return false;
+  if (f.type !== "any" && p.type !== f.type) return false;
+  if (f.guests && p.guests < f.guests) return false;
+  if (f.city !== "any" && p.city !== f.city) return false;
+  for (const a of f.amens) {
+    const set = AMENS.find((x) => x.k === a);
+    if (set && !set.words.some((w) => p.hay.includes(w))) return false;
+  }
+  if (f.opts.includes("instant") && !p.instant) return false;
+  if (f.opts.includes("selfci") && !p.selfCi) return false;
+  if (f.opts.includes("pets") && !p.pets) return false;
   return true;
 }
 
@@ -165,7 +205,7 @@ export function StaysClient({
   }, [initial.match, initial.vibe]);
 
   const [activeFilter, setActiveFilter] = useState(initFilter);
-  const [moreFilters, setMoreFilters] = useState<Filters>({ ...NO_FILTERS, toks: initToks });
+  const [moreFilters, setMoreFilters] = useState<Filters>(() => freshFilters(initToks));
   const [showBanner, setShowBanner] = useState(initial.match);
 
   /* search bar */
@@ -181,7 +221,7 @@ export function StaysClient({
 
   /* filters drawer */
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [draft, setDraft] = useState<Filters>({ ...NO_FILTERS, toks: initToks });
+  const [draft, setDraft] = useState<Filters>(() => freshFilters(initToks));
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -195,7 +235,12 @@ export function StaysClient({
 
   const list = props.filter((p) => matchProp(p, activeFilter, moreFilters));
   const draftCount = props.filter((p) => matchProp(p, activeFilter, draft)).length;
-  const fcount = (moreFilters.price < 600 ? 1 : 0) + (moreFilters.beds ? 1 : 0) + moreFilters.toks.length;
+  const fcount =
+    (moreFilters.price < 600 ? 1 : 0) + (moreFilters.beds ? 1 : 0) + moreFilters.toks.length +
+    (moreFilters.type !== "any" ? 1 : 0) + (moreFilters.guests ? 1 : 0) +
+    (moreFilters.city !== "any" ? 1 : 0) + moreFilters.amens.length + moreFilters.opts.length;
+  const cities = [...new Set(props.map((p) => p.city))].sort();
+  const typesPresent = HOME_TYPES.filter((ty) => props.some((p) => p.type === ty));
 
   function step(k: "a" | "c" | "b", d: number) {
     setGuests((g) => {
@@ -217,8 +262,8 @@ export function StaysClient({
     e.preventDefault();
     setShowBanner(false);
     setActiveFilter("all");
-    setMoreFilters({ ...NO_FILTERS, toks: [] });
-    setDraft({ ...NO_FILTERS, toks: [] });
+    setMoreFilters(freshFilters());
+    setDraft(freshFilters());
     router.replace("/stays");
   }
 
@@ -370,6 +415,74 @@ export function StaysClient({
                 ))}
               </div>
             </div>
+            {typesPresent.length > 1 && (
+              <div className="fgroup">
+                <h4><T k="st_fil_htype" /></h4>
+                <div className="pillrow">
+                  <button className={`pill${draft.type === "any" ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, type: "any" }))}>
+                    <T k="st_fil_any" />
+                  </button>
+                  {typesPresent.map((ty) => (
+                    <button key={ty} className={`pill${draft.type === ty ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, type: ty }))} style={{ textTransform: "capitalize" }}>
+                      {ty}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="fgroup">
+              <h4><T k="st_fil_guests" /></h4>
+              <div className="pillrow">
+                {GUEST_STEPS.map((gN) => (
+                  <button key={gN} className={`pill${draft.guests === gN ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, guests: gN }))}>
+                    {gN === 0 ? <T k="st_fil_any" /> : `${gN}+`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="fgroup">
+              <h4><T k="st_fil_city" /></h4>
+              <div className="pillrow">
+                <button className={`pill${draft.city === "any" ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, city: "any" }))}>
+                  <T k="st_fil_any" />
+                </button>
+                {cities.map((c) => (
+                  <button key={c} className={`pill${draft.city === c ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, city: c }))}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="fgroup">
+              <h4><T k="st_fil_amen" /></h4>
+              {AMENS.map((a) => (
+                <label className="check" key={a.k}>
+                  <input
+                    type="checkbox"
+                    checked={draft.amens.includes(a.k)}
+                    onChange={(e) => setDraft((d) => ({
+                      ...d,
+                      amens: e.target.checked ? [...d.amens, a.k] : d.amens.filter((x) => x !== a.k),
+                    }))}
+                  /> <T k={a.k} />
+                </label>
+              ))}
+            </div>
+            <div className="fgroup">
+              <h4><T k="st_fil_opts" /></h4>
+              {([["instant", "st_opt_instant"], ["selfci", "st_opt_selfci"], ["pets", "st_opt_pets"]] as const).map(([v, k]) => (
+                <label className="check" key={v}>
+                  <input
+                    type="checkbox"
+                    checked={draft.opts.includes(v)}
+                    onChange={(e) => setDraft((d) => ({
+                      ...d,
+                      opts: e.target.checked ? [...d.opts, v] : d.opts.filter((x) => x !== v),
+                    }))}
+                  /> <T k={k} />
+                </label>
+              ))}
+            </div>
             <div className="fgroup">
               <h4><T k="st_fil_type" /></h4>
               {([["beachfront", "st_f_beach"], ["private pool", "st_f_pool"], ["villas", "st_f_villas"], ["penthouses", "st_f_pent"], ["family", "st_f_family"]] as const).map(([v, k]) => (
@@ -380,7 +493,7 @@ export function StaysClient({
             </div>
           </div>
           <div className="drawer-foot">
-            <button className="clear" onClick={() => setDraft({ ...NO_FILTERS, toks: [] })}><T k="st_fil_clear" /></button>
+            <button className="clear" onClick={() => setDraft(freshFilters())}><T k="st_fil_clear" /></button>
             <button className="apply" onClick={() => { setMoreFilters(draft); setDrawerOpen(false); }}>
               <T k="st_fil_show" /> <span>{draftCount}</span> <T k="st_fil_homes" />
             </button>
