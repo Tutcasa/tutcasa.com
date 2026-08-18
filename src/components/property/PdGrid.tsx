@@ -277,6 +277,9 @@ export function PdGrid({ p }: { p: PdData }) {
       </div>
       <aside className="pd-book">
         <div className="pd-price"><b>${p.priceLabel}</b> <T k="pd_pernight" /></div>
+        <div style={{ fontSize: 12.5, color: "var(--grey)", margin: "-4px 0 10px" }}>
+          All-in price &mdash; taxes &amp; cleaning included. Pick your dates below for the full breakdown.
+        </div>
         <div className="pd-dates">
           <label><T k="pd_ci" /><input ref={ciRef} type="date" min={today} value={ci} onChange={(e) => setDates(e.target.value || null, co || null)} /></label>
           <label><T k="pd_co" /><input type="date" min={today} value={co} onChange={(e) => setDates(ci || null, e.target.value || null)} /></label>

@@ -8,11 +8,12 @@
  */
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { CAD_PER_USD, MXN_PER_USD } from "@/lib/rates";
 
 export type Currency = "USD" | "MXN" | "CAD";
 
 /** units per 1 USD (display conversion only) */
-const PER_USD: Record<Currency, number> = { USD: 1, MXN: 17, CAD: 1.4 };
+const PER_USD: Record<Currency, number> = { USD: 1, MXN: MXN_PER_USD, CAD: CAD_PER_USD };
 
 const LABEL: Record<Currency, string> = { USD: "USD", MXN: "MXN", CAD: "CAD" };
 

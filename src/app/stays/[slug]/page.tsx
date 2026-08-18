@@ -10,6 +10,7 @@ import { getSetting } from "@/modules/settings";
 import { T } from "@/lib/i18n";
 import { demoGradient, displayCityCountry, propertyTypeLabel } from "@/lib/demo-parity";
 import { PdGrid, type PdData } from "@/components/property/PdGrid";
+import { PropertyGallery } from "@/components/property/PropertyGallery";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -105,24 +106,13 @@ export default async function ListingPage({ params }: Props) {
             <span className="pd-badge">{listing.headline}</span>
           </div>
         </div>
-        <div className="pd-gallery">
-          {(listing.photos.length > 0
-            ? listing.photos.slice(0, 5).map((p, i) => ({ key: p.url, photo: p, label: p.alt || GALLERY_LABELS[i], i }))
-            : GALLERY_LABELS.map((label, i) => ({ key: label, photo: null, label, i }))
-          ).map(({ key, photo, label, i }) => (
-            <div key={key} className={`pdph ${photo ? "" : GS[(start + i) % 6]}`}>
-              {photo && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={photo.url}
-                  alt={photo.alt || listing.title}
-                  style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              )}
-              <span className="pdlabel">{label}</span>
-            </div>
-          ))}
-        </div>
+        <PropertyGallery
+          photos={listing.photos.map((p) => ({ url: p.url, alt: p.alt ?? "" }))}
+          title={listing.title}
+          labels={GALLERY_LABELS}
+          gs={GS}
+          gStart={start}
+        />
         <PdGrid p={data} />
         <div className="pd-sec">
           <T as="h2" k="pd_similar" />

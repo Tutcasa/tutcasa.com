@@ -24,6 +24,7 @@ export interface AdminListing {
   checkoutUntil: string;
   lat: number | null;
   lng: number | null;
+  address: string | null;
   amenities: string[];
   houseRules: string;
   featured: boolean;
@@ -153,11 +154,14 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
         <label className="text-xs font-bold">CHECK-OUT UNTIL
           <input name="checkoutUntil" type="time" defaultValue={listing.checkoutUntil} className={inputCls} />
         </label>
-        <label className="text-xs font-bold">LATITUDE
-          <input name="lat" type="number" step="any" defaultValue={listing.lat ?? ""} className={inputCls} />
-        </label>
-        <label className="text-xs font-bold">LONGITUDE
-          <input name="lng" type="number" step="any" defaultValue={listing.lng ?? ""} className={inputCls} />
+        <label className="text-xs font-bold sm:col-span-2">ADDRESS <span className="font-normal text-grey">(street, city — the map pin sets itself from this)</span>
+          <input name="address" defaultValue={listing.address ?? ""} placeholder="e.g. Calle 38 Norte 5, Playa del Carmen"
+            className={inputCls} />
+          {listing.lat != null && listing.lng != null && (
+            <span className="mt-1 block text-[11px] font-normal text-grey">
+              Current map pin: {listing.lat.toFixed(4)}, {listing.lng.toFixed(4)} — updates when you save a new address.
+            </span>
+          )}
         </label>
       </div>
 

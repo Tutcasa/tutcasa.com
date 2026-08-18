@@ -34,17 +34,21 @@ export function PhotoManager({
       {photos.length > 0 ? (
         <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
           {photos.map((p) => (
-            <div key={p.id} className="group relative overflow-hidden rounded-xl border border-line">
+            <div key={p.id} className="relative overflow-hidden rounded-xl border border-line">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.url} alt={p.alt} className="h-24 w-full object-cover" />
               <button
                 type="button"
                 aria-label="Delete photo"
+                title="Delete photo"
                 disabled={busy}
-                onClick={() => start(async () => { await deletePhotoAction(p.id); })}
-                className="absolute right-1.5 top-1.5 hidden h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-sm text-white group-hover:flex"
+                onClick={() => {
+                  if (!confirm("Delete this photo? It disappears from the website immediately and can't be undone.")) return;
+                  start(async () => { await deletePhotoAction(p.id); });
+                }}
+                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/70 text-sm text-white hover:bg-rosa disabled:opacity-50"
               >
-                ×
+                🗑
               </button>
             </div>
           ))}

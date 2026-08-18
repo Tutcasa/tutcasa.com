@@ -196,13 +196,65 @@ export async function saveListingAction(
   }
 
   const db = getDb();
+
+  // The admin enters an ADDRESS; we geocode it (OpenStreetMap) into the
+  // lat/lng the public map uses. A failed lookup keeps the previous pin.
+  const address = orNull(formData.get("address"));
+  const prev = await db.query<{ address: string | null; lat: number | null; lng: number | null }>(
+    "select address, lat, lng from listings where id=$1", [id]);
+  let lat = prev.rows[0]?.lat ?? null;
+  let lng = prev.rows[0]?.lng ?? null;
+  let geoNote = "";
+  if (address && (address !== prev.rows[0]?.address || lat === null)) {
+    // precise sources first: full-address OpenStreetMap, then the US
+    // Census geocoder (OSM misses many US house numbers). Only if both
+    // fail, retry OSM with the leading segment dropped ("Vista Cay
+    // Resort, 4874 …" → "4874 …") — coarser, but beats no pin at all.
+    const nominatim = async (q: string): Promise<boolean> => {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+        { headers: { "User-Agent": "TutCasa/1.0 (bookings@tutcasa.com)" }, cache: "no-store" },
+      );
+      const hits = (await res.json()) as { lat?: string; lon?: string }[];
+      if (!Array.isArray(hits) || !hits[0]?.lat || !hits[0]?.lon) return false;
+      lat = Number(hits[0].lat);
+      lng = Number(hits[0].lon);
+      return true;
+    };
+    const census = async (): Promise<boolean> => {
+      const res = await fetch(
+        `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=json&address=${encodeURIComponent(address)}`,
+        { cache: "no-store" },
+      );
+      const data = (await res.json()) as { result?: { addressMatches?: { coordinates: { x: number; y: number } }[] } };
+      const m = data.result?.addressMatches?.[0];
+      if (!m) return false;
+      lat = m.coordinates.y;
+      lng = m.coordinates.x;
+      return true;
+    };
+    try {
+      let found = await nominatim(address);
+      if (!found) found = await census().catch(() => false);
+      for (let a = address; !found && a.includes(","); ) {
+        a = a.slice(a.indexOf(",") + 1).trim();
+        if (a) found = await nominatim(a);
+      }
+      geoNote = found
+        ? " Map pin updated from the address."
+        : " Couldn't find that address on the map — the pin is unchanged.";
+    } catch {
+      geoNote = " Map lookup failed — the pin is unchanged.";
+    }
+  }
+
   await db.query(
     `update listings set
        title=$2, headline=$3, city=$4, country=$5, region=$6,
        property_type=$7, description=$8, max_guests=$9, bedrooms=$10,
        bathrooms=$11, min_stay=$12, status=$13, size_sqft=$14,
        bed_types=$15, checkin_from=$16, checkout_until=$17,
-       lat=$18, lng=$19, amenities=$20, house_rules=$21,
+       lat=$18, lng=$19, address=$39, amenities=$20, house_rules=$21,
        instant_book=$22, keep_calendar_clean=$23, affiliate_url=$24,
        notify_emails=$25, cancellation_policy=$26, other_rules=$27,
        faqs=$28, checkin_message=$29, checkout_message=$30,
@@ -227,8 +279,7 @@ export async function saveListingAction(
       JSON.stringify(parseBedTypes(formData.get("bedTypes"))),
       String(formData.get("checkinFrom") || "15:00"),
       String(formData.get("checkoutUntil") || "11:00"),
-      formData.get("lat") ? num(formData.get("lat")) : null,
-      formData.get("lng") ? num(formData.get("lng")) : null,
+      lat, lng,
       csvList(formData.get("amenities")),
       orNull(formData.get("houseRules")),
       on(formData.get("instantBook")),
@@ -248,11 +299,12 @@ export async function saveListingAction(
       on(formData.get("featured")),
       Math.min(5, Math.max(0, num(formData.get("rating")))),
       Math.max(0, num(formData.get("reviewCount"))),
+      address,
     ],
   );
 
   revalidatePublic();
-  return { ok: true, message: "Home updated — live on the site now." };
+  return { ok: true, message: `Home updated — live on the site now.${geoNote}` };
 }
 
 /* ------------------------------------------------------------------ */

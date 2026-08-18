@@ -12,12 +12,23 @@ export function InvoiceActions({ bookingId, defaultEmail }: { bookingId: string;
   return (
     <div className="mt-6 border-t border-line pt-4 print:hidden">
       <div className="flex flex-wrap items-end gap-2">
-        <button
-          onClick={() => window.print()}
-          className="rounded-pill bg-rosa px-5 py-2.5 text-sm font-bold text-white"
-        >
-          🖨 Print / Save as PDF
-        </button>
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-2">
+            <button
+              onClick={() => window.print()}
+              className="rounded-pill bg-rosa px-5 py-2.5 text-sm font-bold text-white"
+            >
+              ⬇ Download PDF
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="rounded-pill border-[1.5px] border-line px-5 py-2.5 text-sm font-bold hover:border-rosa"
+            >
+              🖨 Print
+            </button>
+          </div>
+          <span className="text-xs text-grey">PDF: pick “Save as PDF” as the destination in the dialog.</span>
+        </div>
         <div className="flex grow items-end gap-2">
           <label className="grow text-xs font-bold">EMAIL THIS INVOICE TO
             <input

@@ -3,6 +3,7 @@ import { getListingsRepo, type Listing } from "@/modules/listings";
 import { listTours } from "@/modules/tours";
 import { HomeHero } from "@/components/home/HomeHero";
 import { NewsletterBand } from "@/components/home/NewsletterBand";
+import { MXN_PER_USD } from "@/lib/rates";
 import {
   PopularCasas,
   PopularExperiences,
@@ -58,7 +59,7 @@ export default async function HomePage() {
       name: t.title,
       sub: `${t.durationLabel || "Full day"} · ${t.city ?? "Riviera Maya"}`,
       img: t.photoUrl,
-      priceLabel: t.priceCents > 0 ? `from $${Math.round(t.priceCents / 100).toLocaleString("en-US")} MXN` : "on request",
+      priceLabel: t.priceCents > 0 ? `from $${Math.round(t.priceCents / 100 / MXN_PER_USD).toLocaleString("en-US")} USD` : "on request",
     }));
   // the admin's "featured" toggle decides the homepage strip
   const featured: CasaCardData[] = listings
