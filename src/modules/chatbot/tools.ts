@@ -107,3 +107,54 @@ export async function busyRanges(slug: string): Promise<
   );
   return { found: true, busy: res.rows.map((r) => ({ from: r.from_date, to: r.to_date })) };
 }
+
+/**
+ * Tour catalog for a specific group size: tier-priced totals plus the
+ * descriptions/highlights the model needs to judge age suitability.
+ */
+export async function toursForGroup(groupSize: number): Promise<{
+  tours: {
+    title: string;
+    city: string | null;
+    category: string;
+    duration: string | null;
+    about: string;
+    highlights: string[];
+    groupFits: boolean;
+    minGroup: number;
+    maxGroup: number;
+    /** total MXN for THIS group when tier pricing exists */
+    groupTotalMXN: number | null;
+    perPersonMXN: number | null;
+    page: string;
+  }[];
+}> {
+  const g = Math.max(1, Math.min(30, Math.round(groupSize)));
+  const res = await getDb().query(
+    `select slug, title, city, category, duration_label, subtitle, description,
+            coalesce(highlights,'{}') as highlights, price_cents, group_prices,
+            min_group, max_group
+       from tours where status='published'
+      order by category, title limit 80`,
+  );
+  const { tierTotalMXN } = await import("@/modules/tours");
+  return {
+    tours: res.rows.map((t) => {
+      const tier = tierTotalMXN(t.group_prices, g);
+      return {
+        title: t.title,
+        city: t.city,
+        category: t.category,
+        duration: t.duration_label,
+        about: [t.subtitle, t.description].filter(Boolean).join(" — ").slice(0, 400),
+        highlights: (t.highlights as string[]).slice(0, 6),
+        groupFits: g >= (t.min_group ?? 1) && g <= (t.max_group ?? 30),
+        minGroup: t.min_group ?? 1,
+        maxGroup: t.max_group ?? 30,
+        groupTotalMXN: tier,
+        perPersonMXN: t.price_cents > 0 ? Math.round(t.price_cents / 100) : null,
+        page: `/tours`,
+      };
+    }),
+  };
+}

@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { getSystemPrompt } from "@/modules/chatbot";
-import { checkStay, busyRanges } from "@/modules/chatbot/tools";
+import { checkStay, busyRanges, toursForGroup } from "@/modules/chatbot/tools";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -42,6 +42,16 @@ const checkAvailabilityTool = betaZodTool({
   }),
   run: async ({ slug, checkIn, checkOut, guests }) =>
     JSON.stringify(await checkStay(slug, checkIn, checkOut, guests)),
+});
+
+const recommendToursTool = betaZodTool({
+  name: "get_tours_for_group",
+  description:
+    "Full tour & park catalog priced for a SPECIFIC group size: group-tier totals in MXN, per-person prices, durations, and full descriptions/highlights (use these to judge what suits the group's ages — e.g. long snorkel days vs. small kids). Call it whenever you recommend tours and you know how many people are going.",
+  inputSchema: z.object({
+    groupSize: z.number().int().min(1).max(30).describe("number of people in the group"),
+  }),
+  run: async ({ groupSize }) => JSON.stringify(await toursForGroup(groupSize)),
 });
 
 const busyRangesTool = betaZodTool({
@@ -91,7 +101,7 @@ export async function POST(req: Request) {
     // safety-refusal fallback routing (recommended default for Opus 5)
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
-    tools: [checkAvailabilityTool, busyRangesTool],
+    tools: [checkAvailabilityTool, busyRangesTool, recommendToursTool],
     max_iterations: 6,
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: history,
