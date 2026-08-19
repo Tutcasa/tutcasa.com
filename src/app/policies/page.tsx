@@ -28,7 +28,9 @@ function Body({ text }: { text: string }) {
       bullets.push(line.slice(2));
     } else {
       flush(`u${i}`);
-      if (line.startsWith("🇪🇬")) out.push(<div className="pol-note" key={i}>{line}</div>);
+      if (line.startsWith("## ")) out.push(<h4 key={i} style={{ fontFamily: "'Baloo 2', cursive", margin: "12px 0 2px" }}>{line.slice(3)}</h4>);
+      else if (line.startsWith("# ")) out.push(<h3 key={i} style={{ fontFamily: "'Baloo 2', cursive", margin: "14px 0 4px" }}>{line.slice(2)}</h3>);
+      else if (line.startsWith("🇪🇬")) out.push(<div className="pol-note" key={i}>{line}</div>);
       else if (i > 0) out.push(<p key={i} style={{ marginTop: 12 }}><b>{line}</b></p>);
       else out.push(<p key={i}>{line}</p>);
     }

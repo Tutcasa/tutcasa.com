@@ -63,7 +63,7 @@ export function PoliciesForm({ content }: { content: PoliciesContent }) {
           <label className="text-xs font-bold">SECTION TITLE
             <input name={`sec_title_${i}`} defaultValue={sec.title} className={inputCls} />
           </label>
-          <label className="text-xs font-bold">BODY <span className="font-normal text-grey">(start a line with “- ” for a bullet)</span>
+          <label className="text-xs font-bold">BODY <span className="font-normal text-grey">(start a line with “- ” for a bullet, “# ” for a heading, “## ” for a subheading)</span>
             <textarea name={`sec_body_${i}`} rows={4} defaultValue={sec.body} className={inputCls} />
           </label>
         </div>

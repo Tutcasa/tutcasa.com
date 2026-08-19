@@ -65,6 +65,7 @@ export function CheckoutClient({
   schedule?: CheckoutSchedule;
 }) {
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [ccName, setCcName] = useState("");
   const [ccNum, setCcNum] = useState("");
   const [ccExp, setCcExp] = useState("");
@@ -133,6 +134,7 @@ export function CheckoutClient({
           ? await reserveAction({
               listingSlug: payload.slug, checkIn: payload.ci, checkOut: payload.co,
               guests: payload.guests, guestName: name, guestEmail: email.trim(),
+              guestPhone: phone.trim() || undefined,
               couponCode: coupon?.code,
             })
           : await reserveTourAction({
@@ -217,6 +219,7 @@ export function CheckoutClient({
             <h3>Payment</h3>
             <div className="co-sub">Card details are handled by Stripe. TutCasa never sees your card number.</div>
             <div className="co-fld"><label>Email for confirmation</label><input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+            <div className="co-fld"><label>Phone / WhatsApp (with country code)</label><input type="tel" placeholder="+52 984 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
             <div className="co-fld"><label>Name on card</label><input placeholder="MARIA LOPEZ" value={ccName} onChange={(e) => setCcName(e.target.value)} /></div>
             <div className="co-fld"><label>Card number</label><input inputMode="numeric" placeholder="1234 1234 1234 1234" value={ccNum} onChange={(e) => setCcNum(fmtCard(e.target.value))} /></div>
             <div className="co-two">

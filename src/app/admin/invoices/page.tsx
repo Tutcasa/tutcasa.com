@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { fmtMoney } from "@/modules/pricing";
 import { CopyLink } from "./copy-link";
+import { AdminSearch, rowMatches } from "../search-box";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +52,12 @@ async function allInvoices(): Promise<InvoiceRow[]> {
   }));
 }
 
-export default async function AdminInvoices() {
-  const invoices = await allInvoices();
+export default async function AdminInvoices({
+  searchParams,
+}: { searchParams: Promise<{ q?: string }> }) {
+  const { q = "" } = await searchParams;
+  const invoices = (await allInvoices()).filter((inv) =>
+    rowMatches(q, inv.invoiceNo, inv.guestName, inv.guestEmail, inv.what));
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Invoices</h1>
@@ -60,6 +65,7 @@ export default async function AdminInvoices() {
         Every booking gets an invoice number and a shareable link — copy it and
         send it straight to the guest, exactly like the old site.
       </p>
+      <AdminSearch placeholder="Search by invoice #, guest or home…" q={q} />
       <div className="overflow-x-auto rounded-card bg-paper shadow-soft">
         <table className="w-full min-w-[860px] text-sm">
           <thead className="border-b border-line text-left text-xs uppercase text-grey">

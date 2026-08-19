@@ -137,3 +137,30 @@ export async function resolveStayQuote(
     listing: { id: L.id, slug: L.slug, title: L.title, city: L.city, maxGuests: L.max_guests, instantBook: L.instant_book },
   };
 }
+
+/**
+ * Tonight's effective nightly rate for a listing (per-date override →
+ * seasonal rate → base), tax included — so the advertised "$X / night
+ * all-in" reflects period-specific pricing, not just the base rate.
+ * Returns null when the listing has no rates.
+ */
+export async function effectiveNightlyTodayCents(listingId: string): Promise<number | null> {
+  const db = getDb();
+  const res = await db.query(
+    `select coalesce(
+              (select d.nightly_cents from listing_price_days d
+                where d.listing_id=$1 and d.day=current_date and d.nightly_cents is not null),
+              (select r.nightly_cents from listing_rates r
+                where r.listing_id=$1 and r.season is not null and r.season @> current_date
+                order by lower(r.season) desc limit 1),
+              (select r.nightly_cents from listing_rates r
+                where r.listing_id=$1 and r.season is null)
+            ) as nightly,
+            (select r.tax_pct from listing_rates r
+              where r.listing_id=$1 and r.season is null) as tax_pct`,
+    [listingId],
+  );
+  const row = res.rows[0];
+  if (!row?.nightly) return null;
+  return Math.round(Number(row.nightly) * (1 + Number(row.tax_pct ?? 0) / 100));
+}

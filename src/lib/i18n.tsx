@@ -99,6 +99,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     st_fil_opts: `Booking options`, st_opt_instant: `Instant book`, st_opt_selfci: `Self check-in`, st_opt_pets: `Pets allowed`,
     st_am_pool: `Pool`, st_am_jacuzzi: `Jacuzzi / hot tub`, st_am_gym: `Gym / fitness`, st_am_beach: `Beach / ocean view`,
     st_am_tennis: `Tennis &amp; pickleball`, st_am_kitchen: `Full kitchen`, st_am_washer: `Washer / dryer`, st_am_parking: `Parking`,
+    st_am_wifi: `Wi-Fi`, st_am_ac: `Air conditioning`,
     /* property page */
     pd_back: `Back to stays`, pd_reviews: `reviews`, pd_about: `About this place`, pd_offers: `What this place offers`,
     pd_know: `Good to know`, pd_avail: `Availability`, pd_caltip: `Tap a start date, then an end date. Crossed-out days are already booked.`,
@@ -188,6 +189,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     st_fil_opts: `Options de réservation`, st_opt_instant: `Réservation instantanée`, st_opt_selfci: `Arrivée autonome`, st_opt_pets: `Animaux acceptés`,
     st_am_pool: `Piscine`, st_am_jacuzzi: `Jacuzzi`, st_am_gym: `Salle de sport`, st_am_beach: `Plage / vue mer`,
     st_am_tennis: `Tennis &amp; pickleball`, st_am_kitchen: `Cuisine équipée`, st_am_washer: `Lave-linge / sèche-linge`, st_am_parking: `Parking`,
+    st_am_wifi: `Wi-Fi`, st_am_ac: `Climatisation`,
     st_fil_show: `Voir`, st_fil_homes: `maisons`, st_match_your: `Vos correspondances`, st_match_in: `à`,
     pd_back: `Retour aux séjours`, pd_reviews: `avis`, pd_about: `À propos du logement`, pd_offers: `Ce que propose ce logement`,
     pd_know: `Bon à savoir`, pd_avail: `Disponibilité`, pd_caltip: `Touchez une date de début, puis une date de fin. Les jours barrés sont déjà réservés.`,
@@ -276,6 +278,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     st_fil_opts: `Opciones de reserva`, st_opt_instant: `Reserva instantánea`, st_opt_selfci: `Check-in autónomo`, st_opt_pets: `Mascotas permitidas`,
     st_am_pool: `Alberca`, st_am_jacuzzi: `Jacuzzi`, st_am_gym: `Gimnasio`, st_am_beach: `Playa / vista al mar`,
     st_am_tennis: `Tenis y pickleball`, st_am_kitchen: `Cocina completa`, st_am_washer: `Lavadora / secadora`, st_am_parking: `Estacionamiento`,
+    st_am_wifi: `Wi-Fi`, st_am_ac: `Aire acondicionado`,
     st_fil_show: `Ver`, st_fil_homes: `casas`, st_match_your: `Tus coincidencias`, st_match_in: `en`,
     pd_back: `Volver a estancias`, pd_reviews: `reseñas`, pd_about: `Sobre este lugar`, pd_offers: `Lo que ofrece este lugar`,
     pd_know: `Bueno saber`, pd_avail: `Disponibilidad`, pd_caltip: `Toca una fecha de inicio y luego una de fin. Los días tachados ya están reservados.`,

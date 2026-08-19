@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { fmtMoney } from "@/modules/pricing";
+import { AdminSearch, rowMatches } from "../search-box";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +52,12 @@ const LINES: [string, string][] = [
   ["taxCents", "Taxes"],
 ];
 
-export default async function AdminOrders() {
-  const orders = await allOrders();
+export default async function AdminOrders({
+  searchParams,
+}: { searchParams: Promise<{ q?: string }> }) {
+  const { q = "" } = await searchParams;
+  const orders = (await allOrders()).filter((o) =>
+    rowMatches(q, o.invoiceNo, o.guestName, o.what));
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Payments &amp; orders</h1>
@@ -61,6 +66,7 @@ export default async function AdminOrders() {
         kept under WooCommerce → Orders. Real card payments switch on with
         Stripe at the payments milestone.
       </p>
+      <AdminSearch placeholder="Search by invoice #, guest or home…" q={q} />
       <div className="grid gap-3">
         {orders.map((o) => {
           const isDiscount = (k: string) => k.includes("Discount") || k.includes("length");

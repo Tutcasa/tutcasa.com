@@ -69,6 +69,8 @@ const AMENS: { k: string; words: string[] }[] = [
   { k: "st_am_kitchen", words: ["kitchen", "cocina"] },
   { k: "st_am_washer", words: ["washer", "dryer", "laundry", "lavadora"] },
   { k: "st_am_parking", words: ["parking"] },
+  { k: "st_am_wifi", words: ["wifi", "wi-fi", "internet"] },
+  { k: "st_am_ac", words: ["air cond", "a/c", "aircon", "climate control", "aire acond"] },
 ];
 const HOME_TYPES = ["condo", "villa", "house", "apartment", "penthouse"];
 const GUEST_STEPS = [0, 2, 4, 6, 8, 12];

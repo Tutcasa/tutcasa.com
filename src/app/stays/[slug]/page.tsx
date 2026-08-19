@@ -5,6 +5,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getListingsRepo, type Listing } from "@/modules/listings";
 import { allInNightlyCents } from "@/modules/pricing";
+import { effectiveNightlyTodayCents } from "@/modules/pricing/resolve";
 import { getUnavailableRanges } from "@/modules/bookings";
 import { getSetting } from "@/modules/settings";
 import { T } from "@/lib/i18n";
@@ -57,10 +58,11 @@ export default async function ListingPage({ params }: Props) {
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const [unavailable, all, contact] = await Promise.all([
+  const [unavailable, all, contact, todayNightly] = await Promise.all([
     getUnavailableRanges(listing.id),
     repo.listPublished(),
     getSetting("contact"),
+    effectiveNightlyTodayCents(listing.id).catch(() => null),
   ]);
 
   const g = demoGradient(listing, 6);
@@ -81,7 +83,7 @@ export default async function ListingPage({ params }: Props) {
     beds: listing.bedrooms,
     baths: listing.bathrooms,
     guests: listing.maxGuests,
-    priceLabel: Math.round(allInNightlyCents(listing) / 100).toLocaleString("en-US"),
+    priceLabel: Math.round((todayNightly ?? allInNightlyCents(listing)) / 100).toLocaleString("en-US"),
     rate: listing.rating.toFixed(2),
     reviews: listing.reviewCount,
     lat: listing.lat,

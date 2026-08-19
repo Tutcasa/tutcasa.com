@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { getDb } from "@/lib/db";
+import { AdminSearch } from "../search-box";
 import { ListingForm, type AdminListing } from "./listing-form";
 import { PricingForm, type AdminPricing, type AdminSeason } from "./pricing-form";
 import { CalendarEditor, type AdminDay, type AdminBlock, type AdminIcalFeed } from "./calendar-editor";
@@ -231,11 +232,15 @@ type Tab = (typeof TABS)[number][0];
 
 export default async function AdminListings({
   searchParams,
-}: { searchParams: Promise<{ edit?: string; tab?: string }> }) {
-  const { edit, tab: rawTab } = await searchParams;
+}: { searchParams: Promise<{ edit?: string; tab?: string; q?: string }> }) {
+  const { edit, tab: rawTab, q = "" } = await searchParams;
   const listings = await allListings();
   const editing = edit ? listings.find((l) => l.id === edit) : listings[0];
   const tab: Tab = TABS.some(([t]) => t === rawTab) ? (rawTab as Tab) : "details";
+  const needle = q.trim().toLowerCase();
+  const shownListings = needle
+    ? listings.filter((l) => `${l.title} ${l.city}`.toLowerCase().includes(needle))
+    : listings;
 
   const [pricingData, calendarData, addons, photos] = editing
     ? await Promise.all([
@@ -265,8 +270,10 @@ export default async function AdminListings({
           </button>
         </form>
 
+        <AdminSearch placeholder="Search homes by name or city…" q={q} extra={{ edit, tab }} />
+
         <div className="grid gap-2">
-          {listings.map((l) => (
+          {shownListings.map((l) => (
             <a
               key={l.id}
               href={`/admin/listings?edit=${l.id}&tab=${tab}`}

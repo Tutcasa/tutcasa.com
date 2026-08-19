@@ -113,7 +113,7 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
           </select>
         </label>
       </div>
-      <label className="text-xs font-bold">DESCRIPTION
+      <label className="text-xs font-bold">DESCRIPTION <span className="font-normal text-grey">(start a line with “# ” for a big heading, “## ” for a subheading, “- ” for a bullet)</span>
         <textarea name="description" rows={4} defaultValue={listing.description} className={inputCls} />
       </label>
       <div className="grid gap-3 sm:grid-cols-4">

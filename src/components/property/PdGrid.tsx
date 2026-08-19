@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
 import { getQuoteAction, type QuoteResult } from "@/app/stays/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
+import { RichText } from "@/components/site/RichText";
 
 export interface PdData {
   slug: string;
@@ -206,7 +207,7 @@ export function PdGrid({ p }: { p: PdData }) {
             <div className="pd-fact"><span className="fi">&#127968;</span>{p.typeLabel}</div>
           </div>
         </div>
-        <div className="pd-sec"><T as="h2" k="pd_about" /><p id="pdDesc">{p.desc}</p></div>
+        <div className="pd-sec"><T as="h2" k="pd_about" /><div id="pdDesc"><RichText text={p.desc} /></div></div>
         <div className="pd-sec">
           <T as="h2" k="pd_offers" />
           <div className="pd-amen">
