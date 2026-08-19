@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import { sendTestEmail } from "@/modules/emails";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export interface EmailFormState { ok: boolean; message: string }
 
@@ -12,6 +13,7 @@ export async function saveAutomationAction(
   _prev: EmailFormState,
   formData: FormData,
 ): Promise<EmailFormState> {
+  await requireAdmin();
   const id = s(formData.get("id"));
   const subject = s(formData.get("subject"));
   const body = String(formData.get("body") ?? "").trim();
@@ -27,6 +29,7 @@ export async function saveAutomationAction(
 }
 
 export async function toggleAutomationAction(id: string): Promise<void> {
+  await requireAdmin();
   await getDb().query(
     "update email_automations set enabled = not enabled, updated_at=now() where id=$1", [id]);
   revalidatePath("/admin/emails");
@@ -36,6 +39,7 @@ export async function addAutomationAction(
   _prev: EmailFormState,
   formData: FormData,
 ): Promise<EmailFormState> {
+  await requireAdmin();
   const name = s(formData.get("name"));
   const subject = s(formData.get("subject"));
   if (!name || !subject) return { ok: false, message: "A name and subject are required." };
@@ -58,6 +62,7 @@ export async function addAutomationAction(
 }
 
 export async function deleteAutomationAction(id: string): Promise<void> {
+  await requireAdmin();
   // built-ins can only be disabled, never deleted
   await getDb().query(
     "delete from email_automations where id=$1 and builtin=false", [id]);
@@ -68,6 +73,7 @@ export async function sendTestAction(
   _prev: EmailFormState,
   formData: FormData,
 ): Promise<EmailFormState> {
+  await requireAdmin();
   const key = s(formData.get("key"));
   const to = s(formData.get("to"));
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return { ok: false, message: "Enter a valid email address." };

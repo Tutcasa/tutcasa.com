@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import type { BookingStatus } from "@/modules/bookings";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export interface BookingFormState { ok: boolean; message: string }
 
@@ -23,11 +24,17 @@ export async function setBookingStatusAction(
   id: string,
   to: BookingStatus,
 ): Promise<void> {
+  await requireAdmin();
   const db = getDb();
-  const cur = await db.query<{ status: BookingStatus }>(
-    "select status from bookings where id=$1", [id]);
-  const from = cur.rows[0]?.status;
+  const cur = await db.query<{ status: BookingStatus; future: boolean; coupon_code: string | null }>(
+    `select status, upper(stay) > current_date as future, coupon_code
+       from bookings where id=$1`, [id]);
+  const row = cur.rows[0];
+  const from = row?.status;
   if (!from || !ALLOWED[from].includes(to)) return;
+  // a FUTURE stay must never be "completed" — that would drop it out of
+  // the double-booking constraint and reopen its nights for sale
+  if (to === "completed" && row.future) return;
   // confirming clears the hold — the dates are now committed
   await db.query(
     `update bookings set status=$2,
@@ -35,6 +42,11 @@ export async function setBookingStatusAction(
       where id=$1`,
     [id, to],
   );
+  if (to === "cancelled" && row.coupon_code) {
+    // give the coupon use back — the discount was never actually spent
+    const { unredeemCoupon } = await import("@/modules/coupons");
+    await unredeemCoupon(row.coupon_code).catch(() => {});
+  }
   if (to === "confirmed") {
     // M3: acceptance email with the invoice link (guest + team copy)
     const { fireAutomations } = await import("@/modules/emails/dispatch");
@@ -60,6 +72,7 @@ export async function createManualBookingAction(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
+  await requireAdmin();
   const listingId = String(formData.get("listingId") ?? "");
   const checkIn = String(formData.get("checkIn") ?? "");
   const checkOut = String(formData.get("checkOut") ?? "");
@@ -89,7 +102,13 @@ export async function createManualBookingAction(
     const t = Number(totalRaw);
     if (!Number.isFinite(t) || t < 0) return { ok: false, message: "The total must be a number (or blank to auto-price)." };
     totalCents = Math.round(t * 100);
-    if (quoted.ok) breakdown = { ...quoted.quote, schedule: undefined, adminOverride: true };
+    // an overridden total gets an HONEST breakdown (one line that sums to
+    // the total) — never the auto-quote's lines next to a different total
+    breakdown = {
+      nights: quoted.ok ? quoted.quote.nights : undefined,
+      accommodationCents: totalCents,
+      adminOverride: true,
+    };
   } else if (quoted.ok) {
     const q = quoted.quote;
     totalCents = q.totalCents;
@@ -139,6 +158,7 @@ export async function updateBookingAction(
   _prev: BookingFormState,
   formData: FormData,
 ): Promise<BookingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const listingId = String(formData.get("listingId") ?? "");
   const guestName = String(formData.get("guestName") ?? "").trim();
@@ -161,7 +181,15 @@ export async function updateBookingAction(
     await getDb().query(
       `update bookings set
          listing_id=$2, guest_name=$3, guest_email=$4, guest_phone=$5,
-         stay=daterange($6::date, $7::date, '[)'), guests=$8, total_cents=$9
+         stay=daterange($6::date, $7::date, '[)'), guests=$8,
+         -- a changed total replaces the stored line items with one honest
+         -- line, so the invoice always sums to what the admin typed
+         price_breakdown = case when total_cents <> $9 then
+           jsonb_build_object('nights', price_breakdown->'nights',
+                              'accommodationCents', $9::bigint,
+                              'adminOverride', true)
+           else price_breakdown end,
+         total_cents=$9
        where id=$1`,
       [id, listingId, guestName, guestEmail,
        String(formData.get("guestPhone") ?? "").trim() || null,

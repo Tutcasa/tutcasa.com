@@ -89,10 +89,26 @@ export async function checkCoupon(rawCode: string, ctx: CouponContext): Promise<
   return { ok: true, code, discountCents };
 }
 
-/** Count a redemption (called when a booking is actually created). */
-export async function redeemCoupon(code: string): Promise<void> {
+/**
+ * Atomically claim one use — the WHERE clause enforces max_uses inside
+ * the UPDATE, so two simultaneous checkouts can never both take the
+ * last slot. Returns false when the coupon just ran out.
+ */
+export async function tryRedeemCoupon(code: string): Promise<boolean> {
+  const res = await getDb().query(
+    `update coupons set used_count = used_count + 1
+      where code = $1 and active
+        and (max_uses is null or used_count < max_uses)
+      returning code`,
+    [code.trim().toUpperCase()],
+  );
+  return res.rowCount === 1;
+}
+
+/** Give a use back (booking insert failed, hold expired, or cancelled). */
+export async function unredeemCoupon(code: string): Promise<void> {
   await getDb().query(
-    "update coupons set used_count = used_count + 1 where code = $1",
+    "update coupons set used_count = greatest(0, used_count - 1) where code = $1",
     [code.trim().toUpperCase()],
   );
 }

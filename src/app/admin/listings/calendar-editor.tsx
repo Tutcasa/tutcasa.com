@@ -169,8 +169,8 @@ export function CalendarEditor({
                  onChange={(e) => setFrom(e.target.value)} className={inputCls} />
           <input name="to" type="date" required value={to || from}
                  onChange={(e) => setTo(e.target.value)} className={inputCls} />
-          <input name="nightlyUSD" type="number" min="1" placeholder="$/night (blank = base)" className={inputCls} />
-          <input name="minStay" type="number" min="1" placeholder="Min stay (blank = base)" className={inputCls} />
+          <input name="nightlyUSD" type="number" min="1" placeholder="$/night (blank = keep current)" className={inputCls} />
+          <input name="minStay" type="number" min="1" placeholder="Min stay (blank = keep)" className={inputCls} />
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input type="checkbox" name="blocked" className="h-4 w-4 accent-rosa" /> Block these nights
           </label>

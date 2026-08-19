@@ -84,6 +84,12 @@ async function alreadySent(key: string, bookingId: string): Promise<boolean> {
   return (res.rowCount ?? 0) > 0;
 }
 
+/**
+ * Send one email to one recipient, exactly once. The claim IS the
+ * unique-indexed log insert: whichever process inserts first sends;
+ * everyone else conflicts and skips (kills the concurrent-cron double
+ * send). A previous FAILED attempt is retried by updating that row.
+ */
 async function deliver(
   key: string,
   bookingId: string,
@@ -93,6 +99,19 @@ async function deliver(
   text: string,
 ): Promise<void> {
   const db = getDb();
+  const claim = await db.query<{ id: string }>(
+    `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status)
+     values ($1,'email',$2,$3,$4,$5,'sending')
+     on conflict (kind, booking_id, recipient) where booking_id is not null
+     do update set status='sending', error=null
+       where notifications_log.status = 'failed'
+          or (notifications_log.status = 'sending'
+              and notifications_log.created_at < now() - interval '15 minutes')
+     returning id`,
+    [key, to, subject, text.slice(0, 4000), bookingId],
+  );
+  if (!claim.rows[0]) return; // already sent (or another process is on it)
+
   const apiKey = process.env.RESEND_API_KEY;
   let status = "manual";
   let error: string | null = null;
@@ -118,9 +137,8 @@ async function deliver(
     }
   }
   await db.query(
-    `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status, error)
-     values ($1,'email',$2,$3,$4,$5,$6,$7)`,
-    [key, to, subject, text.slice(0, 4000), bookingId, status, error],
+    "update notifications_log set status=$2, error=$3 where id=$1",
+    [claim.rows[0].id, status, error],
   );
 }
 
@@ -135,7 +153,8 @@ export async function sendAutomationForBooking(
   if (!ctx) return;
   // Amanah owns guest communication for partner bookings
   if (a.audience === "guest" && ctx.source === "amanah") return;
-  if (await alreadySent(key, bookingId)) return;
+  // dedupe happens PER RECIPIENT inside deliver() (unique-index claim) —
+  // so a partially-delivered team email still reaches the missing inboxes
 
   const subject = fillVars(a.subject, ctx.vars);
   const html = renderEmailHtml({ subject: a.subject, body: a.body, vars: ctx.vars });
@@ -151,11 +170,24 @@ export async function sendAutomationForBooking(
   }
 }
 
-/** Fire-and-forget wrapper for booking-flow hooks (never blocks a booking). */
+/**
+ * Fire-and-forget wrapper for booking-flow hooks (never blocks a booking).
+ * Uses next/server `after()` so the serverless runtime keeps the function
+ * alive until the emails are actually sent — a bare detached promise can
+ * be frozen with the lambda before Resend is ever called.
+ */
 export function fireAutomations(keys: string[], bookingId: string): void {
-  void (async () => {
+  const work = async () => {
     for (const key of keys) {
       await sendAutomationForBooking(key, bookingId).catch(() => {});
+    }
+  };
+  void (async () => {
+    try {
+      const { after } = await import("next/server");
+      after(work);
+    } catch {
+      void work(); // non-request context (scripts/tests)
     }
   })();
 }
@@ -170,16 +202,19 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
 
   for (const a of autos.rows) {
     let bookings: { id: string }[] = [];
+    // WINDOWS, not exact dates: a booking confirmed late (or a day the
+    // cron missed) still gets its reminder on the next sweep, as long as
+    // the moment hasn't passed. The per-recipient claim dedupes repeats.
     if (a.trigger_event === "before_checkin") {
       bookings = (await db.query(
         `select id from bookings where status='confirmed'
-          and lower(stay) = current_date + ($1 || ' days')::interval`,
+          and lower(stay) between current_date and current_date + ($1 || ' days')::interval`,
         [String(a.offset_days)],
       )).rows;
     } else if (a.trigger_event === "before_checkout") {
       bookings = (await db.query(
         `select id from bookings where status in ('confirmed')
-          and upper(stay) = current_date + ($1 || ' days')::interval`,
+          and upper(stay) between current_date and current_date + ($1 || ' days')::interval`,
         [String(a.offset_days)],
       )).rows;
     } else if (a.trigger_event === "second_payment_due") {
@@ -188,7 +223,10 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
           where status='confirmed'
             and (price_breakdown->>'balanceCents')::int > 0
             and amount_paid_cents < total_cents
-            and left(price_breakdown->>'balanceDueDate', 10) = to_char(current_date, 'YYYY-MM-DD')`,
+            and left(price_breakdown->>'balanceDueDate', 10)
+                between to_char(current_date, 'YYYY-MM-DD')
+                    and to_char(current_date + ($1 || ' days')::interval, 'YYYY-MM-DD')`,
+        [String(a.offset_days)],
       )).rows;
     } else {
       continue;

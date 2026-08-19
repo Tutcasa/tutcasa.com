@@ -73,7 +73,13 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     return { ok: false, error: "INVALID_GROUP" };
   }
 
-  const total = tierTotal != null ? Math.round(tierTotal * 100) : tour.priceCents * req.groupSize;
+  // add-ons are per-person, priced from OUR catalog (client names only)
+  const { priceForActivity } = await import("./addons");
+  const addonCents = (req.addons ?? []).slice(0, 12).reduce((sum, nm) => {
+    const p = priceForActivity(String(nm));
+    return p != null ? sum + Math.round(p * 100) * req.groupSize : sum;
+  }, 0);
+  const total = (tierTotal != null ? Math.round(tierTotal * 100) : tour.priceCents * req.groupSize) + addonCents;
   const res = await getDb().query<{ id: string }>(
     `insert into tour_bookings
        (tour_id, guest_name, guest_email, guest_phone, tour_date, group_size,

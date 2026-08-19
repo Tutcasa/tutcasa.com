@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { upsertTour } from "@/modules/tours";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 
 /**
  * Delete a tour/park. Archived instead when bookings exist.
@@ -10,6 +11,7 @@ import { getDb } from "@/lib/db";
 export async function deleteTourAction(
   tourId: string,
 ): Promise<{ deleted: boolean; message: string }> {
+  await requireAdmin();
   const db = getDb();
   const has = await db.query<{ n: string }>(
     "select count(*) as n from tour_bookings where tour_id=$1", [tourId]);
@@ -31,6 +33,7 @@ export async function saveTourAction(
   _prev: TourFormState,
   formData: FormData,
 ): Promise<TourFormState> {
+  await requireAdmin();
   const id = (formData.get("id") as string) || undefined;
   const res = await upsertTour({
     id,
@@ -53,6 +56,7 @@ export async function saveTourAction(
 }
 
 export async function syncAmanahAction(): Promise<{ ok: boolean; text: string }> {
+  await requireAdmin();
   const { syncAmanahTours } = await import("@/modules/tours/sync");
   const res = await syncAmanahTours();
   revalidatePath("/admin/tours");

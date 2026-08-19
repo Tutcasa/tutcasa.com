@@ -121,6 +121,9 @@ export async function upsertTransfer(
     await db.query("update transfers set sent_at=now() where id=$1", [id]);
     return { ok: true, message: "Transfer sent to Amanah — status: Requested.", transfer };
   }
+  // the details CHANGED but the push failed — the old sent_at would show
+  // "delivered" while Amanah still holds stale flight info
+  await db.query("update transfers set sent_at=null where id=$1", [id]);
   return {
     ok: true,
     message: "Transfer saved. Heads-up: the automatic push to Amanah didn't go through — use Resend, or Amanah will get it by email.",
@@ -160,7 +163,7 @@ export async function pushToAmanah(t: Transfer): Promise<{ ok: boolean }> {
 }
 
 /** Instant email to Amanah's ops inbox (works today; WhatsApp API later). */
-async function notifyAmanahEmail(t: Transfer): Promise<void> {
+export async function notifyAmanahEmail(t: Transfer): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY;
   const to = process.env.AMANAH_NOTIFY_EMAIL;
   if (!apiKey || !to) return;
@@ -203,7 +206,7 @@ export async function setTransferStatus(
   const res = await getDb().query(
     `update transfers set status=$2,
             amanah_note = case when $2 = 'need_details' then $3 else amanah_note end
-      where id=$1 returning id`,
+      where id=$1 and status <> 'cancelled' returning id`,
     [transferId, status, note?.trim() || null],
   );
   return (res.rowCount ?? 0) > 0;

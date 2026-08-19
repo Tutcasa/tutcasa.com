@@ -1,4 +1,5 @@
 import "server-only";
+import { todayLocal } from "@/lib/local-date";
 import { getDb } from "@/lib/db";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
 
@@ -23,7 +24,7 @@ export type PartnerHoldResult =
       ok: true;
       holdId: string;
       expiresAt: string;
-      quote: { nights: number; currency: string; total: number };
+      quote: { nights: number; currency: string; total: number; totalCents: number };
     }
   | {
       ok: false;
@@ -39,7 +40,7 @@ export async function createPartnerHold(input: {
   guests: number;
   partnerRef?: string;
 }): Promise<PartnerHoldResult> {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   if (!input.checkIn || input.checkIn < today) return { ok: false, error: "INVALID_DATES" };
 
   // same validation + pricing as the public quote endpoint
@@ -105,7 +106,7 @@ export async function createPartnerHold(input: {
       ok: true,
       holdId: res.rows[0].id,
       expiresAt: new Date(res.rows[0].hold_expires_at).toISOString(),
-      quote: { nights: q.nights, currency: q.currency, total: Math.round(q.totalCents / 100) },
+      quote: { nights: q.nights, currency: q.currency, total: Math.round(q.totalCents / 100), totalCents: q.totalCents },
     };
   } catch (e) {
     const err = e as { code?: string; constraint?: string };
@@ -161,6 +162,30 @@ export async function confirmPartnerHold(
     return { ok: true, bookingId: res.rows[0].id };
   }
 
+  // Request-to-book path: the admin already APPROVED (status='confirmed',
+  // hold cleared) and Amanah is now reporting the collected payment —
+  // record it. Only fills empty payment fields, so a retry can't
+  // overwrite a real payment record.
+  const approved = await db.query<{ id: string }>(
+    `update bookings set
+       guest_name=$2, guest_email=$3, guest_phone=coalesce($4, guest_phone),
+       payment_provider='partner', payment_ref=coalesce($5, partner_ref),
+       partner_ref=coalesce($5, partner_ref),
+       amount_paid_cents=$6, notes=coalesce($7, notes)
+     where id=$1 and source='amanah' and status='confirmed'
+       and coalesce(amount_paid_cents, 0) = 0 and $6 > 0
+     returning id`,
+    [holdId, name, email, input.guestWhatsapp?.trim() || null,
+     input.partnerRef?.trim() || null,
+     Math.max(0, Math.round((input.amountPaid ?? 0) * 100)),
+     input.notes?.trim() || null],
+  );
+  if (approved.rows[0]) {
+    const { fireAutomations } = await import("@/modules/emails/dispatch");
+    fireAutomations(["admin_payment_receipt"], approved.rows[0].id);
+    return { ok: true, bookingId: approved.rows[0].id };
+  }
+
   // idempotency: a webhook retry on an already-confirmed hold gets the same id
   const existing = await db.query<{ id: string; status: string }>(
     "select id, status from bookings where id=$1 and source='amanah'", [holdId]);
@@ -185,7 +210,7 @@ export type PartnerRequestResult =
       requestId: string;
       status: "pending";
       expiresAt: string;
-      quote: { nights: number; currency: string; total: number };
+      quote: { nights: number; currency: string; total: number; totalCents: number };
     }
   | { ok: false; error: "NOT_FOUND" | "INVALID_DATES" | "MIN_STAY_NOT_MET" | "MAX_GUESTS_EXCEEDED" | "DATES_TAKEN" | "INVALID_CONTACT" };
 
@@ -205,7 +230,7 @@ export async function createPartnerRequest(input: {
   if (!name || !email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return { ok: false, error: "INVALID_CONTACT" };
   }
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   if (!input.checkIn || input.checkIn < today) return { ok: false, error: "INVALID_DATES" };
 
   const quoted = await resolveStayQuote(input.slug, input.checkIn, input.checkOut, Math.max(1, input.guests));
@@ -265,7 +290,7 @@ export async function createPartnerRequest(input: {
       requestId: res.rows[0].id,
       status: "pending",
       expiresAt: new Date(res.rows[0].hold_expires_at).toISOString(),
-      quote: { nights: q.nights, currency: q.currency, total: Math.round(q.totalCents / 100) },
+      quote: { nights: q.nights, currency: q.currency, total: Math.round(q.totalCents / 100), totalCents: q.totalCents },
     };
   } catch (e) {
     const err = e as { code?: string; constraint?: string };
@@ -286,8 +311,10 @@ export interface PartnerBookingStatus {
   status: "pending" | "confirmed" | "cancelled" | "completed";
   partnerRef: string | null;
   total: number;
+  totalCents: number;
   currency: string;
   amountPaid: number;
+  amountPaidCents: number;
   expiresAt: string | null;
 }
 
@@ -308,8 +335,10 @@ export async function getPartnerBookingStatus(id: string): Promise<PartnerBookin
     status: b.status,
     partnerRef: b.partner_ref,
     total: Math.round(b.total_cents / 100),
+    totalCents: b.total_cents,
     currency: b.currency,
     amountPaid: Math.round((b.amount_paid_cents ?? 0) / 100),
+    amountPaidCents: b.amount_paid_cents ?? 0,
     expiresAt: b.hold_expires_at ? new Date(b.hold_expires_at).toISOString() : null,
   };
 }

@@ -21,7 +21,7 @@ export default async function ConciergePage() {
     getSetting("page_concierge"),
   ]);
   const wa = (msg: string) =>
-    `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent("Hi May! " + msg + " \u{1F44B}")}`;
+    `https://wa.me/${contact.whatsapp}?text=${encodeURIComponent("Hi TutCasa! " + msg + " \u{1F44B}")}`;
 
   return (
     <div className="pg-concierge">
@@ -34,7 +34,7 @@ export default async function ConciergePage() {
           <h1>{c.hero.title}</h1>
           <p className="svc-intro">{c.hero.intro}</p>
           <div style={{ marginTop: 22, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <a className="btn btn-rosa" href={wa("I’d like to plan concierge services for my stay")} target="_blank" rel="noopener">&#9990; Plan with May</a>
+            <a className="btn btn-rosa" href={wa("I’d like to plan concierge services for my stay")} target="_blank" rel="noopener">&#9990; Contact us to plan</a>
             <Link className="btn btn-soft" href="/tours">Browse tours &amp; experiences</Link>
           </div>
         </div>
@@ -72,7 +72,7 @@ export default async function ConciergePage() {
           <h2>{c.uniqueTitle}</h2>
           <p>{c.uniqueText}</p>
           <div className="cta">
-            <a className="btn btn-ghost" href={wa("I have a special concierge request")} target="_blank" rel="noopener">&#9990; Message May on WhatsApp</a>
+            <a className="btn btn-ghost" href={wa("I have a special concierge request")} target="_blank" rel="noopener">&#9990; Contact us on WhatsApp</a>
             <Link className="btn btn-soft" href="/contact" style={{ background: "#fff", color: "var(--rosa)" }}>Contact the team</Link>
           </div>
         </div>

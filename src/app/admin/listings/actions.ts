@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export interface ListingFormState { ok: boolean; message: string }
 
@@ -70,6 +71,7 @@ const isOverlap = (e: unknown) =>
 
 /** Create a new home as a draft and jump straight to its edit form. */
 export async function addListingAction(formData: FormData): Promise<void> {
+  await requireAdmin();
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return;
   const slug =
@@ -104,6 +106,7 @@ export async function addListingAction(formData: FormData): Promise<void> {
 export async function deleteListingAction(
   listingId: string,
 ): Promise<{ deleted: boolean; message: string }> {
+  await requireAdmin();
   const db = getDb();
   const has = await db.query<{ n: string }>(
     "select count(*) as n from bookings where listing_id=$1", [listingId]);
@@ -138,6 +141,7 @@ export async function deleteListingAction(
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 
 export async function uploadPhotoAction(formData: FormData): Promise<ListingFormState> {
+  await requireAdmin();
   const sb = getSupabaseAdmin();
   if (!sb) {
     return { ok: false, message: "Photo uploads need the Supabase service key (SUPABASE_SERVICE_ROLE_KEY) — paste it in .env.local to activate." };
@@ -169,6 +173,7 @@ export async function uploadPhotoAction(formData: FormData): Promise<ListingForm
 }
 
 export async function deletePhotoAction(photoId: string): Promise<void> {
+  await requireAdmin();
   const db = getDb();
   const res = await db.query<{ url: string }>(
     "delete from listing_photos where id=$1 returning url", [photoId]);
@@ -189,6 +194,7 @@ export async function saveListingAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const title = String(formData.get("title") ?? "").trim();
   if (!id || !title) {
@@ -213,7 +219,7 @@ export async function saveListingAction(
     const nominatim = async (q: string): Promise<boolean> => {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
-        { headers: { "User-Agent": "TutCasa/1.0 (bookings@tutcasa.com)" }, cache: "no-store" },
+        { headers: { "User-Agent": "TutCasa/1.0 (bookings@tutcasa.com)" }, cache: "no-store", signal: AbortSignal.timeout(6_000) },
       );
       const hits = (await res.json()) as { lat?: string; lon?: string }[];
       if (!Array.isArray(hits) || !hits[0]?.lat || !hits[0]?.lon) return false;
@@ -317,6 +323,7 @@ export async function savePricingAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const nightlyUSD = Number(formData.get("nightlyUSD") ?? 0);
   if (!id || nightlyUSD <= 0) {
@@ -388,6 +395,7 @@ export async function addSeasonAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const label = String(formData.get("label") ?? "").trim();
   const from = String(formData.get("from") ?? "");
@@ -420,6 +428,7 @@ export async function addSeasonAction(
 }
 
 export async function deleteSeasonAction(rateId: string): Promise<void> {
+  await requireAdmin();
   await getDb().query(
     "delete from listing_rates where id=$1 and season is not null", [rateId]);
   revalidatePublic();
@@ -430,14 +439,16 @@ export async function deleteSeasonAction(rateId: string): Promise<void> {
 /* ------------------------------------------------------------------ */
 
 /**
- * Apply a per-date override to a range (both dates inclusive).
- * Empty price/min-stay clear that override for the range (fall back to
- * the base/seasonal rate); "block" marks the nights unavailable.
+ * Apply a per-date override to a range (both dates inclusive). Only the
+ * fields the admin actually FILLED are written — applying a price no
+ * longer silently unblocks blocked nights or wipes a min-stay. To remove
+ * overrides, use "Clear range".
  */
 export async function applyCalendarDaysAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const from = String(formData.get("from") ?? "");
   const to = String(formData.get("to") ?? "");
@@ -456,7 +467,11 @@ export async function applyCalendarDaysAction(
      select $1, d::date, $2, $3, $4, $5
        from generate_series($6::date, $7::date, interval '1 day') d
      on conflict (listing_id, day) do update set
-       nightly_cents=$2, min_stay=$3, is_blocked=$4, note=$5, updated_at=now()`,
+       nightly_cents = coalesce($2, listing_price_days.nightly_cents),
+       min_stay      = coalesce($3, listing_price_days.min_stay),
+       is_blocked    = listing_price_days.is_blocked or $4,
+       note          = coalesce($5, listing_price_days.note),
+       updated_at    = now()`,
     [id, price, minStay, blocked, note, from, to],
   );
   revalidatePublic();
@@ -468,6 +483,7 @@ export async function clearCalendarDaysAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const from = String(formData.get("from") ?? "");
   const to = String(formData.get("to") ?? "");
@@ -489,6 +505,7 @@ export async function addBlockAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const from = String(formData.get("from") ?? "");
   const to = String(formData.get("to") ?? "");
@@ -512,6 +529,7 @@ export async function addIcalFeedAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const url = String(formData.get("url") ?? "").trim();
   if (!id || !/^https?:\/\//i.test(url)) {
@@ -531,6 +549,7 @@ export async function addIcalFeedAction(
 }
 
 export async function deleteIcalFeedAction(feedId: string): Promise<void> {
+  await requireAdmin();
   const db = getDb();
   // removing a feed frees the dates it was blocking
   await db.query(
@@ -541,12 +560,14 @@ export async function deleteIcalFeedAction(feedId: string): Promise<void> {
 }
 
 export async function syncIcalNowAction(listingId: string): Promise<void> {
+  await requireAdmin();
   const { syncIcalFeeds } = await import("@/modules/ical");
   await syncIcalFeeds(listingId);
   revalidatePublic();
 }
 
 export async function deleteBlockAction(blockId: string): Promise<void> {
+  await requireAdmin();
   // manual blocks only — iCal blocks are managed by the sync (M4)
   await getDb().query(
     "delete from availability_blocks where id=$1 and reason <> 'ical'", [blockId]);
@@ -561,6 +582,7 @@ export async function addAddonAction(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
+  await requireAdmin();
   const id = String(formData.get("id") ?? "");
   const name = String(formData.get("name") ?? "").trim();
   const priceUSD = Number(formData.get("priceUSD") ?? 0);
@@ -581,12 +603,14 @@ export async function addAddonAction(
 }
 
 export async function toggleAddonAction(addonId: string): Promise<void> {
+  await requireAdmin();
   await getDb().query(
     "update listing_addons set active = not active where id=$1", [addonId]);
   revalidatePublic();
 }
 
 export async function deleteAddonAction(addonId: string): Promise<void> {
+  await requireAdmin();
   await getDb().query("delete from listing_addons where id=$1", [addonId]);
   revalidatePublic();
 }

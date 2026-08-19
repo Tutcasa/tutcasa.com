@@ -90,7 +90,9 @@ export async function syncAmanahTours(): Promise<SyncResult> {
        on conflict (slug) do update set
          title=$2, subtitle=$3, duration_label=$4, price_cents=$5,
          photo_url=$6, group_prices=$7, stops=$8, source='amanah',
-         synced_at=now(), status='published'`,
+         synced_at=now()
+         -- data mirrors Amanah, but STATUS stays whatever it is: the sync
+         -- never re-publishes a tour the admin archived or drafted`,
       [
         t.key, t.name, t.sub || null, t.dur || null, perPerson,
         t.img, t.groupPrices ? JSON.stringify(t.groupPrices) : null,
@@ -127,8 +129,7 @@ export async function syncAmanahTours(): Promise<SyncResult> {
                $7,'amanah', now())
        on conflict (slug) do update set
          title=$2, subtitle=$3, duration_label=$4, description=$5,
-         price_cents=$6, photo_url=$7, source='amanah', synced_at=now(),
-         status='published'`,
+         price_cents=$6, photo_url=$7, source='amanah', synced_at=now()`,
       [slug, p.name, p.sub || null, p.dur || null, p.desc || null,
        Math.round(p.priceMXN * 100), p.img],
     );
@@ -138,7 +139,8 @@ export async function syncAmanahTours(): Promise<SyncResult> {
   if (parkSlugs.length) {
     const gone = await db.query(
       `update tours set status='archived', synced_at=now()
-        where category='park' and status='published' and not (slug = any($1))
+        where source='amanah' and category='park' and status='published'
+          and not (slug = any($1))
         returning slug`,
       [parkSlugs],
     );

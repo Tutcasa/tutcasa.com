@@ -137,7 +137,7 @@ export function renderEmailHtml(opts: {
         </td></tr>
         <tr><td style="padding:18px 10px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#8A7A72;line-height:1.6;">
           TutCasa · Riviera Maya · Egypt · Florida<br>
-          Questions? Message May on WhatsApp — we answer in minutes.
+          Questions? Contact us on WhatsApp — we answer in minutes.
         </td></tr>
       </table>
     </td></tr>

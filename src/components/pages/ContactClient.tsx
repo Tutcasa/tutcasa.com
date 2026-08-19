@@ -32,7 +32,7 @@ export function ContactClient({ whatsapp, email }: { whatsapp: string; email: st
         <div className="sun"></div>
         <div className="eyebrow">We&rsquo;d love to hear from you</div>
         <h1>Contact us</h1>
-        <p>Questions about a home, a booking, or listing your own property? Send us a note &mdash; or skip the form and message May on WhatsApp for the fastest reply.</p>
+        <p>Questions about a home, a booking, or listing your own property? Send us a note &mdash; or skip the form and contact us on WhatsApp for the fastest reply.</p>
       </div>
       <div className="ct-grid">
         <div className="ct-card">
@@ -65,7 +65,7 @@ export function ContactClient({ whatsapp, email }: { whatsapp: string; email: st
         <div className="ct-card ct-info">
           <h3>Reach us directly</h3>
           <a className="ct-item" href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener">
-            <div className="ic">&#128241;</div><div><b>WhatsApp</b><span>Chat with May &mdash; replies in minutes</span></div>
+            <div className="ic">&#128241;</div><div><b>WhatsApp</b><span>Contact us &mdash; replies in minutes</span></div>
           </a>
           <a className="ct-item" href={`mailto:${contactEmail}`}>
             <div className="ic">&#9993;&#65039;</div><div><b>Email</b><span>{contactEmail}</span></div>

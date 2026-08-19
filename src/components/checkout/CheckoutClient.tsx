@@ -23,7 +23,7 @@ export interface CheckoutLine {
 
 export type CheckoutPayload =
   | { kind: "stay"; slug: string; ci: string; co: string; guests: number }
-  | { kind: "tour"; slug: string; date: string; groupSize: number; notes?: string }
+  | { kind: "tour"; slug: string; date: string; groupSize: number; addons?: string[]; notes?: string }
   | { kind: "none" }; // demo-style preview confirm (acts-only carts)
 
 /** Deposit split + security-deposit info, display units. */
@@ -142,7 +142,7 @@ export function CheckoutClient({
           : await reserveTourAction({
               tourSlug: payload.slug, tourDate: payload.date, groupSize: payload.groupSize,
               guestName: name, guestEmail: email.trim(), guestPhone: phone.trim() || undefined,
-              notes: payload.notes,
+              addons: payload.addons, notes: payload.notes,
             });
       if (res.ok) { setPaid(true); window.scrollTo(0, 0); }
       else setError(ERRORS[res.error] ?? "Something went wrong — please try again.");
@@ -170,7 +170,7 @@ export function CheckoutClient({
         <div className="co-grid" style={{ display: empty || paid ? "none" : undefined }}>
           <div className="co-card">
             <h3>Order summary</h3>
-            <div className="co-sub">You can adjust anything with May on WhatsApp before you pay.</div>
+            <div className="co-sub">You can adjust anything with us on WhatsApp before you pay.</div>
             {dates && <div className="co-dates" style={{ display: "block" }}>&#128197; <b>Dates:</b> <span>{dates}</span></div>}
             <div>
               {lines.map((it, i) => (
@@ -254,7 +254,7 @@ export function CheckoutClient({
           <div className="c">&#10003;</div><h2>Booking request received!</h2>
           <p>
             Thank you &mdash; your dates are on hold and a confirmation email is on
-            its way. <b>No payment has been taken yet</b>: May will confirm your
+            its way. <b>No payment has been taken yet</b>: our team will confirm your
             booking and send a secure payment link for the amount due.
           </p>
           <div className="amt">Total to pay: ${money(total)} {cur}</div>

@@ -6,7 +6,7 @@ import { ContactClient } from "@/components/pages/ContactClient";
 export const metadata: Metadata = {
   title: { absolute: "TutCasa — Contact us" },
   description:
-    "Questions about a home, a booking, or listing your property? Message the TutCasa family — or reach May on WhatsApp for the fastest reply.",
+    "Questions about a home, a booking, or listing your property? Message the TutCasa family — or contact us on WhatsApp for the fastest reply.",
 };
 
 export default async function ContactPage() {

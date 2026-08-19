@@ -87,7 +87,7 @@ interface ParsedEvent { uid: string; from: string; to: string }
 export function parseIcs(ics: string): ParsedEvent[] {
   const unfolded = ics.replace(/\r?\n[ \t]/g, "");
   const out: ParsedEvent[] = [];
-  let cur: Partial<ParsedEvent> & { seq: number } | null = null;
+  let cur: Partial<ParsedEvent> & { seq: number; durDays?: number } | null = null;
   let seq = 0;
   const toDate = (v: string): string | null => {
     const m = v.match(/(\d{4})(\d{2})(\d{2})/);
@@ -97,8 +97,13 @@ export function parseIcs(ics: string): ParsedEvent[] {
     const line = raw.trim();
     if (line === "BEGIN:VEVENT") { cur = { seq: seq++ }; continue; }
     if (line === "END:VEVENT") {
-      if (cur?.from && cur?.to && cur.to > cur.from) {
-        out.push({ uid: cur.uid || `noext-${cur.from}-${cur.to}-${cur.seq}`, from: cur.from, to: cur.to });
+      if (cur?.from) {
+        // DTEND missing (or a same-day timed event, or DURATION-only):
+        // per RFC 5545 a date event without DTEND lasts one day — don't
+        // silently drop the block and leave the night bookable
+        let to = cur.to ?? null;
+        if (!to || to <= cur.from) to = addDays(cur.from, Math.max(1, cur.durDays ?? 1));
+        out.push({ uid: cur.uid || `noext-${cur.from}-${to}-${cur.seq}`, from: cur.from, to });
       }
       cur = null;
       continue;
@@ -111,8 +116,18 @@ export function parseIcs(ics: string): ParsedEvent[] {
     if (prop === "UID") cur.uid = val.trim();
     else if (prop === "DTSTART") cur.from = toDate(val) ?? cur.from;
     else if (prop === "DTEND") cur.to = toDate(val) ?? cur.to;
+    else if (prop === "DURATION") {
+      const d = val.match(/P(\d+)D/i);
+      if (d) cur.durDays = Number(d[1]);
+    }
   }
   return out;
+}
+
+function addDays(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 export interface IcalSyncResult {
@@ -145,7 +160,14 @@ export async function syncIcalFeeds(listingId?: string): Promise<IcalSyncResult>
         signal: AbortSignal.timeout(20_000),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const events = parseIcs(await res.text());
+      const body = await res.text();
+      // an expired/rotated link often returns an HTML page with HTTP 200 —
+      // treating it as "zero events" would DELETE every imported block and
+      // reopen channel-reserved nights. Refuse anything that isn't a calendar.
+      if (!body.includes("BEGIN:VCALENDAR")) {
+        throw new Error("response is not an iCal calendar (link expired or rotated?)");
+      }
+      const events = parseIcs(body);
 
       // upsert current events (external_ref is unique per feed)
       const refs: string[] = [];

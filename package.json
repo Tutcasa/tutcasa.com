@@ -11,6 +11,7 @@
     "test:pricing": "tsc src/modules/pricing/engine.ts --outDir .test-build --target es2022 --module esnext --moduleResolution bundler --strict && node --test tests/pricing.test.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.119.0",
     "@supabase/supabase-js": "^2.110.7",
     "next": "16.2.10",
     "pg": "^8.22.0",

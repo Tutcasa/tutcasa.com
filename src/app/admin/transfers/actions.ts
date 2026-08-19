@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { upsertTransfer } from "@/modules/transfers";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export interface TransferFormState { ok: boolean; message: string }
 
@@ -10,6 +11,7 @@ export async function saveTransferAction(
   _prev: TransferFormState,
   formData: FormData,
 ): Promise<TransferFormState> {
+  await requireAdmin();
   const res = await upsertTransfer({
     bookingId: String(formData.get("bookingId") ?? ""),
     fullName: String(formData.get("fullName") ?? ""),
@@ -25,14 +27,23 @@ export async function saveTransferAction(
 }
 
 export async function cancelTransferAction(transferId: string): Promise<void> {
+  await requireAdmin();
   await getDb().query(
     "update transfers set status='cancelled' where id=$1", [transferId]);
-  // alert Amanah so the job is closed on their side too
-  const { transferForBooking, pushToAmanah } = await import("@/modules/transfers");
+  // alert Amanah so the job is closed on their side too — email is the
+  // fallback channel, and a failed push clears sent_at so the list shows
+  // the cancellation as NOT yet delivered
+  const { transferForBooking, pushToAmanah, notifyAmanahEmail } = await import("@/modules/transfers");
   const row = await getDb().query("select booking_id from transfers where id=$1", [transferId]);
   if (row.rows[0]) {
     const t = await transferForBooking(row.rows[0].booking_id);
-    if (t) await pushToAmanah(t).catch(() => {});
+    if (t) {
+      const push = await pushToAmanah(t).catch(() => ({ ok: false }));
+      await notifyAmanahEmail(t).catch(() => {});
+      if (!push.ok) {
+        await getDb().query("update transfers set sent_at=null where id=$1", [transferId]);
+      }
+    }
   }
   revalidatePath("/admin/transfers");
 }

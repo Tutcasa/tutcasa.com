@@ -1,0 +1,90 @@
+import "server-only";
+import { getDb } from "@/lib/db";
+import { getSetting } from "@/modules/settings";
+
+/**
+ * Knowledge base for the AI concierge ("Contact us" chat). The system
+ * prompt is rebuilt from live data at most every 5 minutes per server
+ * instance — listings, tours, FAQs, policies — so the bot always knows
+ * the real catalog without a per-message DB hit.
+ */
+
+interface KB {
+  prompt: string;
+  builtAt: number;
+}
+
+let cache: KB | null = null;
+const TTL_MS = 5 * 60 * 1000;
+
+async function buildKnowledge(): Promise<string> {
+  const db = getDb();
+  const [homes, tours, faq, contact] = await Promise.all([
+    db.query(
+      `select l.title, l.slug, l.city, l.country, l.max_guests, l.bedrooms,
+              l.min_stay, coalesce(l.instant_book,false) as instant_book,
+              coalesce(l.allow_pets,false) as allow_pets, r.nightly_cents, r.tax_pct
+         from listings l
+         left join listing_rates r on r.listing_id = l.id and r.season is null
+        where l.status = 'published' order by l.city, l.title`,
+    ),
+    db.query(
+      `select title, city, category, price_cents, duration_label
+         from tours where status = 'published' order by category, title limit 60`,
+    ),
+    getSetting("page_faq"),
+    getSetting("contact"),
+  ]);
+
+  const homeLines = homes.rows.map((h) => {
+    const allIn = h.nightly_cents
+      ? Math.round((h.nightly_cents / 100) * (1 + Number(h.tax_pct ?? 0) / 100))
+      : null;
+    return `- ${h.title} — ${h.city}${h.country === "EG" ? ", Egypt" : h.country === "US" ? ", Florida" : ", Mexico"} · sleeps ${h.max_guests} · ${h.bedrooms} BR · min ${h.min_stay} nights${allIn ? ` · from ~$${allIn} USD/night all-in` : ""}${h.instant_book ? " · instant book" : ""}${h.allow_pets ? " · pets OK" : ""} · page: /stays/${h.slug}`;
+  });
+
+  const tourLines = tours.rows.map((t) =>
+    `- ${t.title}${t.city ? ` (${t.city})` : ""} · ${t.category}${t.price_cents > 0 ? ` · from $${Math.round(t.price_cents / 100)} MXN` : " · price on request"}${t.duration_label ? ` · ${t.duration_label}` : ""}`,
+  );
+
+  const faqLines = faq.items.map((f) => `Q: ${f.q}\nA: ${f.a}`);
+
+  return [
+    `## Homes (${homeLines.length})`,
+    ...homeLines,
+    ``,
+    `## Tours & parks (partner prices via Amanah Vacations)`,
+    ...tourLines,
+    ``,
+    `## FAQ`,
+    ...faqLines,
+    ``,
+    `## Contact`,
+    `WhatsApp: +${contact.whatsapp} (share as https://wa.me/${contact.whatsapp})`,
+  ].join("\n");
+}
+
+export async function getSystemPrompt(): Promise<string> {
+  if (cache && Date.now() - cache.builtAt < TTL_MS) return cache.prompt;
+  const knowledge = await buildKnowledge();
+  const prompt = [
+    `You are the TutCasa concierge assistant on tutcasa.com — a family-run vacation-rental company with homes in Playa del Carmen, Tulum, Nuba (Egypt) and Orlando, plus tours, theme-park tickets and airport transfers in the Riviera Maya.`,
+    ``,
+    `Your job: help guests pick a home, answer questions about booking, pricing, policies, tours and transfers, and guide them to the right page. Every booking includes a free arrival airport transfer and WhatsApp concierge.`,
+    ``,
+    `Rules:`,
+    `- Be warm, concise and concrete. A few sentences per reply; use short lists when comparing homes.`,
+    `- Only state facts from the knowledge below. If you don't know (exact availability, a specific date's price, special requests), say so and point the guest to the home's page for live prices/dates, or to WhatsApp for a human.`,
+    `- Prices: homes are USD all-in estimates ("from"); exact totals appear when dates are picked on the home's page. Tours are MXN.`,
+    `- When you mention a home or page, give its path (e.g. /stays/casa-selva) so the site can link it.`,
+    `- Payment questions: card via Stripe, PayPal, Zelle, bank wire; InstaPay from Egypt. Deposits: a security deposit may apply — never call it refundable, just "security deposit".`,
+    `- For anything personal (existing booking changes, complaints, discounts beyond listed coupons, urgent matters) hand off to WhatsApp.`,
+    `- Never invent coupon codes, availability, or homes not in the list.`,
+    `- Reply in the guest's language (English, Spanish or French).`,
+    ``,
+    `# Knowledge`,
+    knowledge,
+  ].join("\n");
+  cache = { prompt, builtAt: Date.now() };
+  return prompt;
+}

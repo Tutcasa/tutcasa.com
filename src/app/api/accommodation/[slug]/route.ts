@@ -107,7 +107,6 @@ export async function GET(
     },
     {
       headers: {
-        "Access-Control-Allow-Origin": "*",
         "Cache-Control": "no-store", // availability must always be fresh
       },
     },

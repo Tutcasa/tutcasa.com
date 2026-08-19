@@ -10,6 +10,7 @@ import {
   type WhyBookContent,
 } from "@/modules/settings";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export interface ContentFormState { ok: boolean; message: string }
 
@@ -57,6 +58,7 @@ export async function savePoliciesAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const current = await getSetting("page_policies");
   const sections: PoliciesContent["sections"] = current.sections.map((sec, i) => ({
     id: sec.id,
@@ -73,6 +75,7 @@ export async function saveWhyAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const cards = parseCards(formData.get("cards"));
   if (!cards.length) return { ok: false, message: "Add at least one card (icon | title | text)." };
   await setSetting("page_why", { hero: hero(formData), cards });
@@ -85,6 +88,7 @@ export async function saveConciergeAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const services = parseServices(formData.get("services"));
   if (!services.length) return { ok: false, message: "Add at least one service line." };
   const value: ConciergeContent = {
@@ -105,6 +109,7 @@ export async function saveFaqAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const items = lines(formData.get("items"))
     .filter((l) => l.includes("::"))
     .map((l) => {
@@ -123,6 +128,7 @@ export async function saveLoyaltyAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const value: LoyaltyContent = {
     hero: hero(formData),
     step1Title: s(formData.get("step1Title")),
@@ -146,6 +152,7 @@ export async function saveContactAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   await setSetting("contact", {
     whatsapp: String(formData.get("whatsapp") ?? "").replace(/[^\d]/g, ""),
     email: String(formData.get("email") ?? "").trim(),
@@ -162,6 +169,7 @@ export async function uploadDeckAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const sb = getSupabaseAdmin();
   if (!sb) return { ok: false, message: "Storage key missing — uploads unavailable." };
 
@@ -192,6 +200,7 @@ export async function saveFxAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   const mxn = Number(formData.get("mxnPerUsd"));
   const cad = Number(formData.get("cadPerUsd"));
   if (!Number.isFinite(mxn) || mxn <= 0 || !Number.isFinite(cad) || cad <= 0) {
@@ -206,6 +215,7 @@ export async function saveGoogleReviewsAction(
   _prev: ContentFormState,
   formData: FormData,
 ): Promise<ContentFormState> {
+  await requireAdmin();
   await setSetting("google_reviews", {
     placeId: String(formData.get("placeId") ?? "").trim(),
   });

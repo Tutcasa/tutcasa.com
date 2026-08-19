@@ -1,5 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
+import { overLimit } from "@/lib/rate-limit";
+
 import { getDb } from "@/lib/db";
 import { renderEmailHtml, fillVars } from "@/modules/emails";
 
@@ -10,6 +13,10 @@ export async function emailInvoiceAction(
   to: string,
 ): Promise<{ ok: boolean; message: string }> {
   if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return { ok: false, message: "Invalid invoice." };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`invoice-mail:${ip}`, 3, 60 * 60 * 1000) || overLimit(`invoice-mail:${bookingId}`, 5, 60 * 60 * 1000)) {
+    return { ok: false, message: "This invoice was emailed several times already — try again later." };
+  }
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to.trim())) return { ok: false, message: "Enter a valid email address." };
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return { ok: false, message: "Email isn't configured yet." };
@@ -53,7 +60,7 @@ export async function emailInvoiceAction(
     ``,
     ...lines,
     ``,
-    `Questions? May is one message away on WhatsApp.`,
+    `Questions? Contact us on WhatsApp — we answer in minutes.`,
   ].join("\n");
 
   const send = await fetch("https://api.resend.com/emails", {

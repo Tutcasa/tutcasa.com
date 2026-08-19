@@ -2,7 +2,6 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { renderEmailHtml } from "@/modules/emails";
-import { createLead } from "@/modules/leads";
 
 /**
  * Growth features: the newsletter 10%-coupon signup and loyalty referral
@@ -36,6 +35,21 @@ async function sendBranded(to: string, subject: string, body: string): Promise<b
   return !!res?.ok;
 }
 
+/** Team heads-up for a new signup (the lead row is the source of truth). */
+function notifyTeam(email: string, phone: string, coupon: string): void {
+  const to = process.env.TUTCASA_NOTIFY_EMAIL;
+  if (!to) return;
+  void sendBranded(to, "Newsletter signup", [
+    "New newsletter signup:",
+    "",
+    `- Email: ${email}`,
+    `- Phone: ${phone}`,
+    `- Coupon issued: ${coupon}`,
+    "",
+    "Manage it in admin → Leads.",
+  ].join("\n")).catch(() => {});
+}
+
 /* ---------------- newsletter ---------------- */
 
 export async function subscribeNewsletter(
@@ -61,16 +75,34 @@ export async function subscribeNewsletter(
   let code = prior.rows[0]?.coupon as string | undefined;
 
   if (!code) {
+    // coupon + lead land together or not at all — a half-committed pair
+    // used to mint an orphan coupon on every retry
     code = shortCode("WELCOME");
-    await db.query(
-      `insert into coupons (code, kind, percent_off, max_uses, note)
-       values ($1,'percent',10,1,'Newsletter signup coupon')`,
-      [code],
-    );
-    await createLead({ kind: "newsletter", email: clean, phone: cleanPhone, payload: { coupon: code } });
+    const client = await db.connect();
+    try {
+      await client.query("begin");
+      await client.query(
+        `insert into coupons (code, kind, percent_off, max_uses, per_user_limit, note)
+         values ($1,'percent',10,1,1,'Newsletter signup coupon')
+         on conflict (code) do nothing`,
+        [code],
+      );
+      await client.query(
+        `insert into leads (kind, name, email, phone, payload)
+         values ('newsletter','',$1,$2,$3)`,
+        [clean, cleanPhone, JSON.stringify({ coupon: code })],
+      );
+      await client.query("commit");
+    } catch (e) {
+      await client.query("rollback").catch(() => {});
+      throw e;
+    } finally {
+      client.release();
+    }
+    notifyTeam(clean, cleanPhone, code);
   }
 
-  await sendBranded(
+  const sent = await sendBranded(
     clean,
     "Your 10% TutCasa welcome coupon",
     [
@@ -87,7 +119,9 @@ export async function subscribeNewsletter(
       `Find your casa: ${SITE}/stays`,
     ].join("\n"),
   );
-  return { ok: true, message: "Check your inbox — your 10% coupon is on its way! 🎉" };
+  return sent
+    ? { ok: true, message: "Check your inbox — your 10% coupon is on its way! 🎉" }
+    : { ok: true, message: `You're in! Your 10% coupon code is ${code} — save it now (the email couldn't be delivered).` };
 }
 
 /* ---------------- referral links ---------------- */
@@ -113,17 +147,19 @@ export async function createReferral(
       `insert into referrals (code, referrer_name, referrer_email) values ($1,$2,$3)`,
       [code, name.trim(), cleanEmail],
     );
-    // the code doubles as the friend's $100 coupon (reusable across friends)
+    // the code doubles as the friend's $100 coupon — reusable across
+    // DIFFERENT friends, but once per guest email, and never by the
+    // referrer themselves (enforced again at reward time)
     await db.query(
-      `insert into coupons (code, kind, amount_cents, note)
-       values ($1,'fixed',10000,'Referral friend coupon')
+      `insert into coupons (code, kind, amount_cents, per_user_limit, allowed_email, note)
+       values ($1,'fixed',10000,1,null,'Referral friend coupon')
        on conflict (code) do nothing`,
       [code],
     );
   }
   const link = `${SITE}/invite/${code}`;
 
-  await sendBranded(
+  const sentRef = await sendBranded(
     cleanEmail,
     "Your TutCasa invite link",
     [
@@ -136,7 +172,9 @@ export async function createReferral(
       "Every friend who books through it gets $100 off their first stay — and once their booking is confirmed, YOU get a $200 coupon toward your next one. No limits: refer as many friends as you like.",
     ].join("\n"),
   );
-  return { ok: true, message: "Your invite link is ready (and in your inbox)!", code, link };
+  return sentRef
+    ? { ok: true, message: "Your invite link is ready (and in your inbox)!", code, link }
+    : { ok: true, message: "Your invite link is ready — copy it below (the email couldn't be delivered).", code, link };
 }
 
 export async function getReferralByCode(code: string) {
@@ -150,7 +188,7 @@ export async function getReferralByCode(code: string) {
 export async function rewardReferrerForBooking(bookingId: string): Promise<void> {
   const db = getDb();
   const booking = await db.query(
-    `select b.coupon_code, l.title from bookings b
+    `select b.coupon_code, b.guest_email, l.title from bookings b
        join listings l on l.id=b.listing_id
       where b.id=$1 and b.coupon_code like 'REF-%'`,
     [bookingId],
@@ -163,21 +201,37 @@ export async function rewardReferrerForBooking(bookingId: string): Promise<void>
   );
   const r = referral.rows[0];
   if (!r) return;
+  // no self-referral: booking your own invite code earns nothing
+  if (String(b.guest_email ?? "").trim().toLowerCase() === String(r.referrer_email).trim().toLowerCase()) return;
 
+  // reward row + reward coupon land atomically — a half-committed pair
+  // used to burn the once-per-booking dedupe without creating the coupon
   const rewardCode = shortCode("THANKS");
-  // one reward per booking — the PK insert is the dedupe
-  const ins = await db.query(
-    `insert into referral_rewards (booking_id, referral_id, reward_code)
-     values ($1,$2,$3) on conflict (booking_id) do nothing returning booking_id`,
-    [bookingId, r.id, rewardCode],
-  );
-  if (!ins.rows[0]) return; // already rewarded
-
-  await db.query(
-    `insert into coupons (code, kind, amount_cents, max_uses, note)
-     values ($1,'fixed',20000,1,$2)`,
-    [rewardCode, `Referral reward for ${r.referrer_email}`],
-  );
+  const client = await db.connect();
+  let created = false;
+  try {
+    await client.query("begin");
+    const ins = await client.query(
+      `insert into referral_rewards (booking_id, referral_id, reward_code)
+       values ($1,$2,$3) on conflict (booking_id) do nothing returning booking_id`,
+      [bookingId, r.id, rewardCode],
+    );
+    if (ins.rows[0]) {
+      await client.query(
+        `insert into coupons (code, kind, amount_cents, max_uses, note)
+         values ($1,'fixed',20000,1,$2)`,
+        [rewardCode, `Referral reward for ${r.referrer_email}`],
+      );
+      created = true;
+    }
+    await client.query("commit");
+  } catch (e) {
+    await client.query("rollback").catch(() => {});
+    throw e;
+  } finally {
+    client.release();
+  }
+  if (!created) return; // already rewarded
   await sendBranded(
     r.referrer_email,
     "You earned $200 — your friend just booked",

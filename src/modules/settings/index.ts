@@ -122,7 +122,7 @@ const DEFAULTS: {
     hero: {
       eyebrow: "Answers, upfront",
       title: "Frequently asked questions",
-      intro: "Everything guests ask us most — and if your question isn't here, May is one message away on WhatsApp.",
+      intro: "Everything guests ask us most — and if your question isn't here, contact us — we're one message away on WhatsApp.",
     },
     items: [
       { q: "How do I book a home?", a: "Pick your dates on the home's page and book instantly, or send a request — the owner confirms within hours. Your dates are locked while you complete payment." },
@@ -139,7 +139,7 @@ const DEFAULTS: {
     hero: {
       eyebrow: "Good to know",
       title: "Help & policies",
-      intro: "Everything about deposits, payments and cancellations — clear and upfront. Have a question we haven’t covered? May is one message away.",
+      intro: "Everything about deposits, payments and cancellations — clear and upfront. Have a question we haven’t covered? Contact us — we're one message away.",
     },
     sections: [
       { id: "deposit", title: "💳 Reservation deposit", body: "To confirm your dates we ask for a deposit, with the balance due before arrival:\n- Condos & Villas — 50% deposit to reserve. The remaining balance is due 30 days before arrival, and finalised 15 days prior.\n- Hotels — 50% deposit to reserve, with the balance due 15 days before arrival." },
@@ -147,7 +147,7 @@ const DEFAULTS: {
       { id: "keys", title: "🗝️ Keys & access", body: "- Most homes use a secure key box or digital lock — we send the code and directions before you arrive.\n- Lost keys or remotes are charged at $100 to cover replacement." },
       { id: "restrictions", title: "⚠️ Restrictions", body: "- No parties or events without prior written approval.\n- No smoking indoors.\n- Please respect the maximum guest count on your reservation and quiet hours in the community." },
       { id: "cancellation", title: "📅 Cancellation policy", body: "Condos & Villas\n- 30+ days before arrival — full refund.\n- Between 30 and 7 days — 50% refund.\n- 7 days or less — non-refundable.\nHotels\n- 15+ days before arrival — full refund.\n- Within 15 days — one night is charged, the rest refunded." },
-      { id: "payment", title: "💰 Payment options", body: "Pay whichever way is easiest for you:\n- Credit or debit card (securely via Stripe)\n- PayPal\n- Zelle\n- Bank wire / direct bank transfer\n🇪🇬 Paying from Egypt? We also accept InstaPay. Just ask May and we’ll share the details." },
+      { id: "payment", title: "💰 Payment options", body: "Pay whichever way is easiest for you:\n- Credit or debit card (securely via Stripe)\n- PayPal\n- Zelle\n- Bank wire / direct bank transfer\n🇪🇬 Paying from Egypt? We also accept InstaPay. Just contact us and we’ll share the details." },
     ],
   },
 
@@ -160,7 +160,7 @@ const DEFAULTS: {
     cards: [
       { icon: "💰", title: "Best price, guaranteed", text: "Booking direct skips the platform fees. Find the same home cheaper somewhere else and we’ll match it." },
       { icon: "✈️", title: "Free airport pickup", text: "Land and relax. A private transfer from Cancún airport is included with qualifying stays." },
-      { icon: "💬", title: "A concierge on WhatsApp", text: "May answers in minutes — restaurant tips, tours, early check-in. No tickets, no bots, just us." },
+      { icon: "💬", title: "A concierge on WhatsApp", text: "We answer in minutes — restaurant tips, tours, early check-in. No tickets, just us." },
       { icon: "🔑", title: "No hidden fees", text: "The price you see is the price you pay. No surprise cleaning or service charges at the end." },
       { icon: "💳", title: "Secure card payment", text: "Pay safely by card through Stripe, or use PayPal, Zelle and bank transfer — whatever suits you." },
       { icon: "💕", title: "A real family, not a call center", text: "A Canadian-Egyptian couple who fell in love with the Riviera Maya. Every home is one we’d put our own parents in." },

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
+import { requireAdmin } from "@/lib/admin-auth";
 
 export interface CouponFormState { ok: boolean; message: string }
 
@@ -9,6 +10,7 @@ export async function addCouponAction(
   _prev: CouponFormState,
   formData: FormData,
 ): Promise<CouponFormState> {
+  await requireAdmin();
   const code = String(formData.get("code") ?? "").trim().toUpperCase().replace(/\s+/g, "");
   const kind = String(formData.get("kind") ?? "percent");
   const value = Number(formData.get("value") ?? 0);
@@ -47,11 +49,13 @@ export async function addCouponAction(
 }
 
 export async function toggleCouponAction(id: string): Promise<void> {
+  await requireAdmin();
   await getDb().query("update coupons set active = not active where id=$1", [id]);
   revalidatePath("/admin/coupons");
 }
 
 export async function deleteCouponAction(id: string): Promise<void> {
+  await requireAdmin();
   await getDb().query("delete from coupons where id=$1", [id]);
   revalidatePath("/admin/coupons");
 }

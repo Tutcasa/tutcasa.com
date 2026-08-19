@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: { absolute: "TutCasa — Help & policies" },
   description:
-    "Everything about deposits, payments and cancellations — clear and upfront. Have a question we haven't covered? May is one message away.",
+    "Everything about deposits, payments and cancellations — clear and upfront. Have a question we haven't covered? Contact us — we're one message away.",
 };
 
 /** "- " lines become bullets (grouped), other lines paragraphs;

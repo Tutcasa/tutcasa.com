@@ -37,6 +37,8 @@ export function tierTotalMXN(
 }
 
 export interface TourBookingRequest {
+  /** add-on activity NAMES — priced server-side, never from the client */
+  addons?: string[];
   tourSlug: string;
   tourDate: string; // YYYY-MM-DD
   groupSize: number;

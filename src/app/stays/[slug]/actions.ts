@@ -1,5 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
+import { overLimit } from "@/lib/rate-limit";
+
 import { resolveStayQuote, type StayQuoteError } from "@/modules/pricing/resolve";
 import type { Quote } from "@/modules/pricing";
 import { createBookingHold, type ReserveResult } from "@/modules/bookings";
@@ -34,6 +37,8 @@ export async function reserveAction(input: {
   guestPhone?: string;
   couponCode?: string;
 }): Promise<ReserveResult> {
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`reserve:${ip}`, 8, 10 * 60 * 1000)) return { ok: false, error: "DATES_TAKEN" };
   return createBookingHold(input);
 }
 
@@ -50,6 +55,10 @@ export async function validateCouponAction(
   guests: number,
   guestEmail?: string,
 ): Promise<CouponResult> {
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`coupon:${ip}`, 15, 10 * 60 * 1000)) {
+    return { ok: false, message: "Too many coupon attempts — try again in a few minutes." };
+  }
   const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests));
   if (!res.ok) return { ok: false, message: "Add valid dates first." };
   const cp = await checkCoupon(code, {

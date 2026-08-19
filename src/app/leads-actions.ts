@@ -1,5 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
+import { overLimit } from "@/lib/rate-limit";
+
 import { createLead } from "@/modules/leads";
 
 /** Guest-facing form submissions — one action per form kind. */
@@ -8,6 +11,8 @@ export async function submitContactLead(input: {
   name: string; email: string; phone?: string; message: string;
 }): Promise<{ ok: boolean }> {
   if (!input.name?.trim() || !input.email?.trim()) return { ok: false };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`lead:${ip}`, 6, 10 * 60 * 1000)) return { ok: false };
   return createLead({
     kind: "contact",
     name: input.name, email: input.email, phone: input.phone,
@@ -20,6 +25,8 @@ export async function submitListPropertyLead(input: {
   city?: string; propertyType?: string; bedrooms?: string; message?: string;
 }): Promise<{ ok: boolean }> {
   if (!input.name?.trim() || !input.email?.trim()) return { ok: false };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`lead:${ip}`, 6, 10 * 60 * 1000)) return { ok: false };
   return createLead({
     kind: "list_property",
     name: input.name, email: input.email, phone: input.phone,

@@ -49,7 +49,7 @@ export async function createLead(input: {
   if (apiKey && to) {
     const detail = Object.entries(input.payload ?? {})
       .map(([k, v]) => `${k}: ${v}`).join("\n");
-    void fetch("https://api.resend.com/emails", {
+    const send = () => fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -67,6 +67,8 @@ export async function createLead(input: {
         ].filter(Boolean).join("\n"),
       }),
     }).catch(() => {});
+    // keep the lambda alive until the notify email actually leaves
+    void import("next/server").then(({ after }) => after(send)).catch(() => void send());
   }
   return { ok: true };
 }

@@ -140,7 +140,7 @@ export function PdGrid({ p }: { p: PdData }) {
   }
 
   function pdWa() {
-    let msg = `Hi May! \u{1F44B} I’m interested in ${p.name} (${p.city}).`;
+    let msg = `Hi TutCasa! \u{1F44B} I’m interested in ${p.name} (${p.city}).`;
     if (ci && co) msg += ` Dates: ${ci} to ${co}, ${guests} guests.`;
     window.open(`https://wa.me/${p.whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
   }

@@ -1,5 +1,8 @@
 "use server";
 
+import { headers } from "next/headers";
+import { overLimit } from "@/lib/rate-limit";
+
 import { revalidatePath } from "next/cache";
 import { upsertTransfer } from "@/modules/transfers";
 
@@ -13,6 +16,10 @@ export async function guestTransferAction(
 ): Promise<GuestTransferState> {
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(bookingId)) return { ok: false, message: "Invalid booking." };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`transfer:${ip}`, 6, 10 * 60 * 1000)) {
+    return { ok: false, message: "Too many updates — try again in a few minutes." };
+  }
   const res = await upsertTransfer({
     bookingId,
     fullName: String(formData.get("fullName") ?? ""),

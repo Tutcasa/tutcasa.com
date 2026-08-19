@@ -2,7 +2,7 @@ import "server-only";
 import { getDb } from "@/lib/db";
 import { getListingsRepo } from "@/modules/listings";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
-import { checkCoupon, redeemCoupon } from "@/modules/coupons";
+import { checkCoupon, tryRedeemCoupon, unredeemCoupon } from "@/modules/coupons";
 import { fireAutomations } from "@/modules/emails/dispatch";
 import type {
   Booking,
@@ -20,9 +20,7 @@ function parseDay(s: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+import { todayLocal } from "@/lib/local-date";
 
 /**
  * Create a pending booking hold. The price is recomputed server-side
@@ -34,7 +32,7 @@ function todayUtc(): string {
 export async function createBookingHold(req: BookingRequest): Promise<ReserveResult> {
   const checkIn = parseDay(req.checkIn);
   const checkOut = parseDay(req.checkOut);
-  if (!checkIn || !checkOut || req.checkIn < todayUtc() || req.checkOut <= req.checkIn) {
+  if (!checkIn || !checkOut || req.checkIn < todayLocal() || req.checkOut <= req.checkIn) {
     return { ok: false, error: "INVALID_DATES" };
   }
 
@@ -72,6 +70,9 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
       saleDiscountCents: q.lengthDiscountCents + q.earlyBirdDiscountCents,
     });
     if (!cp.ok) return { ok: false, error: "COUPON_INVALID" };
+    // atomic claim BEFORE the insert — two checkouts can't share the
+    // last use of a limited code (given back below if the insert fails)
+    if (!(await tryRedeemCoupon(cp.code))) return { ok: false, error: "COUPON_INVALID" };
     couponCode = cp.code;
     couponDiscountCents = cp.discountCents;
   }
@@ -130,11 +131,11 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
         couponCode, couponDiscountCents,
       ],
     );
-    if (couponCode) await redeemCoupon(couponCode);
     // M3: request-received emails (guest + team) — never blocks the booking
     fireAutomations(["guest_booking_request", "admin_new_booking"], res.rows[0].id);
     return { ok: true, bookingId: res.rows[0].id };
   } catch (e) {
+    if (couponCode) await unredeemCoupon(couponCode).catch(() => {});
     const err = e as { code?: string; constraint?: string };
     if (err.code === "23P01" && err.constraint === "no_double_booking") {
       return { ok: false, error: "DATES_TAKEN" };

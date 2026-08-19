@@ -61,6 +61,13 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
       photo: r.profile_photo_url ?? null,
     }));
 
+  if (reviews.length === 0) {
+    // never clobber a populated homepage strip with an empty sync
+    const prior = await getSetting("google_reviews_cache");
+    if (prior.reviews.length > 0) {
+      return { ok: false, message: "Google returned no showable reviews — kept the existing ones." };
+    }
+  }
   await setSetting("google_reviews_cache", {
     fetchedAt: new Date().toISOString(),
     rating: data.result.rating ?? 0,

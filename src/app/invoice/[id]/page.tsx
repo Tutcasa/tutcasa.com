@@ -189,7 +189,7 @@ export default async function InvoicePage({
         )}
 
         <p className="mt-6 text-xs text-grey">
-          Questions about this invoice? Message May on WhatsApp — we&rsquo;re at your service 24/7.
+          Questions about this invoice? Contact us on WhatsApp — we&rsquo;re at your service 24/7.
         </p>
 
         <InvoiceActions bookingId={id} defaultEmail={inv.guestEmail} />

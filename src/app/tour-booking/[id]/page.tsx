@@ -54,11 +54,11 @@ export default async function TourBookingPage({
         <p className="mt-4 text-sm text-grey">{ui.note}</p>
 
         <a
-          href={`https://wa.me/201069706782?text=${encodeURIComponent(`Hi May! About my tour booking ${b.id.slice(0, 8).toUpperCase()} (${b.tourTitle}, ${b.tourDate}) 👋`)}`}
+          href={`https://wa.me/201069706782?text=${encodeURIComponent(`Hi TutCasa! About my tour booking ${b.id.slice(0, 8).toUpperCase()} (${b.tourTitle}, ${b.tourDate}) 👋`)}`}
           target="_blank" rel="noopener"
           className="mt-5 block rounded-pill bg-[#1EBE5D] py-3.5 text-center font-bold text-white shadow-soft"
         >
-          Chat with May about this booking 💬
+          Contact us about this booking 💬
         </a>
 
         <Link href="/tours" className="mt-6 block text-center text-sm font-semibold text-rosa hover:underline">

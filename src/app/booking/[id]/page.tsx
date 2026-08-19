@@ -50,7 +50,7 @@ export default async function BookingPage({
   const ui = STATUS_UI[booking.status];
   const b = booking.priceBreakdown;
   const wa = `https://wa.me/201069706782?text=${encodeURIComponent(
-    `Hi May! I just reserved ${booking.listingTitle} (${booking.checkIn} → ${booking.checkOut}), booking ref ${booking.id.slice(0, 8)}. I'd like to complete my payment 👋`,
+    `Hi TutCasa! I just reserved ${booking.listingTitle} (${booking.checkIn} → ${booking.checkOut}), booking ref ${booking.id.slice(0, 8)}. I'd like to complete my payment 👋`,
   )}`;
 
   return (
@@ -133,7 +133,7 @@ export default async function BookingPage({
               rel="noopener"
               className="mt-5 block rounded-pill bg-[#1EBE5D] py-3.5 text-center font-bold text-white shadow-soft"
             >
-              Complete payment with May 💬
+              Contact us to complete payment 💬
             </a>
             <p className="mt-2 text-center text-xs text-grey">
               Card checkout is coming online next — until then May confirms your
