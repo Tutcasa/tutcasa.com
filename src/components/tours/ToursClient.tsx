@@ -58,7 +58,6 @@ export interface AddonData {
   unit?: string;
 }
 
-const USD_RATE = 17;
 const TT_TOWNS = ["Playa del Carmen", "Tulum", "Cancún", "Cozumel", "Akumal", "Puerto Morelos", "Puerto Aventuras", "Bacalar", "Holbox", "Isla Mujeres", "Valladolid", "Cobá", "Chichén Itzá", "Mérida", "Mahahual", "Nuba", "Hurghada", "Cairo", "Orlando", "Miami"];
 
 const WA_SVG = (
@@ -66,7 +65,6 @@ const WA_SVG = (
 );
 
 const fmtN = (m: number) => m.toLocaleString("en-US");
-const fmtUSD = (m: number) => `≈ ${Math.round(m / USD_RATE).toLocaleString("en-US")} USD`;
 
 function localTomorrowISO(): string {
   const t = new Date();
@@ -84,7 +82,8 @@ function TourCard({
 }) {
   const router = useRouter();
   const { t: tr } = useLang();
-  const { cur, fromMXN } = useCurrency();
+  const { cur, fromMXN, mxnPerUsd } = useCurrency();
+  const fmtUSD = (m: number) => `≈ ${Math.round(m / mxnPerUsd).toLocaleString("en-US")} USD`;
   const [date, setDate] = useState("");
   const [n, setN] = useState(1);
   const [sel, setSel] = useState<string[]>([]);

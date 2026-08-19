@@ -4,8 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getListingsRepo, type Listing } from "@/modules/listings";
-import { allInNightlyCents } from "@/modules/pricing";
-import { effectiveNightlyTodayCents } from "@/modules/pricing/resolve";
+import { advertisedNightly } from "@/modules/pricing";
 import { getUnavailableRanges } from "@/modules/bookings";
 import { getSetting } from "@/modules/settings";
 import { T } from "@/lib/i18n";
@@ -33,6 +32,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 const GALLERY_LABELS = ["Living", "Terrace", "Bedroom", "Pool", "View"];
 const GS = ["g1", "g2", "g3", "g4", "g5", "g6"];
 
+/** Coordinates exist and aren't the 0,0 placeholder. */
+const hasPin = (l: { lat: number; lng: number }) =>
+  Number.isFinite(l.lat) && Number.isFinite(l.lng) && (l.lat !== 0 || l.lng !== 0);
+/** ~100 m precision — accurate area without revealing the exact house. */
+const roundedPin = (l: { lat: number; lng: number }) =>
+  `${l.lat.toFixed(3)},${l.lng.toFixed(3)}`;
+
 function SimilarCard({ l }: { l: Listing }) {
   return (
     <Link className="sim" href={`/stays/${l.slug}`}>
@@ -58,11 +64,11 @@ export default async function ListingPage({ params }: Props) {
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const [unavailable, all, contact, todayNightly] = await Promise.all([
+  const [unavailable, all, contact, adv] = await Promise.all([
     getUnavailableRanges(listing.id),
     repo.listPublished(),
     getSetting("contact"),
-    effectiveNightlyTodayCents(listing.id).catch(() => null),
+    advertisedNightly(listing.id).catch(() => null),
   ]);
 
   const g = demoGradient(listing, 6);
@@ -75,6 +81,10 @@ export default async function ListingPage({ params }: Props) {
     .sort((a, b) => (a.city === listing.city ? 0 : 1) - (b.city === listing.city ? 0 : 1))
     .slice(0, 4);
 
+  // pre-tax nightly for the static breakdown; all-in for the headline
+  const pretax = adv?.minCents ?? listing.nightlyCents;
+  const taxPct = adv?.taxPct ?? listing.taxPct;
+  const allIn = Math.round(pretax * (1 + taxPct / 100));
   const data: PdData = {
     slug: listing.slug,
     name: listing.title,
@@ -83,14 +93,33 @@ export default async function ListingPage({ params }: Props) {
     beds: listing.bedrooms,
     baths: listing.bathrooms,
     guests: listing.maxGuests,
-    priceLabel: Math.round((todayNightly ?? allInNightlyCents(listing)) / 100).toLocaleString("en-US"),
+    priceLabel: Math.round(allIn / 100).toLocaleString("en-US"),
+    allInNightly: Math.round(allIn / 100),
+    priceVaries: adv?.varies ?? false,
+    nightlyPretax: Math.round(pretax / 100),
+    cleaningFee: Math.round((adv?.cleaningCents ?? listing.cleaningCents) / 100),
+    taxPct,
     rate: listing.rating.toFixed(2),
     reviews: listing.reviewCount,
     lat: listing.lat,
     lng: listing.lng,
+    // approximate map pin: coordinates rounded to ~100 m (the exact
+    // address is only shared after booking, as the page promises); the
+    // admin's address itself never appears in the embed URL
+    mapQ: hasPin(listing) ? roundedPin(listing) : listing.city,
     minStay: listing.minStay,
     desc: listing.description,
     amen: listing.amenities,
+    bedTypes: listing.bedTypes,
+    checkinFrom: listing.checkinFrom,
+    checkoutUntil: listing.checkoutUntil,
+    houseRules: listing.houseRules,
+    cancellationPolicy: listing.cancellationPolicy,
+    otherRules: listing.otherRules,
+    allowChildren: listing.allowChildren,
+    allowSmoking: listing.allowSmoking,
+    allowParty: listing.allowParty,
+    allowPets: listing.allowPets,
     unavailable,
     whatsapp: contact.whatsapp,
   };

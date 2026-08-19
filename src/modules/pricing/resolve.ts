@@ -138,29 +138,50 @@ export async function resolveStayQuote(
   };
 }
 
-/**
- * Tonight's effective nightly rate for a listing (per-date override →
- * seasonal rate → base), tax included — so the advertised "$X / night
- * all-in" reflects period-specific pricing, not just the base rate.
- * Returns null when the listing has no rates.
- */
-export async function effectiveNightlyTodayCents(listingId: string): Promise<number | null> {
+export interface AdvertisedNightly {
+  /** the CHEAPEST pre-tax nightly across the next 12 months (override →
+      season → base) — powers "from $X / night" so period prices show */
+  minCents: number;
+  /** true when some upcoming period is priced differently */
+  varies: boolean;
+  taxPct: number;
+  cleaningCents: number;
+}
+
+/** Advertised nightly pricing for the listing page's booking box.
+    Computes the per-day EFFECTIVE rate (override → season → base) for
+    each of the next 365 days and takes min/max over bookable days —
+    so "from $X" is always a price some real date actually costs.
+    Returns null when the listing has no base rate row. */
+export async function advertisedNightly(listingId: string): Promise<AdvertisedNightly | null> {
   const db = getDb();
   const res = await db.query(
-    `select coalesce(
-              (select d.nightly_cents from listing_price_days d
-                where d.listing_id=$1 and d.day=current_date and d.nightly_cents is not null),
-              (select r.nightly_cents from listing_rates r
-                where r.listing_id=$1 and r.season is not null and r.season @> current_date
-                order by lower(r.season) desc limit 1),
-              (select r.nightly_cents from listing_rates r
-                where r.listing_id=$1 and r.season is null)
-            ) as nightly,
-            (select r.tax_pct from listing_rates r
-              where r.listing_id=$1 and r.season is null) as tax_pct`,
+    `with base as (
+       select nightly_cents, tax_pct, cleaning_cents from listing_rates
+        where listing_id=$1 and season is null),
+     eff as (
+       select coalesce(pd.nightly_cents, sr.nightly_cents, b.nightly_cents) as n
+         from generate_series(current_date, current_date + interval '364 days', interval '1 day') gs(day)
+        cross join base b
+         left join listing_price_days pd
+                on pd.listing_id=$1 and pd.day = gs.day::date
+         left join lateral (
+                select r.nightly_cents from listing_rates r
+                 where r.listing_id=$1 and r.season is not null and r.season @> gs.day::date
+                 order by lower(r.season) desc limit 1) sr on true
+        where not coalesce(pd.is_blocked, false))
+     select (select min(n) from eff) as min_cents,
+            (select max(n) from eff) as max_cents,
+            (select tax_pct from base) as tax_pct,
+            (select cleaning_cents from base) as cleaning_cents`,
     [listingId],
   );
-  const row = res.rows[0];
-  if (!row?.nightly) return null;
-  return Math.round(Number(row.nightly) * (1 + Number(row.tax_pct ?? 0) / 100));
+  const r = res.rows[0];
+  if (!r || r.min_cents == null) return null;
+  return {
+    minCents: Number(r.min_cents),
+    varies: Number(r.max_cents) !== Number(r.min_cents),
+    taxPct: Number(r.tax_pct ?? 0),
+    cleaningCents: Number(r.cleaning_cents ?? 0),
+  };
 }

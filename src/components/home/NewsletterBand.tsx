@@ -3,6 +3,15 @@
 import { useActionState } from "react";
 import { subscribeNewsletterAction } from "@/app/growth-actions";
 
+const fieldStyle: React.CSSProperties = {
+  borderRadius: 999,
+  border: "1.5px solid var(--line, #EADFD3)",
+  padding: "12px 18px",
+  fontSize: 15,
+  outline: "none",
+  background: "var(--paper, #FFFDF9)",
+};
+
 /** Homepage bottom band: enter your email → we email a 10% welcome coupon. */
 export function NewsletterBand() {
   const [state, action, pending] = useActionState(subscribeNewsletterAction, {
@@ -41,16 +50,10 @@ export function NewsletterBand() {
               flexWrap: "wrap", maxWidth: 480, margin: "0 auto",
             }}
           >
-            <input
-              type="email"
-              name="email"
-              required
-              placeholder="you@email.com"
-              style={{
-                flex: "1 1 220px", borderRadius: 999, border: "1.5px solid var(--line, #EADFD3)",
-                padding: "12px 18px", fontSize: 15, outline: "none", background: "#fff",
-              }}
-            />
+            <input type="email" name="email" required placeholder="you@email.com"
+              style={{ ...fieldStyle, flex: "1 1 220px" }} />
+            <input type="tel" name="phone" required placeholder="+52 984 123 4567"
+              style={{ ...fieldStyle, flex: "1 1 180px" }} />
             <button className="btn-rosa" disabled={pending} style={{ whiteSpace: "nowrap" }}>
               {pending ? "Sending…" : "Send my coupon"}
             </button>

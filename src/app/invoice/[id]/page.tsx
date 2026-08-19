@@ -67,7 +67,12 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       lines,
       couponCode: b.coupon_code, couponDiscountCents: b.coupon_discount_cents ?? 0,
       totalCents: b.total_cents, currency: b.currency,
-      dueNowCents: p.dueNowCents ?? null, balanceCents: p.balanceCents ?? null,
+      // derive the balance from the REAL total so old bookings whose stored
+      // schedule predates the coupon fix still show correct numbers
+      dueNowCents: p.dueNowCents != null ? Math.min(p.dueNowCents, b.total_cents) : null,
+      balanceCents: p.dueNowCents != null
+        ? Math.max(0, b.total_cents - Math.min(p.dueNowCents, b.total_cents))
+        : (p.balanceCents ?? null),
       balanceDueDate: p.balanceDueDate ? String(p.balanceDueDate).slice(0, 10) : null,
       securityDepositCents: p.securityDepositCents ?? 0,
     };

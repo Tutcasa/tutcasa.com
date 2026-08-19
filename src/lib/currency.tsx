@@ -24,13 +24,25 @@ interface CurrencyCtx {
   fromUSD: (usd: number) => string;
   /** format an amount whose native currency is MXN */
   fromMXN: (mxn: number) => string;
+  /** live admin-set rate — for "≈ $X USD" hints next to MXN prices */
+  mxnPerUsd: number;
 }
 
 const Ctx = createContext<CurrencyCtx | null>(null);
 
 const nf = (n: number) => Math.round(n).toLocaleString("en-US");
 
-export function CurrencyProvider({ children }: { children: React.ReactNode }) {
+export function CurrencyProvider({
+  children,
+  rates,
+}: {
+  children: React.ReactNode;
+  /** admin-set FX rates (units per 1 USD); falls back to the defaults */
+  rates?: { mxnPerUsd: number; cadPerUsd: number };
+}) {
+  const perUsd: Record<Currency, number> = rates
+    ? { USD: 1, MXN: rates.mxnPerUsd, CAD: rates.cadPerUsd }
+    : PER_USD;
   const [cur, setCurState] = useState<Currency>("USD");
 
   useEffect(() => {
@@ -46,10 +58,10 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
     try { window.localStorage.setItem("tc_currency", c); } catch {}
   };
 
-  const fromUSD = (usd: number) => `$${nf(usd * PER_USD[cur])} ${LABEL[cur]}`;
-  const fromMXN = (mxn: number) => `$${nf((mxn / PER_USD.MXN) * PER_USD[cur])} ${LABEL[cur]}`;
+  const fromUSD = (usd: number) => `$${nf(usd * perUsd[cur])} ${LABEL[cur]}`;
+  const fromMXN = (mxn: number) => `$${nf((mxn / perUsd.MXN) * perUsd[cur])} ${LABEL[cur]}`;
 
-  return <Ctx.Provider value={{ cur, setCur, fromUSD, fromMXN }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ cur, setCur, fromUSD, fromMXN, mxnPerUsd: perUsd.MXN }}>{children}</Ctx.Provider>;
 }
 
 export function useCurrency(): CurrencyCtx {
@@ -61,5 +73,6 @@ export function useCurrency(): CurrencyCtx {
     setCur: () => {},
     fromUSD: (usd) => `$${nf(usd)} USD`,
     fromMXN: (mxn) => `$${nf(mxn)} MXN`,
+    mxnPerUsd: MXN_PER_USD,
   };
 }

@@ -53,9 +53,9 @@ export async function createLead(input: {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM ?? "TutCasa <bookings@tutcasa.com>",
+        from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>",
         to: [to],
-        subject: `📥 ${KIND_LABEL[input.kind]}${input.name ? ` — ${input.name.trim()}` : ""}`,
+        subject: `${KIND_LABEL[input.kind]}${input.name ? ` — ${input.name.trim()}` : ""}`,
         text: [
           KIND_LABEL[input.kind],
           input.name ? `Name: ${input.name.trim()}` : "",

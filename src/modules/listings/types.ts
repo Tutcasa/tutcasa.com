@@ -23,6 +23,17 @@ export interface Listing {
   instantBook: boolean;
   selfCheckIn: boolean;
   allowPets: boolean;
+  allowChildren: boolean;
+  allowSmoking: boolean;
+  allowParty: boolean;
+  /** the admin's editable page content — shown on the listing page */
+  checkinFrom: string; // "15:00"
+  checkoutUntil: string; // "11:00"
+  houseRules: string;
+  cancellationPolicy: string;
+  otherRules: string;
+  bedTypes: { count: number; type: string }[];
+  address: string | null;
   rating: number;
   reviewCount: number;
   /** placeholder art class until real photos land (ph-g1 … ph-g6) */

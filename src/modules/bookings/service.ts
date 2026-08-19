@@ -58,13 +58,22 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
   }
   const q = quoted.quote;
 
-  // coupon: validated server-side; silently ignored when invalid so a stale
-  // code never blocks a booking (the guest saw the validation at checkout)
+  // coupon: validated server-side with the FINAL guest email. An invalid
+  // coupon REJECTS the booking — never silently books at full price while
+  // the guest is looking at a discounted total.
   let couponCode: string | null = null;
   let couponDiscountCents = 0;
   if (req.couponCode?.trim()) {
-    const cp = await checkCoupon(req.couponCode, q.nights, q.totalCents);
-    if (cp.ok) { couponCode = cp.code; couponDiscountCents = cp.discountCents; }
+    const cp = await checkCoupon(req.couponCode, {
+      nights: q.nights,
+      totalCents: q.totalCents,
+      listingId: listing.id,
+      guestEmail: email,
+      saleDiscountCents: q.lengthDiscountCents + q.earlyBirdDiscountCents,
+    });
+    if (!cp.ok) return { ok: false, error: "COUPON_INVALID" };
+    couponCode = cp.code;
+    couponDiscountCents = cp.discountCents;
   }
   const chargeCents = q.totalCents - couponDiscountCents;
 
@@ -112,8 +121,10 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           securityDepositCents: q.securityDepositCents,
           couponCode,
           couponDiscountCents,
+          // the coupon reduces the due-now first; the balance is whatever
+          // is left of the DISCOUNTED total — the two always sum to charge
           dueNowCents: Math.max(0, q.schedule.dueNowCents - couponDiscountCents),
-          balanceCents: q.schedule.balanceCents,
+          balanceCents: Math.max(0, chargeCents - Math.max(0, q.schedule.dueNowCents - couponDiscountCents)),
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
         couponCode, couponDiscountCents,

@@ -18,6 +18,7 @@ import {
  */
 
 export * from "./engine";
+export * from "./resolve";
 
 export function nightsBetween(checkIn: Date, checkOut: Date): number {
   const ms = checkOut.getTime() - checkIn.getTime();

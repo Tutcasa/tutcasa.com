@@ -3,7 +3,7 @@ import { getListingsRepo, type Listing } from "@/modules/listings";
 import { listTours } from "@/modules/tours";
 import { HomeHero } from "@/components/home/HomeHero";
 import { NewsletterBand } from "@/components/home/NewsletterBand";
-import { MXN_PER_USD } from "@/lib/rates";
+import { getSetting } from "@/modules/settings";
 import {
   PopularCasas,
   PopularExperiences,
@@ -48,9 +48,11 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
 }
 
 export default async function HomePage() {
-  const [listings, tours] = await Promise.all([
+  const [listings, tours, fx, gReviews] = await Promise.all([
     getListingsRepo().listPublished(),
     listTours({ category: "tour" }),
+    getSetting("fx"),
+    getSetting("google_reviews_cache"),
   ]);
   const expItems = tours
     .filter((t) => t.photoUrl)
@@ -59,7 +61,7 @@ export default async function HomePage() {
       name: t.title,
       sub: `${t.durationLabel || "Full day"} · ${t.city ?? "Riviera Maya"}`,
       img: t.photoUrl,
-      priceLabel: t.priceCents > 0 ? `from $${Math.round(t.priceCents / 100 / MXN_PER_USD).toLocaleString("en-US")} USD` : "on request",
+      priceLabel: t.priceCents > 0 ? `from $${Math.round(t.priceCents / 100 / fx.mxnPerUsd).toLocaleString("en-US")} USD` : "on request",
     }));
   // the admin's "featured" toggle decides the homepage strip
   const featured: CasaCardData[] = listings
@@ -89,7 +91,7 @@ export default async function HomePage() {
       <PopularCasas casas={featured} />
       <PopularExperiences items={expItems} />
       <FamiliaBand />
-      <LovedByGuests />
+      <LovedByGuests live={gReviews.reviews} />
       <NewsletterBand />
     </div>
   );

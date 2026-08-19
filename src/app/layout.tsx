@@ -28,7 +28,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const contact = await getSetting("contact");
+  const [contact, fx] = await Promise.all([getSetting("contact"), getSetting("fx")]);
   return (
     <html lang="en">
       <body>
@@ -42,7 +42,7 @@ export default async function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap"
         />
         <LangProvider>
-          <CurrencyProvider>
+          <CurrencyProvider rates={fx}>
             <SiteHeader whatsapp={contact.whatsapp} />
             <main>{children}</main>
             <SiteFooter whatsapp={contact.whatsapp} />

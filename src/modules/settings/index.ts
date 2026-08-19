@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { getDb } from "@/lib/db";
 
 /**
@@ -12,6 +13,31 @@ export interface ContactSettings {
   email: string;
   instagram: string;
   facebook: string;
+}
+
+export interface GoogleReviewsSettings {
+  placeId: string;
+}
+
+export interface GoogleReview {
+  author: string;
+  rating: number;
+  text: string;
+  when: string;   // e.g. "March 2026" / "2 months ago"
+  photo: string | null;
+}
+
+export interface GoogleReviewsCache {
+  fetchedAt: string | null;
+  rating: number;
+  total: number;
+  reviews: GoogleReview[];
+}
+
+export interface FxSettings {
+  /** display-conversion rates: units per 1 USD */
+  mxnPerUsd: number;
+  cadPerUsd: number;
 }
 
 export interface InvestorSettings {
@@ -81,7 +107,13 @@ const DEFAULTS: {
   page_loyalty: LoyaltyContent;
   page_faq: FaqContent;
   tour_addons: TourAddonsSetting;
+  fx: FxSettings;
+  google_reviews: GoogleReviewsSettings;
+  google_reviews_cache: GoogleReviewsCache;
 } = {
+  fx: { mxnPerUsd: 17, cadPerUsd: 1.4 },
+  google_reviews: { placeId: "" },
+  google_reviews_cache: { fetchedAt: null, rating: 0, total: 0, reviews: [] },
   contact: { whatsapp: "201069706782", email: "", instagram: "", facebook: "" },
   investor: { deck_url: "", deck_name: "" },
   tour_addons: { items: [] },
@@ -183,11 +215,11 @@ const DEFAULTS: {
   },
 };
 
-export async function getSetting<K extends keyof typeof DEFAULTS>(
-  key: K,
-): Promise<(typeof DEFAULTS)[K]> {
+// react cache() dedupes repeat reads of the same key within one request
+// (layout + page both read "fx" — one query, not two)
+const getSettingCached = cache(async (key: keyof typeof DEFAULTS): Promise<object> => {
   try {
-    const res = await getDb().query<{ value: (typeof DEFAULTS)[K] }>(
+    const res = await getDb().query<{ value: object }>(
       "select value from site_settings where key = $1",
       [key],
     );
@@ -195,6 +227,12 @@ export async function getSetting<K extends keyof typeof DEFAULTS>(
   } catch {
     return DEFAULTS[key]; // settings must never take a page down
   }
+});
+
+export async function getSetting<K extends keyof typeof DEFAULTS>(
+  key: K,
+): Promise<(typeof DEFAULTS)[K]> {
+  return getSettingCached(key) as Promise<(typeof DEFAULTS)[K]>;
 }
 
 export async function setSetting(key: keyof typeof DEFAULTS, value: object): Promise<void> {

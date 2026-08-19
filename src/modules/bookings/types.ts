@@ -55,4 +55,5 @@ export type ReserveError =
   | "MIN_STAY_NOT_MET"
   | "TOO_MANY_GUESTS"
   | "LISTING_NOT_FOUND"
-  | "INVALID_CONTACT";
+  | "INVALID_CONTACT"
+  | "COUPON_INVALID";     // coupon no longer valid for this guest/booking

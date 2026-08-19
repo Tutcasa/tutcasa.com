@@ -23,17 +23,44 @@ export interface PdData {
   beds: number;
   baths: number;
   guests: number;
-  priceLabel: string; // advertised all-in nightly, whole dollars
+  priceLabel: string; // advertised all-in nightly, whole dollars (USD text)
+  allInNightly: number; // same value as a number, for currency conversion
+  priceVaries: boolean; // upcoming periods priced differently → "from $X"
+  nightlyPretax: number; // whole dollars, before taxes (static breakdown)
+  cleaningFee: number; // whole dollars per stay
+  taxPct: number;
   rate: string;
   reviews: number;
   lat: number;
   lng: number;
+  mapQ: string; // map query: address → coords → city
   minStay: number;
   desc: string;
   amen: string[];
+  bedTypes: { count: number; type: string }[];
+  checkinFrom: string; // "15:00"
+  checkoutUntil: string;
+  houseRules: string;
+  cancellationPolicy: string;
+  otherRules: string;
+  allowChildren: boolean;
+  allowSmoking: boolean;
+  allowParty: boolean;
+  allowPets: boolean;
   unavailable: { from: string; to: string }[];
   whatsapp: string;
 }
+
+/** "15:00" → "3:00 PM" */
+function ampm(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  if (Number.isNaN(h)) return t;
+  const hr = ((h + 11) % 12) + 1;
+  return `${hr}:${String(m ?? 0).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+const textLines = (s: string) =>
+  s.split("\n").map((l) => l.replace(/^[-•#\s]+/, "").trim()).filter(Boolean);
 
 /* demo amenity icon matching (property.html `icons` map, ported verbatim) */
 const AMEN_ICONS: [string, string][] = [
@@ -120,7 +147,19 @@ export function PdGrid({ p }: { p: PdData }) {
 
   /* booking summary rows — real server total shown in the demo's layout */
   function calcRows() {
-    if (!nights) return <div className="row"><span>Add your dates for a total</span></div>;
+    if (!nights) {
+      // no dates yet → static nightly composition so the guest always
+      // sees how the advertised price is built
+      return (
+        <>
+          <div className="row"><span>Nightly price (before taxes)</span><span>{fromUSD(p.nightlyPretax)}</span></div>
+          {p.taxPct > 0 && <div className="row"><span>Taxes</span><span>{p.taxPct}%</span></div>}
+          <div className="row"><span>Nightly incl. taxes</span><span>{fromUSD(p.allInNightly)}</span></div>
+          {p.cleaningFee > 0 && <div className="row"><span>Cleaning fee (once per stay)</span><span>{fromUSD(p.cleaningFee)}</span></div>}
+          <div className="row"><span>Add your dates for your exact total</span></div>
+        </>
+      );
+    }
     const warn = nights < p.minStay
       ? <div className="row" style={{ color: "var(--rosa)" }}>Minimum stay is {p.minStay} nights</div>
       : null;
@@ -189,9 +228,6 @@ export function PdGrid({ p }: { p: PdData }) {
     );
   });
 
-  const dLat = 0.010, dLng = 0.014;
-  const bbox = `${p.lng - dLng},${p.lat - dLat},${p.lng + dLng},${p.lat + dLat}`;
-
   return (
     <div className="pd-grid">
       <div className="pd-col">
@@ -205,6 +241,11 @@ export function PdGrid({ p }: { p: PdData }) {
             <div className="pd-fact"><span className="fi">&#128719;</span>{p.beds} bedrooms</div>
             <div className="pd-fact"><span className="fi">&#128703;</span>{p.baths} bathrooms</div>
             <div className="pd-fact"><span className="fi">&#127968;</span>{p.typeLabel}</div>
+            {p.bedTypes.length > 0 && (
+              <div className="pd-fact"><span className="fi">&#128717;</span>
+                {p.bedTypes.map((b) => `${b.count} × ${b.type}`).join(" · ")}
+              </div>
+            )}
           </div>
         </div>
         <div className="pd-sec"><T as="h2" k="pd_about" /><div id="pdDesc"><RichText text={p.desc} /></div></div>
@@ -221,8 +262,11 @@ export function PdGrid({ p }: { p: PdData }) {
           <T as="h2" k="pd_know" />
           <div className="pd-know">
             <div><b>Minimum stay</b><br />{p.minStay} nights</div>
-            <div><b>Check-in / out</b><br />From 3:00 PM &middot; until 11:00 AM</div>
+            <div><b>Check-in / out</b><br />From {ampm(p.checkinFrom)} &middot; until {ampm(p.checkoutUntil)}</div>
             <div><b>Guests</b><br />Up to {p.guests}</div>
+            {p.bedTypes.length > 0 && (
+              <div><b>Beds</b><br />{p.bedTypes.map((b) => `${b.count} × ${b.type}`).join(", ")}</div>
+            )}
             <div><b>Pricing</b><br />All-in &mdash; taxes &amp; cleaning included, no hidden fees</div>
           </div>
         </div>
@@ -236,7 +280,8 @@ export function PdGrid({ p }: { p: PdData }) {
           <div className="pd-map">
             <iframe
               loading="lazy"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${p.lat},${p.lng}`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(p.mapQ)}&z=15&output=embed`}
+              title={`Map — ${p.name}`}
             />
           </div>
           <div className="pd-map-note">Approximate location in {p.city}. Exact address is shared after booking is confirmed.</div>
@@ -246,13 +291,22 @@ export function PdGrid({ p }: { p: PdData }) {
           <div className="pd-rev-head">
             <div className="pd-rev-score">{p.reviews > 0 ? <>&#9733; {p.rate}</> : ""}</div>
             <div className="pd-rev-bars">
-              {([["Cleanliness", 4.9], ["Location", 4.9], ["Check-in", 4.8], ["Value", 4.9]] as const).map(([label, v]) => (
-                <div className="pd-bar" key={label}>
-                  <span style={{ width: 78 }}>{label}</span>
-                  <span className="track"><span className="fill" style={{ width: `${(v / 5) * 100}%` }}></span></span>
-                  <span>{v.toFixed(1)}</span>
-                </div>
-              ))}
+              {(() => {
+                // sub-scores follow the home's real rating once one exists
+                const r = parseFloat(p.rate) || 0;
+                const rows: [string, number][] = r > 0
+                  ? [["Cleanliness", r], ["Location", r], ["Check-in", Math.max(0, r - 0.1)], ["Value", r]]
+                  : [["Cleanliness", 4.9], ["Location", 4.9], ["Check-in", 4.8], ["Value", 4.9]];
+                return rows.map(([label, v]) => (
+                  <div className="pd-bar" key={label}>
+                    <span style={{ width: 78 }}>{label}</span>
+                    <span className="track">
+                      <span className="fill" style={{ width: `${(v / 5) * 100}%` }}></span>
+                    </span>
+                    <span>{v.toFixed(1)}</span>
+                  </div>
+                ));
+              })()}
             </div>
           </div>
           <div className="pd-reviews">
@@ -269,17 +323,47 @@ export function PdGrid({ p }: { p: PdData }) {
         </div>
         <div className="pd-sec">
           <T as="h2" k="pd_things" />
+          {/* real admin-entered rules & policies (custom text lines are
+              appended after the standard lines) */}
           <div className="pd-rules">
-            <div><h4>House rules</h4><li>Check-in after 3:00 PM</li><li>Checkout before 11:00 AM</li><li>{p.guests} guests maximum</li><li>No parties or events</li><li>No smoking indoors</li></div>
-            <div><h4>Safety &amp; property</h4><li>Smoke &amp; CO alarms</li><li>Pool without a fence/gate</li><li>Security deposit may apply</li><li>Pets on request only</li></div>
-            <div><h4>Cancellation &amp; terms</h4><li>Free cancellation up to 30 days before</li><li>50% refund up to 14 days before</li><li>Minimum stay: {p.minStay} nights</li><li>Rates are all-in (tax &amp; cleaning included)</li></div>
+            <div><h4>House rules</h4>
+              <li>Check-in after {ampm(p.checkinFrom)}</li>
+              <li>Checkout before {ampm(p.checkoutUntil)}</li>
+              <li>{p.guests} guests maximum</li>
+              <li>{p.allowParty ? "Events on request" : "No parties or events"}</li>
+              <li>{p.allowSmoking ? "Smoking allowed" : "No smoking indoors"}</li>
+              {!p.allowChildren && <li>Adults only</li>}
+              {textLines(p.houseRules).map((l, i) => <li key={`hr${i}`}>{l}</li>)}
+            </div>
+            <div><h4>Safety &amp; property</h4>
+              <li>Smoke &amp; CO alarms</li>
+              <li>Security deposit may apply</li>
+              <li>{p.allowPets ? "Pets allowed" : "Pets on request only"}</li>
+              {textLines(p.otherRules).map((l, i) => <li key={`or${i}`}>{l}</li>)}
+            </div>
+            <div><h4>Cancellation &amp; terms</h4>
+              {p.cancellationPolicy.trim() ? (
+                textLines(p.cancellationPolicy).map((l, i) => <li key={`cp${i}`}>{l}</li>)
+              ) : (
+                <>
+                  <li>Free cancellation up to 30 days before</li>
+                  <li>50% refund up to 14 days before</li>
+                </>
+              )}
+              <li>Minimum stay: {p.minStay} nights</li>
+              <li>Rates are all-in (tax &amp; cleaning included)</li>
+            </div>
           </div>
         </div>
       </div>
       <aside className="pd-book">
-        <div className="pd-price"><b>${p.priceLabel}</b> <T k="pd_pernight" /></div>
+        <div className="pd-price">
+          {p.priceVaries && <span style={{ fontSize: 14, fontWeight: 600 }}>from </span>}
+          <b>${p.priceLabel}</b> <T k="pd_pernight" />
+        </div>
         <div style={{ fontSize: 12.5, color: "var(--grey)", margin: "-4px 0 10px" }}>
-          All-in price &mdash; taxes &amp; cleaning included. Pick your dates below for the full breakdown.
+          All-in price &mdash; taxes &amp; cleaning included.
+          {p.priceVaries ? " Rates vary by date — pick your dates for the exact total." : " Pick your dates below for the full breakdown."}
         </div>
         <div className="pd-dates">
           <label><T k="pd_ci" /><input ref={ciRef} type="date" min={today} value={ci} onChange={(e) => setDates(e.target.value || null, co || null)} /></label>

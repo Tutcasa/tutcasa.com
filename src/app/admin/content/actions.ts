@@ -187,3 +187,33 @@ export async function uploadDeckAction(
   revalidatePath("/admin/content");
   return { ok: true, message: "Investor deck updated." };
 }
+
+export async function saveFxAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  const mxn = Number(formData.get("mxnPerUsd"));
+  const cad = Number(formData.get("cadPerUsd"));
+  if (!Number.isFinite(mxn) || mxn <= 0 || !Number.isFinite(cad) || cad <= 0) {
+    return { ok: false, message: "Rates must be positive numbers (units per 1 USD)." };
+  }
+  await setSetting("fx", { mxnPerUsd: mxn, cadPerUsd: cad });
+  revalidatePath("/", "layout"); // prices display everywhere
+  return { ok: true, message: "Exchange rates saved — applied across the whole site." };
+}
+
+export async function saveGoogleReviewsAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  await setSetting("google_reviews", {
+    placeId: String(formData.get("placeId") ?? "").trim(),
+  });
+  // try a sync right away so the admin sees the result immediately
+  const { syncGoogleReviews } = await import("@/modules/reviews");
+  const sync = await syncGoogleReviews();
+  revalidatePath("/");
+  return sync.ok
+    ? { ok: true, message: `Saved. ${sync.message}` }
+    : { ok: true, message: `Place ID saved. Sync note: ${sync.message}` };
+}

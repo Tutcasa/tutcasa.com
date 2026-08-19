@@ -19,16 +19,22 @@ export async function addCouponAction(
   const maxUses = formData.get("maxUses") ? Number(formData.get("maxUses")) : null;
   const expires = String(formData.get("expiresAt") ?? "") || null;
   const minNights = Number(formData.get("minNights") ?? 0) || 0;
+  const listingId = String(formData.get("listingId") ?? "") || null;
+  const perUserLimit = formData.get("perUserLimit") ? Number(formData.get("perUserLimit")) : null;
+  const allowedEmail = String(formData.get("allowedEmail") ?? "").trim().toLowerCase() || null;
+  const blockOnSale = formData.get("blockOnSale") === "on";
 
   try {
     await getDb().query(
-      `insert into coupons (code, kind, percent_off, amount_cents, min_nights, max_uses, expires_at, note)
-       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      `insert into coupons (code, kind, percent_off, amount_cents, min_nights, max_uses,
+                            expires_at, note, listing_id, per_user_limit, allowed_email, block_on_sale)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
       [code, kind,
        kind === "percent" ? value : null,
        kind === "fixed" ? Math.round(value * 100) : null,
        minNights, maxUses, expires,
-       String(formData.get("note") ?? "").trim() || null],
+       String(formData.get("note") ?? "").trim() || null,
+       listingId, perUserLimit, allowedEmail, blockOnSale],
     );
   } catch (e) {
     if ((e as { code?: string }).code === "23505") {

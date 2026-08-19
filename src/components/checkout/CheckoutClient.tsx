@@ -34,7 +34,6 @@ export interface CheckoutSchedule {
   securityDeposit?: number;
 }
 
-const RATE = 17;
 const money = (n: number) => Number(n).toLocaleString("en-US");
 
 const ERRORS: Record<string, string> = {
@@ -45,6 +44,7 @@ const ERRORS: Record<string, string> = {
   LISTING_NOT_FOUND: "This home is no longer available.",
   INVALID_CONTACT: "Please add the name on card and a valid email.",
   UNAVAILABLE: "Some of those nights are already booked.",
+  COUPON_INVALID: "That coupon can't be used for this booking (it may be tied to another email, home, or already used) — remove it or fix it, then try again.",
   TOUR_NOT_FOUND: "This tour is no longer available.",
   INVALID_DATE: "Please pick a valid tour date.",
   INVALID_GROUP: "Group size must be between 1 and 6.",
@@ -64,6 +64,7 @@ export function CheckoutClient({
   payload: CheckoutPayload;
   schedule?: CheckoutSchedule;
 }) {
+  const [guestName, setGuestName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [ccName, setCcName] = useState("");
@@ -102,7 +103,7 @@ export function CheckoutClient({
     if (payload.kind !== "stay") { setPromoMsg(true); return; } // demo behavior for non-stay carts
     setCheckingCoupon(true);
     try {
-      const res = await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests);
+      const res = await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests, email.trim() || undefined);
       if (res.ok) { setCoupon({ code: res.code, discount: res.discount }); setPromoMsg(false); }
       else { setCoupon(null); setCouponErr(res.message); }
     } finally {
@@ -124,9 +125,10 @@ export function CheckoutClient({
   async function pay() {
     setError(null);
     if (payload.kind === "none") { setPaid(true); window.scrollTo(0, 0); return; }
-    const name = ccName.trim();
+    const name = guestName.trim() || ccName.trim();
     const okEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
     if (!name || !okEmail) { setError(ERRORS.INVALID_CONTACT); return; }
+    if (!phone.trim()) { setError("Please add your phone number with country code."); return; }
     setPaying(true);
     try {
       const res =
@@ -139,7 +141,8 @@ export function CheckoutClient({
             })
           : await reserveTourAction({
               tourSlug: payload.slug, tourDate: payload.date, groupSize: payload.groupSize,
-              guestName: name, guestEmail: email.trim(), notes: payload.notes,
+              guestName: name, guestEmail: email.trim(), guestPhone: phone.trim() || undefined,
+              notes: payload.notes,
             });
       if (res.ok) { setPaid(true); window.scrollTo(0, 0); }
       else setError(ERRORS[res.error] ?? "Something went wrong — please try again.");
@@ -194,7 +197,7 @@ export function CheckoutClient({
             )}
             <div className="co-row"><span>Subtotal</span><span>${money(totalBefore)} {cur}</span></div>
             <div className="co-row big"><span>Total</span><span>${money(total)} {cur}</span></div>
-            {cur === "MXN" && displayCur === "USD" && <div className="co-usd">&#8776; {money(Math.round(total / RATE))} USD</div>}
+            {cur === "MXN" && displayCur === "USD" && <div className="co-usd">&#8776; {fromMXN(total)}</div>}
             {displayCur !== cur && !(cur === "MXN" && displayCur === "USD") && (
               <div className="co-usd">&#8776; {cur === "USD" ? fromUSD(total) : fromMXN(total)}</div>
             )}
@@ -205,7 +208,8 @@ export function CheckoutClient({
                 </div>
                 <div className="co-row">
                   <span>Balance{schedule.balanceBy ? ` — due by ${schedule.balanceBy}` : ""}</span>
-                  <span>${money(schedule.balance)} {cur}</span>
+                  {/* balance = discounted total minus what's due today */}
+                  <span>${money(Math.max(0, total - Math.max(0, schedule.dueNow - discount)))} {cur}</span>
                 </div>
               </>
             )}
@@ -218,6 +222,7 @@ export function CheckoutClient({
           <div className="co-card">
             <h3>Payment</h3>
             <div className="co-sub">Card details are handled by Stripe. TutCasa never sees your card number.</div>
+            <div className="co-fld"><label>Guest full name</label><input placeholder="Maria Lopez" value={guestName} onChange={(e) => setGuestName(e.target.value)} /></div>
             <div className="co-fld"><label>Email for confirmation</label><input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="co-fld"><label>Phone / WhatsApp (with country code)</label><input type="tel" placeholder="+52 984 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
             <div className="co-fld"><label>Name on card</label><input placeholder="MARIA LOPEZ" value={ccName} onChange={(e) => setCcName(e.target.value)} /></div>
@@ -238,7 +243,7 @@ export function CheckoutClient({
               <span>
                 {paying
                   ? "Holding your dates…"
-                  : `Pay $${money(schedule && schedule.balance > 0 ? Math.max(0, schedule.dueNow - discount) : total)} ${cur}${schedule && schedule.balance > 0 ? " now" : ""}`}
+                  : `Reserve — $${money(schedule && schedule.balance > 0 ? Math.max(0, schedule.dueNow - discount) : total)} ${cur} due${schedule && schedule.balance > 0 ? " now" : ""}`}
               </span>
             </button>
             <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
@@ -246,9 +251,13 @@ export function CheckoutClient({
           </div>
         </div>
         <div className="paid" style={{ display: paid ? "block" : "none" }}>
-          <div className="c">&#10003;</div><h2>Booking confirmed!</h2>
-          <p>Thank you &mdash; a confirmation is on its way, and May will message you on WhatsApp with the final details.</p>
-          <div className="amt">Reserved: ${money(total)} {cur}</div>
+          <div className="c">&#10003;</div><h2>Booking request received!</h2>
+          <p>
+            Thank you &mdash; your dates are on hold and a confirmation email is on
+            its way. <b>No payment has been taken yet</b>: May will confirm your
+            booking and send a secure payment link for the amount due.
+          </p>
+          <div className="amt">Total to pay: ${money(total)} {cur}</div>
           <Link className="btn-rosa" href="/">Back to home</Link>
         </div>
       </div>

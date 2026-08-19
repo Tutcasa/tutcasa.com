@@ -31,6 +31,7 @@ export interface StayCard {
   price: number;
   lat: number;
   lng: number;
+  mapQ: string; // map query: address → coords → city
   g: string; // g1…g4
   tag: string;
   /** real photo URLs — when present the card shows them instead of gradients */
@@ -179,7 +180,7 @@ function StayCasa({ p }: { p: StayCard }) {
           {mapLoaded && (
             <iframe
               loading="lazy"
-              src={`https://maps.google.com/maps?q=${p.lat},${p.lng}&z=14&output=embed`}
+              src={`https://maps.google.com/maps?q=${encodeURIComponent(p.mapQ)}&z=14&output=embed`}
               title={p.name}
             />
           )}

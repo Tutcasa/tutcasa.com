@@ -1,11 +1,11 @@
 import { getSetting } from "@/modules/settings";
-import { ContactForm, DeckForm } from "./content-forms";
+import { ContactForm, DeckForm, FxForm, GoogleReviewsForm } from "./content-forms";
 import { PoliciesForm, WhyForm, ConciergeForm, LoyaltyForm, FaqForm } from "./page-forms";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminContent() {
-  const [contact, investor, policies, why, concierge, loyalty, faq] = await Promise.all([
+  const [contact, investor, policies, why, concierge, loyalty, faq, fx, gr, grCache] = await Promise.all([
     getSetting("contact"),
     getSetting("investor"),
     getSetting("page_policies"),
@@ -13,6 +13,9 @@ export default async function AdminContent() {
     getSetting("page_concierge"),
     getSetting("page_loyalty"),
     getSetting("page_faq"),
+    getSetting("fx"),
+    getSetting("google_reviews"),
+    getSetting("google_reviews_cache"),
   ]);
 
   return (
@@ -32,6 +35,16 @@ export default async function AdminContent() {
       <section className="rounded-card bg-paper p-5 shadow-soft">
         <h2 className="mb-4 font-display text-lg font-bold">Investor deck (PDF)</h2>
         <DeckForm investor={investor} />
+      </section>
+
+      <section className="rounded-card bg-paper p-5 shadow-soft">
+        <h2 className="mb-4 font-display text-lg font-bold">Currency exchange rates</h2>
+        <FxForm fx={fx} />
+      </section>
+
+      <section className="rounded-card bg-paper p-5 shadow-soft">
+        <h2 className="mb-4 font-display text-lg font-bold">Google reviews</h2>
+        <GoogleReviewsForm placeId={gr.placeId} cache={grCache} />
       </section>
 
       <section className="rounded-card bg-paper p-5 shadow-soft">

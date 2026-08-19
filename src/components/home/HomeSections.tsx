@@ -209,23 +209,47 @@ export function PopularExperiences({ items = [] }: { items?: ExpCardData[] }) {
   );
 }
 
-export function LovedByGuests() {
+export interface LiveReview {
+  author: string;
+  rating: number;
+  text: string;
+  when: string;
+}
+
+export function LovedByGuests({ live }: { live?: LiveReview[] }) {
+  const useLive = !!live && live.length > 0;
   return (
     <section className="loved wrap">
       <T as="div" className="sec-t" k="home_loved" />
-      <div className="sec-s">Verified reviews imported from Airbnb, Vrbo and Google &mdash; same homes, better price here.</div>
+      <div className="sec-s">
+        {useLive
+          ? <>Real reviews from our Google Business profile &mdash; refreshed daily.</>
+          : <>Verified reviews imported from Airbnb, Vrbo and Google &mdash; same homes, better price here.</>}
+      </div>
       <Carousel kind="rev">
-        {REVIEWS.map((r, i) => (
-          <div className="rev" key={i}>
-            <div className="st">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <p>{r.text}</p>
-            <div className="who">
-              <span className={`face ${r.face}`}>{r.init}</span>
-              <span>{r.who}</span>
-              <span className="src">{r.src}</span>
-            </div>
-          </div>
-        ))}
+        {useLive
+          ? live.map((r, i) => (
+              <div className="rev" key={i}>
+                <div className="st">{"★".repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}</div>
+                <p>&ldquo;{r.text.length > 220 ? `${r.text.slice(0, 220)}…` : r.text}&rdquo;</p>
+                <div className="who">
+                  <span className={`face f${(i % 3) + 1}`}>{r.author.charAt(0).toUpperCase()}</span>
+                  <span><b>{r.author}</b> &middot; {r.when}</span>
+                  <span className="src">Google</span>
+                </div>
+              </div>
+            ))
+          : REVIEWS.map((r, i) => (
+              <div className="rev" key={i}>
+                <div className="st">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+                <p>{r.text}</p>
+                <div className="who">
+                  <span className={`face ${r.face}`}>{r.init}</span>
+                  <span>{r.who}</span>
+                  <span className="src">{r.src}</span>
+                </div>
+              </div>
+            ))}
       </Carousel>
     </section>
   );

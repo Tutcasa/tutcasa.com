@@ -7,7 +7,14 @@ import type { Listing } from "./types";
  */
 const MOCK_FEATURED = new Set(["spiritum-marea", "vista-playa", "casa-selva", "nile-breeze"]);
 
-const RAW: Omit<Listing, "featured" | "instantBook" | "selfCheckIn" | "allowPets">[] = [
+type RawListing = Omit<
+  Listing,
+  | "featured" | "instantBook" | "selfCheckIn" | "allowPets"
+  | "allowChildren" | "allowSmoking" | "allowParty"
+  | "checkinFrom" | "checkoutUntil" | "houseRules" | "cancellationPolicy"
+  | "otherRules" | "bedTypes" | "address"
+>;
+const RAW: RawListing[] = [
   {
     id: "l-spiritum-marea",
     slug: "spiritum-marea",
@@ -259,6 +266,16 @@ export const MOCK_LISTINGS: Listing[] = RAW.map((l) => ({
   instantBook: true,
   selfCheckIn: false,
   allowPets: false,
+  allowChildren: true,
+  allowSmoking: false,
+  allowParty: false,
+  checkinFrom: "15:00",
+  checkoutUntil: "11:00",
+  houseRules: "",
+  cancellationPolicy: "",
+  otherRules: "",
+  bedTypes: [],
+  address: null,
 }));
 
 /** demo parity: bookable via direct link, hidden from the grid */

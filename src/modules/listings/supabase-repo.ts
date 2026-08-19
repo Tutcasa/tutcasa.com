@@ -24,6 +24,16 @@ interface ListingRow {
   instant_book: boolean | null;
   self_check_in: boolean | null;
   allow_pets: boolean | null;
+  allow_children: boolean | null;
+  allow_smoking: boolean | null;
+  allow_party: boolean | null;
+  checkin_from: string | null;
+  checkout_until: string | null;
+  house_rules: string | null;
+  cancellation_policy: string | null;
+  other_rules: string | null;
+  bed_types: { count: number; type: string }[] | null;
+  address: string | null;
   rating_cached: number;
   review_count_cached: number;
   listing_rates: {
@@ -40,6 +50,9 @@ const SELECT = `
   id, slug, title, city, country, region, lat, lng, property_type,
   max_guests, bedrooms, bathrooms, headline, description, amenities,
   min_stay, featured, instant_book, self_check_in, allow_pets,
+  allow_children, allow_smoking, allow_party,
+  checkin_from, checkout_until, house_rules, cancellation_policy,
+  other_rules, bed_types, address,
   rating_cached, review_count_cached,
   listing_rates ( nightly_cents, cleaning_cents, tax_pct, currency, season ),
   listing_photos ( url, alt, sort )
@@ -76,6 +89,16 @@ function toListing(row: ListingRow): Listing {
     instantBook: row.instant_book ?? false,
     selfCheckIn: row.self_check_in ?? false,
     allowPets: row.allow_pets ?? false,
+    allowChildren: row.allow_children ?? true,
+    allowSmoking: row.allow_smoking ?? false,
+    allowParty: row.allow_party ?? false,
+    checkinFrom: (row.checkin_from ?? "15:00").slice(0, 5),
+    checkoutUntil: (row.checkout_until ?? "11:00").slice(0, 5),
+    houseRules: row.house_rules ?? "",
+    cancellationPolicy: row.cancellation_policy ?? "",
+    otherRules: row.other_rules ?? "",
+    bedTypes: row.bed_types ?? [],
+    address: row.address,
     rating: Number(row.rating_cached),
     reviewCount: row.review_count_cached,
     gradient: gradientFor(row.slug),

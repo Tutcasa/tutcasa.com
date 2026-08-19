@@ -26,7 +26,7 @@ async function sendBranded(to: string, subject: string, body: string): Promise<b
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "TutCasa <bookings@tutcasa.com>",
+      from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>",
       to: [to],
       subject,
       html: renderEmailHtml({ subject, body }),
@@ -40,10 +40,15 @@ async function sendBranded(to: string, subject: string, body: string): Promise<b
 
 export async function subscribeNewsletter(
   email: string,
+  phone: string,
 ): Promise<{ ok: boolean; message: string }> {
   const clean = email.trim().toLowerCase();
+  const cleanPhone = phone.trim();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) {
     return { ok: false, message: "Enter a valid email address." };
+  }
+  if (!/^\+?[0-9][0-9 ()-]{6,}$/.test(cleanPhone)) {
+    return { ok: false, message: "Add your phone number with country code (e.g. +52 …)." };
   }
   const db = getDb();
 
@@ -62,14 +67,14 @@ export async function subscribeNewsletter(
        values ($1,'percent',10,1,'Newsletter signup coupon')`,
       [code],
     );
-    await createLead({ kind: "newsletter", email: clean, payload: { coupon: code } });
+    await createLead({ kind: "newsletter", email: clean, phone: cleanPhone, payload: { coupon: code } });
   }
 
   await sendBranded(
     clean,
-    "Your 10% welcome coupon 🎁",
+    "Your 10% TutCasa welcome coupon",
     [
-      "Hola! 👋",
+      "Hola!",
       "",
       "Welcome to the TutCasa family — here's your welcome gift:",
       "",
@@ -120,7 +125,7 @@ export async function createReferral(
 
   await sendBranded(
     cleanEmail,
-    "Your TutCasa invite link 💕",
+    "Your TutCasa invite link",
     [
       `Hola ${name.trim().split(" ")[0]}!`,
       "",
@@ -175,7 +180,7 @@ export async function rewardReferrerForBooking(bookingId: string): Promise<void>
   );
   await sendBranded(
     r.referrer_email,
-    "You earned $200 — your friend just booked! 🎉",
+    "You earned $200 — your friend just booked",
     [
       `Hola ${String(r.referrer_name).split(" ")[0]}!`,
       "",
