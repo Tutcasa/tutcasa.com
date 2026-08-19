@@ -105,9 +105,10 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
     window.open(waLink(txt), "_blank");
   }
 
-  /** the bot cites site paths like /stays/casa-selva — make them tappable */
+  /** the bot cites site paths like /stays/casa-selva or prefilled
+      /booking?stay=… links — make them tappable */
   function renderText(text: string) {
-    const parts = text.split(/(\/(?:stays|tours|experiences|faq|policies|loyalty|contact|concierge|invite)\/?[a-z0-9-]*)/g);
+    const parts = text.split(/(\/(?:stays|tours|experiences|faq|policies|loyalty|contact|concierge|invite|booking)(?:\/[a-z0-9-]*)?(?:\?[a-zA-Z0-9=&%-]+)?)/g);
     return parts.map((p, i) =>
       p.startsWith("/") ? (
         <Link key={i} href={p} style={{ color: "var(--rosa)", fontWeight: 700 }} onClick={() => setOpen(false)}>

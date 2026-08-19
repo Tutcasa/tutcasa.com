@@ -1,20 +1,23 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { z } from "zod";
 import { getSystemPrompt } from "@/modules/chatbot";
+import { checkStay, busyRanges } from "@/modules/chatbot/tools";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
  * AI concierge endpoint for the "Contact us" chat widget. Streams plain
- * text back. When ANTHROPIC_API_KEY isn't configured the widget falls
- * back to the WhatsApp handoff (response: { fallback: true }).
+ * text; the model can check REAL availability and prices through the
+ * same engine checkout uses, and hands the guest a prefilled booking
+ * link. When ANTHROPIC_API_KEY isn't configured the widget falls back
+ * to the WhatsApp handoff (response: { fallback: true }).
  */
 
-const MAX_TURNS = 24; // client sends trimmed history
-const MAX_CHARS = 2000; // per message
+const MAX_TURNS = 24;
+const MAX_CHARS = 2000;
 
-/* Small in-memory throttle per instance — enough to stop a casual
-   abuse loop from burning tokens (Vercel instances are ephemeral). */
 const hits = new Map<string, { n: number; t: number }>();
 function throttled(ip: string): boolean {
   const now = Date.now();
@@ -26,6 +29,30 @@ function throttled(ip: string): boolean {
   h.n += 1;
   return h.n > 30;
 }
+
+const checkAvailabilityTool = betaZodTool({
+  name: "check_availability_and_price",
+  description:
+    "Check whether a specific home is available for concrete dates and get the exact all-in price, deposit split, and a prefilled booking link. Use the home's slug from the knowledge list (the part after /stays/). Dates are YYYY-MM-DD; checkOut is the departure day.",
+  inputSchema: z.object({
+    slug: z.string().describe("listing slug, e.g. casa-selva"),
+    checkIn: z.string().describe("YYYY-MM-DD"),
+    checkOut: z.string().describe("YYYY-MM-DD"),
+    guests: z.number().int().min(1).max(30),
+  }),
+  run: async ({ slug, checkIn, checkOut, guests }) =>
+    JSON.stringify(await checkStay(slug, checkIn, checkOut, guests)),
+});
+
+const busyRangesTool = betaZodTool({
+  name: "get_busy_dates",
+  description:
+    "List a home's already-booked/blocked date ranges for the next 6 months (checkOut day is free again). Use when the guest asks WHEN a home is available without giving exact dates.",
+  inputSchema: z.object({
+    slug: z.string().describe("listing slug, e.g. casa-selva"),
+  }),
+  run: async ({ slug }) => JSON.stringify(await busyRanges(slug)),
+});
 
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -56,7 +83,7 @@ export async function POST(req: Request) {
   const client = new Anthropic();
   const system = await getSystemPrompt();
 
-  const stream = client.beta.messages.stream({
+  const runner = client.beta.messages.toolRunner({
     model: "claude-opus-5",
     max_tokens: 1024,
     // fast, cheap replies for a chat widget; the knowledge does the work
@@ -64,17 +91,22 @@ export async function POST(req: Request) {
     // safety-refusal fallback routing (recommended default for Opus 5)
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
+    tools: [checkAvailabilityTool, busyRangesTool],
+    max_iterations: 6,
     system: [{ type: "text", text: system, cache_control: { type: "ephemeral" } }],
     messages: history,
+    stream: true,
   });
 
   const encoder = new TextEncoder();
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const event of stream) {
-          if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
-            controller.enqueue(encoder.encode(event.delta.text));
+        for await (const messageStream of runner) {
+          for await (const event of messageStream) {
+            if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
           }
         }
       } catch {
