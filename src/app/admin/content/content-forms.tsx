@@ -182,6 +182,17 @@ export function ListPropertyForm({ content }: { content: ListPropertyContent }) 
           <input name="formIntro" defaultValue={content.formIntro} className={inputCls} />
         </label>
       </div>
+      <label className="text-xs font-bold">EXTRA FORM QUESTIONS{" "}
+        <span className="font-normal text-grey">
+          (one per line: &ldquo;Question | text&rdquo;, &ldquo;Question | textarea&rdquo;, or
+          &ldquo;Question | checkboxes | option1, option2&rdquo; — answers arrive in admin → Leads)
+        </span>
+        <textarea name="extraFields" rows={4} className={inputCls}
+          placeholder={"Which amenities does your home have? | checkboxes | Pool, Gym, Beach access\nHOA / building rules we should know? | textarea"}
+          defaultValue={content.extraFields.map((f) =>
+            f.kind === "checkboxes" ? `${f.label} | checkboxes | ${f.options.join(", ")}` : `${f.label} | ${f.kind}`,
+          ).join("\n")} />
+      </label>
       <div className="flex items-center gap-3">
         <button disabled={pending}
           className="rounded-pill bg-rosa px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50">

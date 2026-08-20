@@ -122,10 +122,11 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           securityDepositCents: q.securityDepositCents,
           couponCode,
           couponDiscountCents,
-          // the coupon reduces the due-now first; the balance is whatever
-          // is left of the DISCOUNTED total — the two always sum to charge
-          dueNowCents: Math.max(0, q.schedule.dueNowCents - couponDiscountCents),
-          balanceCents: Math.max(0, chargeCents - Math.max(0, q.schedule.dueNowCents - couponDiscountCents)),
+          // the coupon eats the LATER balance first — whatever remains of
+          // the discounted total is collected at booking (a coupon larger
+          // than the balance must never leave money to chase later)
+          dueNowCents: chargeCents - Math.max(0, q.schedule.balanceCents - couponDiscountCents),
+          balanceCents: Math.max(0, q.schedule.balanceCents - couponDiscountCents),
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
         couponCode, couponDiscountCents,

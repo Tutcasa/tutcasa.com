@@ -24,6 +24,9 @@ export function ListPropertyClient({ content }: { content: ListPropertyContent }
     guests: "4", rate: "", msg: "", listed: "no", consent: false,
   });
   const [amenities, setAmenities] = useState<string[]>([]);
+  // answers to the admin-defined extra questions, keyed by label
+  const [extra, setExtra] = useState<Record<string, string>>({});
+  const [extraChecks, setExtraChecks] = useState<Record<string, string[]>>({});
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((s) => ({ ...s, [k]: e.target.value }));
@@ -61,6 +64,10 @@ export function ListPropertyClient({ content }: { content: ListPropertyContent }
       name: f.name, email: f.email, phone: f.phone,
       city: f.loc, propertyType: f.type, bedrooms: f.beds,
       message: `baths ${f.baths} · sleeps ${f.guests} · target rate ${f.rate || "?"} · already listed: ${f.listed} · amenities: ${amenities.join(", ") || "—"}
+${content.extraFields.map((x) => {
+  const v = x.kind === "checkboxes" ? (extraChecks[x.label] ?? []).join(", ") : (extra[x.label] ?? "");
+  return v ? `${x.label}: ${v}` : "";
+}).filter(Boolean).join("\n")}
 ${f.msg}`,
     });
     setTimeout(() => okRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 30);
@@ -140,6 +147,31 @@ ${f.msg}`,
               </div>
             </div>
 
+            {content.extraFields.map((x) => (
+              <div className="field" key={x.label}>
+                <label>{x.label}</label>
+                {x.kind === "textarea" ? (
+                  <textarea value={extra[x.label] ?? ""} onChange={(e) => setExtra((s) => ({ ...s, [x.label]: e.target.value }))}></textarea>
+                ) : x.kind === "checkboxes" ? (
+                  <div className="checks">
+                    {x.options.map((o) => (
+                      <label key={o}>
+                        <input
+                          type="checkbox"
+                          checked={(extraChecks[x.label] ?? []).includes(o)}
+                          onChange={(e) => setExtraChecks((s) => {
+                            const cur = s[x.label] ?? [];
+                            return { ...s, [x.label]: e.target.checked ? [...cur, o] : cur.filter((v) => v !== o) };
+                          })}
+                        /> {o}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <input type="text" value={extra[x.label] ?? ""} onChange={(e) => setExtra((s) => ({ ...s, [x.label]: e.target.value }))} />
+                )}
+              </div>
+            ))}
             <div className="field"><T as="label" k="list_f_msg" /><textarea value={f.msg} onChange={set("msg")}></textarea></div>
 
             <div className="field">

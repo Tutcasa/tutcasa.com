@@ -137,6 +137,9 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
               <button onClick={() => ask("Help me pick a home — what do you have?")}>Find me a home</button>
               <button onClick={() => ask("How does booking and payment work?")}>How booking works</button>
               <button onClick={() => ask("What tours and parks can I book?")}>Tours &amp; parks</button>
+              <button onClick={() => window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent("Hi TutCasa! I'd like to talk to a real person \u{1F44B}")}`, "_blank")}>
+                &#129489; Talk to a human
+              </button>
             </div>
           )}
           {log.map((m, i) => (

@@ -244,6 +244,22 @@ export async function saveListPropertyAction(
     stats: [0, 1, 2].map((i) => statPair(formData, i)),
     formTitle: String(formData.get("formTitle") ?? "").trim(),
     formIntro: String(formData.get("formIntro") ?? "").trim(),
+    // one per line: "Label | text" / "Label | textarea" /
+    // "Label | checkboxes | option1, option2, option3"
+    extraFields: String(formData.get("extraFields") ?? "")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [label = "", kind = "text", opts = ""] = line.split("|").map((x) => x.trim());
+        const k = kind === "textarea" || kind === "checkboxes" ? kind : "text";
+        return {
+          label,
+          kind: k,
+          options: k === "checkboxes" ? opts.split(",").map((o) => o.trim()).filter(Boolean) : [],
+        };
+      })
+      .filter((f) => f.label),
   });
   revalidatePath("/list-my-property");
   return { ok: true, message: "List-your-property page saved — live now." };

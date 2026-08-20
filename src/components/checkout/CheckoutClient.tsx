@@ -209,12 +209,12 @@ export function CheckoutClient({
             {schedule && schedule.balance > 0 && (
               <>
                 <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
-                  <span>Due today</span><span>{show(Math.max(0, schedule.dueNow - discount))}</span>
+                  <span>Due today</span><span>{show(total - Math.max(0, schedule.balance - discount))}</span>
                 </div>
                 <div className="co-row">
                   <span>Balance{schedule.balanceBy ? ` — due by ${schedule.balanceBy}` : ""}</span>
                   {/* balance = discounted total minus what's due today */}
-                  <span>{show(Math.max(0, total - Math.max(0, schedule.dueNow - discount)))}</span>
+                  <span>{show(Math.max(0, schedule.balance - discount))}</span>
                 </div>
               </>
             )}
@@ -257,7 +257,7 @@ export function CheckoutClient({
               <span>
                 {paying
                   ? "Holding your dates…"
-                  : `Reserve — ${show(schedule && schedule.balance > 0 ? Math.max(0, schedule.dueNow - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
+                  : `Reserve — ${show(schedule && schedule.balance > 0 ? total - Math.max(0, schedule.balance - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
               </span>
             </button>
             <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>

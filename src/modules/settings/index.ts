@@ -34,12 +34,20 @@ export interface GoogleReviewsCache {
   reviews: GoogleReview[];
 }
 
+export interface ListPropertyExtraField {
+  label: string;
+  kind: "text" | "textarea" | "checkboxes";
+  options: string[]; // for checkboxes
+}
+
 export interface ListPropertyContent {
   title: string;   // empty = use the built-in translations
   intro: string;
   stats: { big: string; label: string }[];
   formTitle: string;
   formIntro: string;
+  /** admin-defined extra questions appended to the form */
+  extraFields: ListPropertyExtraField[];
 }
 
 export interface FamilyContent {
@@ -140,6 +148,7 @@ const DEFAULTS: {
       { big: "24/7", label: "guest support" },
     ],
     formTitle: "", formIntro: "",
+    extraFields: [],
   },
   page_family: {
     eyebrow: "", title: "", intro: "",
