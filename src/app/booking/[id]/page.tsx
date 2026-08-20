@@ -136,7 +136,7 @@ export default async function BookingPage({
               Contact us to complete payment 💬
             </a>
             <p className="mt-2 text-center text-xs text-grey">
-              Card checkout is coming online next — until then May confirms your
+              Card checkout is coming online next — until then our team confirms your
               payment on WhatsApp in minutes.
             </p>
           </>

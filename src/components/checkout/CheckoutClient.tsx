@@ -47,8 +47,8 @@ const ERRORS: Record<string, string> = {
   COUPON_INVALID: "That coupon can't be used for this booking (it may be tied to another email, home, or already used) — remove it or fix it, then try again.",
   TOUR_NOT_FOUND: "This tour is no longer available.",
   INVALID_DATE: "Please pick a valid tour date.",
-  INVALID_GROUP: "Group size must be between 1 and 6.",
-  ON_REQUEST: "This tour is arranged personally — message May to book it.",
+  INVALID_GROUP: "That group size isn&rsquo;t available for this tour — adjust the number of people.".replace("&rsquo;", "’"),
+  ON_REQUEST: "This tour is arranged personally — contact us to book it.",
 };
 
 export function CheckoutClient({
@@ -93,6 +93,7 @@ export function CheckoutClient({
   }, []);
 
   const { cur: displayCur, fromUSD, fromMXN } = useCurrency();
+  const cur = currency;
   /** every quoted number renders in the DISPLAY currency (USD by default,
       the picker switches it); the charge stays in the cart's native
       currency and is shown once, honestly, under the total */
@@ -100,7 +101,6 @@ export function CheckoutClient({
   const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
   const discount = Math.min(coupon?.discount ?? 0, totalBefore);
   const total = totalBefore - discount;
-  const cur = currency;
 
   async function applyCoupon() {
     setCouponErr(null);
@@ -129,7 +129,10 @@ export function CheckoutClient({
 
   async function pay() {
     setError(null);
-    if (payload.kind === "none") { setPaid(true); window.scrollTo(0, 0); return; }
+    if (payload.kind === "none") {
+      if (!agreed) { setError("Please read and agree to TutCasa's terms and conditions first."); return; }
+      setPaid(true); window.scrollTo(0, 0); return;
+    }
     const name = guestName.trim() || ccName.trim();
     const okEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
     if (!name || !okEmail) { setError(ERRORS.INVALID_CONTACT); return; }

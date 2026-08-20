@@ -2,6 +2,7 @@ import "server-only";
 import { getDb } from "@/lib/db";
 import { notifyTourBooking } from "@/modules/notifications";
 import { tierTotalMXN, type Tour, type TourBooking, type TourBookingRequest, type TourReserveResult } from "./types";
+import { todayLocal } from "@/lib/local-date";
 
 interface TourRow {
   id: string; slug: string; title: string; subtitle: string | null;
@@ -56,7 +57,7 @@ export function fmtMXN(cents: number): string {
 
 /** Create the booking, then fire partner/guest notifications. */
 export async function createTourBooking(req: TourBookingRequest): Promise<TourReserveResult> {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(req.tourDate) || req.tourDate < new Date().toISOString().slice(0, 10)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(req.tourDate) || req.tourDate < todayLocal()) {
     return { ok: false, error: "INVALID_DATE" };
   }
   const name = req.guestName?.trim();
