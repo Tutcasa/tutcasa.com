@@ -14,6 +14,7 @@ import { PropertyGallery } from "@/components/property/PropertyGallery";
 
 interface Props {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ ci?: string; co?: string }>;
 }
 
 // Availability must always be fresh — render per-request.
@@ -59,8 +60,12 @@ function SimilarCard({ l }: { l: Listing }) {
   );
 }
 
-export default async function ListingPage({ params }: Props) {
+export default async function ListingPage({ params, searchParams }: Props) {
   const { slug } = await params;
+  const q = await searchParams;
+  const DATE = /^\d{4}-\d{2}-\d{2}$/;
+  const initialCi = q.ci && DATE.test(q.ci) ? q.ci : "";
+  const initialCo = q.co && DATE.test(q.co) ? q.co : "";
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
@@ -124,6 +129,8 @@ export default async function ListingPage({ params }: Props) {
     allowPets: listing.allowPets,
     unavailable,
     whatsapp: contact.whatsapp,
+    initialCi,
+    initialCo,
   };
 
   return (

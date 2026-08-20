@@ -49,6 +49,9 @@ export interface PdData {
   allowPets: boolean;
   unavailable: { from: string; to: string }[];
   whatsapp: string;
+  /** dates carried over from the stays search — prefill the booking box */
+  initialCi?: string;
+  initialCo?: string;
 }
 
 /** "15:00" → "3:00 PM" */
@@ -88,8 +91,8 @@ export function PdGrid({ p }: { p: PdData }) {
   const router = useRouter();
   const { fromUSD } = useCurrency();
   const { t } = useLang();
-  const [ci, setCi] = useState("");
-  const [co, setCo] = useState("");
+  const [ci, setCi] = useState(p.initialCi ?? "");
+  const [co, setCo] = useState(p.initialCo && p.initialCi && p.initialCo > p.initialCi ? p.initialCo : "");
   const [guests, setGuests] = useState(Math.min(2, p.guests));
   const [gMinDisabled, setGMinDisabled] = useState(false);
   // quote is keyed by its date range so stale results never show —
@@ -97,7 +100,11 @@ export function PdGrid({ p }: { p: PdData }) {
   const [quoteFor, setQuoteFor] = useState<{ key: string; res: QuoteResult } | null>(null);
   const [, startQuote] = useTransition();
   const ciRef = useRef<HTMLInputElement>(null);
-  const today = localISO(new Date());
+  // property-local (UTC-5) "now", identical on server and client — using
+  // the viewer's clock caused React hydration mismatches across timezones
+  // (lazy state: computed once per mount, keeps the render pure)
+  const [cancunNow] = useState(() => new Date(Date.now() - 5 * 3600 * 1000));
+  const today = cancunNow.toISOString().slice(0, 10);
 
   const nights = ci && co ? Math.max(0, Math.round((+new Date(co) - +new Date(ci)) / 86400000)) : 0;
   const quoteKey = `${ci}|${co}|${guests}`;
@@ -106,12 +113,15 @@ export function PdGrid({ p }: { p: PdData }) {
   const blocked = (iso: string) => p.unavailable.some((r) => iso >= r.from && iso < r.to);
   const overlaps = (from: string, to: string) => p.unavailable.some((r) => from < r.to && to > r.from);
 
+  const latestKeyRef = useRef("");
   useEffect(() => {
     if (!ci || !co || co <= ci || nights < p.minStay) return;
     const key = `${ci}|${co}|${guests}`;
+    latestKeyRef.current = key;
     startQuote(async () => {
       const res = await getQuoteAction(p.slug, ci, co, guests);
-      setQuoteFor({ key, res });
+      // a slower, older request must never overwrite a newer result
+      if (latestKeyRef.current === key) setQuoteFor({ key, res });
     });
   }, [ci, co, nights, p.minStay, p.slug, guests]);
 
@@ -188,6 +198,20 @@ export function PdGrid({ p }: { p: PdData }) {
         </>
       );
     }
+    if (quote && !quote.ok) {
+      const msg =
+        quote.error === "DATES_TAKEN"
+          ? "Some of those nights are already booked — pick different dates."
+          : quote.error === "MIN_STAY_NOT_MET"
+            ? `Minimum stay is ${p.minStay} nights.`
+            : "We couldn't price those dates — try different ones.";
+      return (
+        <>
+          <div className="row" style={{ color: "var(--rosa)", fontWeight: 700 }}><span>{msg}</span></div>
+          {warn}
+        </>
+      );
+    }
     return (
       <>
         <div className="row"><span>Calculating your all-in total&hellip;</span></div>
@@ -198,8 +222,7 @@ export function PdGrid({ p }: { p: PdData }) {
 
   /* availability calendar — demo buildCal with real blocked days */
   const months = [0, 1].map((m) => {
-    const now = new Date();
-    const first = new Date(now.getFullYear(), now.getMonth() + m, 1);
+    const first = new Date(cancunNow.getUTCFullYear(), cancunNow.getUTCMonth() + m, 1);
     const startDow = first.getDay();
     const total = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
     const cells = [];
@@ -209,12 +232,18 @@ export function PdGrid({ p }: { p: PdData }) {
       const iso = localISO(cur);
       const past = iso < today;
       const off = blocked(iso);
+      // a booked night's FIRST day is still a legal checkout morning —
+      // the guest leaves before the next stay begins
+      const checkoutOk = !past && off && !!ci && !co && iso > ci && !overlaps(ci, iso);
       let cls = "pd-day avail";
       if (past || off) cls = "pd-day off";
       else if (iso === ci || iso === co) cls = "pd-day sel";
       else if (ci && co && iso > ci && iso < co) cls = "pd-day inrange";
+      if (iso === co && off) cls = "pd-day sel";
       cells.push(
-        <div key={iso} className={cls} onClick={past || off ? undefined : () => pickDay(iso)}>
+        <div key={iso} className={cls}
+          onClick={past || (off && !checkoutOk) ? undefined : () => pickDay(iso)}
+          style={checkoutOk ? { cursor: "pointer" } : undefined}>
           {dd}
         </div>
       );

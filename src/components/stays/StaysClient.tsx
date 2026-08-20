@@ -53,7 +53,9 @@ const FILTERS: { k: string; f: string; ic: string; raw?: string }[] = [
 ];
 
 const DEST_TOK: Record<string, string> = {
-  "playa del carmen": "playa del carmen", tulum: "tulum", nuba: "nuba", orlando: "orlando",
+  "playa del carmen": "playa del carmen", tulum: "tulum",
+  nuba: "nuba", "nuba, egypt": "nuba", egypt: "nuba",
+  orlando: "orlando", "orlando, florida": "orlando", florida: "florida",
 };
 const VIBE_TOK: Record<string, string> = {
   relax: "private pool", family: "family", "big group": "villas", romantic: "penthouses",
@@ -90,7 +92,7 @@ const freshFilters = (toks: string[] = []): Filters => ({ ...NO_FILTERS, toks, a
 
 function matchProp(p: StayCard, activeFilter: string, f: Filters): boolean {
   if (activeFilter !== "all" && !p.tokens.includes(activeFilter)) return false;
-  if (p.price > f.price) return false;
+  if (f.price < 600 && p.price > f.price) return false; // 600 = "$600+" (uncapped)
   if (f.beds && p.beds < f.beds) return false;
   for (const t of f.toks) if (!p.tokens.includes(t)) return false;
   if (f.type !== "any" && p.type !== f.type) return false;
@@ -106,7 +108,7 @@ function matchProp(p: StayCard, activeFilter: string, f: Filters): boolean {
   return true;
 }
 
-function StayCasa({ p }: { p: StayCard }) {
+function StayCasa({ p, dates }: { p: StayCard; dates: { ci: string; co: string } }) {
   const router = useRouter();
   const { t } = useLang();
   const { fromUSD } = useCurrency();
@@ -117,7 +119,8 @@ function StayCasa({ p }: { p: StayCard }) {
   const hasPhotos = p.photos.length > 0;
   const n = hasPhotos ? p.photos.length : 5;
   const base = parseInt(p.g.slice(1), 10) - 1;
-  const g = "g" + (((base + idx) % 6) + 1);
+  // stays.css only defines g1–g4 — cycling into g5/g6 rendered blank tiles
+  const g = "g" + (((base + idx) % 4) + 1);
   const on = has(p.slug);
   const item: WishItem = { id: p.slug, name: p.name, meta: p.city, price: String(p.price), rate: p.rate, tag: p.tag, g: p.g };
 
@@ -174,7 +177,7 @@ function StayCasa({ p }: { p: StayCard }) {
           >
             &#128506;&#65039; <T k="st_showmap" />
           </button>
-          <button className="mini rosa" onClick={() => router.push(`/stays/${p.slug}`)}><T k="st_details" /></button>
+          <button className="mini rosa" onClick={() => router.push(`/stays/${p.slug}${dates.ci && dates.co ? `?ci=${dates.ci}&co=${dates.co}` : ""}`)}><T k="st_details" /></button>
         </div>
         <div className={`map-slot${mapOpen ? " open" : ""}`}>
           {mapLoaded && (
@@ -255,9 +258,16 @@ export function StaysClient({
   }
 
   function applySearch() {
-    const w = where.toLowerCase();
-    const hit = FILTERS.find((f) => f.raw && w.indexOf(f.f) > -1);
-    if (hit) setActiveFilter(hit.f);
+    const w = where.trim().toLowerCase();
+    // destination: exact map first (covers Orlando/Nuba), then chip tokens
+    const tok = DEST_TOK[w] ?? FILTERS.find((f) => f.raw && w.indexOf(f.f) > -1)?.f;
+    if (tok) setActiveFilter(tok);
+    // party size feeds the real capacity filter (babies don't count)
+    const party = guests.a + guests.c;
+    if (party > 0) {
+      setMoreFilters((mf) => ({ ...mf, guests: party }));
+      setDraft((d) => ({ ...d, guests: party }));
+    }
     resultsRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -384,7 +394,7 @@ export function StaysClient({
           <span className="muted"><T k="st_allin" /></span>
         </div>
         <div className="casa-grid">
-          {list.map((p) => <StayCasa key={p.slug} p={p} />)}
+          {list.map((p) => <StayCasa key={p.slug} p={p} dates={{ ci, co }} />)}
         </div>
         {list.length === 0 && <div className="no-res" style={{ display: "block" }}><T k="st_none" /></div>}
       </section>
