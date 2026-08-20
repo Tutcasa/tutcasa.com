@@ -6,8 +6,9 @@ import { useRef, useState } from "react";
 import { T, useLang } from "@/lib/i18n";
 import { BackBar } from "@/components/site/BackBar";
 import { submitListPropertyLead } from "@/app/leads-actions";
+import type { ListPropertyContent } from "@/modules/settings";
 
-export function ListPropertyClient() {
+export function ListPropertyClient({ content }: { content: ListPropertyContent }) {
   const { t } = useLang();
   const [sent, setSent] = useState(false);
   const [err, setErr] = useState(false);
@@ -75,12 +76,17 @@ ${f.msg}`,
       <section className="lp-hero">
         <div className="sun"></div>
         <div className="wrap">
-          <T as="h1" k="list_h1" />
-          <T as="p" k="list_sub" />
+          {content.title ? <h1>{content.title}</h1> : <T as="h1" k="list_h1" />}
+          {content.intro ? <p>{content.intro}</p> : <T as="p" k="list_sub" />}
           <div className="lp-stats">
-            <div className="s"><b>85%</b><T k="list_stat1" /></div>
-            <div className="s"><b>40+</b><T k="list_stat2" /></div>
-            <div className="s"><b>24/7</b><T k="list_stat3" /></div>
+            {[0, 1, 2].map((i) => (
+              <div className="s" key={i}>
+                <b>{content.stats[i]?.big ?? ""}</b>
+                {content.stats[i]?.label
+                  ? <span>{content.stats[i].label}</span>
+                  : <T k={`list_stat${i + 1}`} />}
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -88,8 +94,8 @@ ${f.msg}`,
       <section className="lp-main wrap">
         <div className="form-card">
           <div style={{ display: sent ? "none" : undefined }}>
-            <T as="h2" k="list_form_h" />
-            <T as="p" className="lead" k="list_form_p" />
+            {content.formTitle ? <h2>{content.formTitle}</h2> : <T as="h2" k="list_form_h" />}
+            {content.formIntro ? <p className="lead">{content.formIntro}</p> : <T as="p" className="lead" k="list_form_p" />}
             <div className={`form-err${err ? " show" : ""}`} ref={errRef}><T k="list_req" /></div>
 
             <div className="grid2">

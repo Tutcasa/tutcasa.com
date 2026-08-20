@@ -34,7 +34,7 @@ function toCard(l: Listing): StayCard {
     // approximate pin only — never the street address (shared after booking)
     mapQ: Number.isFinite(l.lat) && Number.isFinite(l.lng) && (l.lat !== 0 || l.lng !== 0)
       ? `${l.lat.toFixed(3)},${l.lng.toFixed(3)}`
-      : l.city,
+      : `${l.title}, ${l.city}`,
     g: demoGradient(l, 4),
     tag: l.headline,
     photos: l.photos.map((ph) => ph.url),

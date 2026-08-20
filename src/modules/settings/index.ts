@@ -34,6 +34,24 @@ export interface GoogleReviewsCache {
   reviews: GoogleReview[];
 }
 
+export interface ListPropertyContent {
+  title: string;   // empty = use the built-in translations
+  intro: string;
+  stats: { big: string; label: string }[];
+  formTitle: string;
+  formIntro: string;
+}
+
+export interface FamilyContent {
+  eyebrow: string; title: string; intro: string;
+  tag: string; storyTitle: string;
+  p1: string; p2: string; p3: string; sign: string;
+  stats: { big: string; label: string }[];
+  valuesTitle: string; valuesSub: string;
+  values: { icon: string; title: string; text: string }[];
+  ctaTitle: string; ctaText: string;
+}
+
 export interface FxSettings {
   /** display-conversion rates: units per 1 USD */
   mxnPerUsd: number;
@@ -110,7 +128,35 @@ const DEFAULTS: {
   fx: FxSettings;
   google_reviews: GoogleReviewsSettings;
   google_reviews_cache: GoogleReviewsCache;
+  page_list_property: ListPropertyContent;
+  page_family: FamilyContent;
 } = {
+  // empty strings mean "keep the built-in three-language text"
+  page_list_property: {
+    title: "", intro: "",
+    stats: [
+      { big: "85%", label: "average occupancy" },
+      { big: "40+", label: "homes managed" },
+      { big: "24/7", label: "guest support" },
+    ],
+    formTitle: "", formIntro: "",
+  },
+  page_family: {
+    eyebrow: "", title: "", intro: "",
+    tag: "", storyTitle: "", p1: "", p2: "", p3: "", sign: "",
+    stats: [
+      { big: "40+", label: "homes personally inspected" },
+      { big: "200+", label: "five-star stays hosted" },
+      { big: "100%", label: "family owned & run" },
+    ],
+    valuesTitle: "", valuesSub: "",
+    values: [
+      { icon: "✨", title: "", text: "" },
+      { icon: "🏡", title: "", text: "" },
+      { icon: "📈", title: "", text: "" },
+    ],
+    ctaTitle: "", ctaText: "",
+  },
   fx: { mxnPerUsd: 17, cadPerUsd: 1.4 },
   google_reviews: { placeId: "" },
   google_reviews_cache: { fetchedAt: null, rating: 0, total: 0, reviews: [] },

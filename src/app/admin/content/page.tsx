@@ -1,11 +1,11 @@
 import { getSetting } from "@/modules/settings";
-import { ContactForm, DeckForm, FxForm, GoogleReviewsForm } from "./content-forms";
+import { ContactForm, DeckForm, FamilyForm, FxForm, GoogleReviewsForm, ListPropertyForm } from "./content-forms";
 import { PoliciesForm, WhyForm, ConciergeForm, LoyaltyForm, FaqForm } from "./page-forms";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminContent() {
-  const [contact, investor, policies, why, concierge, loyalty, faq, fx, gr, grCache] = await Promise.all([
+  const [contact, investor, policies, why, concierge, loyalty, faq, fx, gr, grCache, listProp, family] = await Promise.all([
     getSetting("contact"),
     getSetting("investor"),
     getSetting("page_policies"),
@@ -16,6 +16,8 @@ export default async function AdminContent() {
     getSetting("fx"),
     getSetting("google_reviews"),
     getSetting("google_reviews_cache"),
+    getSetting("page_list_property"),
+    getSetting("page_family"),
   ]);
 
   return (
@@ -63,6 +65,18 @@ export default async function AdminContent() {
         <h2 className="mb-1 font-display text-lg font-bold">Why book with us page</h2>
         <p className="mb-4 text-xs text-grey">Edits /why-book-with-us</p>
         <WhyForm content={why} />
+      </section>
+
+      <section className="rounded-card bg-paper p-5 shadow-soft">
+        <h2 className="mb-1 font-display text-lg font-bold">List-your-property page</h2>
+        <p className="mb-4 text-xs text-grey">Edits /list-my-property (hero, stats, form headings)</p>
+        <ListPropertyForm content={listProp} />
+      </section>
+
+      <section className="rounded-card bg-paper p-5 shadow-soft">
+        <h2 className="mb-1 font-display text-lg font-bold">Our Family page</h2>
+        <p className="mb-4 text-xs text-grey">Edits /our-family</p>
+        <FamilyForm content={family} />
       </section>
 
       <section className="rounded-card bg-paper p-5 shadow-soft">

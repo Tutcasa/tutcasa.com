@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { T } from "@/lib/i18n";
 import { BackBar } from "@/components/site/BackBar";
+import { getSetting } from "@/modules/settings";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: { absolute: "TutCasa — Our Family" },
@@ -10,7 +13,11 @@ export const metadata: Metadata = {
     "The Canadian-Egyptian family behind TutCasa — from one condo in Playa del Carmen to a curated collection of 40+ homes.",
 };
 
-export default function OurFamilyPage() {
+export default async function OurFamilyPage() {
+  const c = await getSetting("page_family");
+  // admin text wins when set; empty fields keep the translated built-ins
+  const or = (v: string, k: string) => (v ? <>{v}</> : <T k={k} />);
+
   return (
     <div className="pg-our_family">
       <BackBar />
@@ -18,9 +25,9 @@ export default function OurFamilyPage() {
       <section className="fam-hero">
         <div className="sun"></div>
         <div className="wrap">
-          <T as="div" className="eyebrow" k="fam_eyebrow" />
-          <T as="h1" k="fam_h1" />
-          <T as="p" k="fam_lede" />
+          <div className="eyebrow">{or(c.eyebrow, "fam_eyebrow")}</div>
+          <h1>{or(c.title, "fam_h1")}</h1>
+          <p>{or(c.intro, "fam_lede")}</p>
         </div>
       </section>
 
@@ -28,39 +35,48 @@ export default function OurFamilyPage() {
         <div className="story-card">
           <div className="story-photo"></div>
           <div className="story-body">
-            <T as="span" className="tag" k="fam_tag" />
-            <T as="h2" k="fam_story_h" />
-            <T as="p" k="fam_p1" />
-            <T as="p" k="fam_p2" />
-            <T as="p" k="fam_p3" />
-            <T as="div" className="sign" k="fam_sign" />
+            <span className="tag">{or(c.tag, "fam_tag")}</span>
+            <h2>{or(c.storyTitle, "fam_story_h")}</h2>
+            <p>{or(c.p1, "fam_p1")}</p>
+            <p>{or(c.p2, "fam_p2")}</p>
+            <p>{or(c.p3, "fam_p3")}</p>
+            <div className="sign">{or(c.sign, "fam_sign")}</div>
           </div>
         </div>
       </section>
 
       <section className="fam-stats wrap">
         <div className="stat-grid">
-          <div className="stat r"><b>40+</b><T k="fam_stat1" /></div>
-          <div className="stat t"><b>200+</b><T k="fam_stat2" /></div>
-          <div className="stat c"><b>100%</b><T k="fam_stat3" /></div>
+          {(["r", "t", "c"] as const).map((cls, i) => (
+            <div className={`stat ${cls}`} key={i}>
+              <b>{c.stats[i]?.big ?? ""}</b>
+              {c.stats[i]?.label
+                ? <span>{c.stats[i].label}</span>
+                : <T k={`fam_stat${i + 1}`} />}
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="values wrap">
-        <T as="div" className="sec-title" k="fam_val_title" />
-        <T as="div" className="sec-sub" k="fam_val_sub" />
+        <div className="sec-title">{or(c.valuesTitle, "fam_val_title")}</div>
+        <div className="sec-sub">{or(c.valuesSub, "fam_val_sub")}</div>
         <div className="val-grid">
-          <div className="val"><div className="ic">&#10024;</div><T as="h3" k="fam_v1_h" /><T as="p" k="fam_v1_p" /></div>
-          <div className="val"><div className="ic">&#127969;</div><T as="h3" k="fam_v2_h" /><T as="p" k="fam_v2_p" /></div>
-          <div className="val"><div className="ic">&#128200;</div><T as="h3" k="fam_v3_h" /><T as="p" k="fam_v3_p" /></div>
+          {[0, 1, 2].map((i) => (
+            <div className="val" key={i}>
+              <div className="ic">{c.values[i]?.icon || ["✨", "🏡", "📈"][i]}</div>
+              <h3>{or(c.values[i]?.title ?? "", `fam_v${i + 1}_h`)}</h3>
+              <p>{or(c.values[i]?.text ?? "", `fam_v${i + 1}_p`)}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       <section className="cta-band wrap">
         <div className="cta-inner">
           <span className="deco">&#127796;</span>
-          <T as="h2" k="fam_cta_h" />
-          <T as="p" k="fam_cta_p" />
+          <h2>{or(c.ctaTitle, "fam_cta_h")}</h2>
+          <p>{or(c.ctaText, "fam_cta_p")}</p>
           <div className="cta-btns">
             <Link className="btn btn-white" href="/stays"><T k="fam_cta_b1" /></Link>
             <Link className="btn btn-ghost" href="/list-my-property"><T k="fam_cta_b2" /></Link>

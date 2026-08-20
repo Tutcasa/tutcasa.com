@@ -227,3 +227,45 @@ export async function saveGoogleReviewsAction(
     ? { ok: true, message: `Saved. ${sync.message}` }
     : { ok: true, message: `Place ID saved. Sync note: ${sync.message}` };
 }
+
+const statPair = (fd: FormData, i: number) => ({
+  big: String(fd.get(`stat_big_${i}`) ?? "").trim(),
+  label: String(fd.get(`stat_label_${i}`) ?? "").trim(),
+});
+
+export async function saveListPropertyAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  await requireAdmin();
+  await setSetting("page_list_property", {
+    title: String(formData.get("title") ?? "").trim(),
+    intro: String(formData.get("intro") ?? "").trim(),
+    stats: [0, 1, 2].map((i) => statPair(formData, i)),
+    formTitle: String(formData.get("formTitle") ?? "").trim(),
+    formIntro: String(formData.get("formIntro") ?? "").trim(),
+  });
+  revalidatePath("/list-my-property");
+  return { ok: true, message: "List-your-property page saved — live now." };
+}
+
+export async function saveFamilyAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  await requireAdmin();
+  const g = (k: string) => String(formData.get(k) ?? "").trim();
+  await setSetting("page_family", {
+    eyebrow: g("eyebrow"), title: g("title"), intro: g("intro"),
+    tag: g("tag"), storyTitle: g("storyTitle"),
+    p1: g("p1"), p2: g("p2"), p3: g("p3"), sign: g("sign"),
+    stats: [0, 1, 2].map((i) => statPair(formData, i)),
+    valuesTitle: g("valuesTitle"), valuesSub: g("valuesSub"),
+    values: [0, 1, 2].map((i) => ({
+      icon: g(`val_icon_${i}`), title: g(`val_title_${i}`), text: g(`val_text_${i}`),
+    })),
+    ctaTitle: g("ctaTitle"), ctaText: g("ctaText"),
+  });
+  revalidatePath("/our-family");
+  return { ok: true, message: "Our Family page saved — live now." };
+}

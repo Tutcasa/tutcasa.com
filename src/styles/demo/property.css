@@ -272,7 +272,7 @@ body:has([class^="pg-property"]) .pd-dow,body:has([class^="pg-property"]) .pd-da
 body:has([class^="pg-property"]) .pd-dow span{text-align:center;font-size:11px;color:var(--grey);font-weight:700;padding-bottom:4px}
 body:has([class^="pg-property"]) .pd-day{text-align:center;padding:9px 0;font-size:13px;border-radius:9px;cursor:pointer;user-select:none}
 body:has([class^="pg-property"]) .pd-day.empty{visibility:hidden}
-body:has([class^="pg-property"]) .pd-day.off{color:#cbb;text-decoration:line-through;cursor:not-allowed}
+body:has([class^="pg-property"]) .pd-day.off{background:#F8D3D9;color:#B3123F;text-decoration:line-through;cursor:not-allowed;border-radius:9px}
 body:has([class^="pg-property"]) .pd-day.avail:hover{background:var(--crema)}
 body:has([class^="pg-property"]) .pd-day.sel{background:var(--rosa);color:#fff;font-weight:700}
 body:has([class^="pg-property"]) .pd-day.inrange{background:rgba(228,50,107,.12)}

@@ -8,6 +8,8 @@
 
 import { useRef, useState } from "react";
 
+const SHOW_FACEBOOK_LOGIN = false;
+
 export type AuthMode = "login" | "signup";
 
 /**
@@ -111,9 +113,13 @@ export function AuthModal({
               <button className="au-sbtn" onClick={() => social("Google")}>
                 <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.4 1.1 7.3 2.9l5.7-5.7C33.6 6.1 29 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c2.8 0 5.4 1.1 7.3 2.9l5.7-5.7C33.6 6.1 29 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.3 0-9.7-2.6-11.3-6.7l-6.5 5C9.6 39.7 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.1-4.1 5.6l6.2 5.2C39.9 36.1 44 30.7 44 24c0-1.3-.1-2.3-.4-3.5z"/></svg> Continue with Google
               </button>
-              <button className="au-sbtn" onClick={() => social("Facebook")}>
-                <svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4H7v-3.5h3.1V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9v2.2h3.4l-.5 3.5h-2.9v8.4A12 12 0 0024 12z"/></svg> Continue with Facebook
-              </button>
+              {/* Facebook login parked for now (Google is enough) — flip
+                  SHOW_FACEBOOK_LOGIN to true to bring it back */}
+              {SHOW_FACEBOOK_LOGIN && (
+                <button className="au-sbtn" onClick={() => social("Facebook")}>
+                  <svg viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12a12 12 0 10-13.9 11.9v-8.4H7v-3.5h3.1V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9v2.2h3.4l-.5 3.5h-2.9v8.4A12 12 0 0024 12z"/></svg> Continue with Facebook
+                </button>
+              )}
             </div>
             <div className="au-or">or with email</div>
             <div className="au-field" style={{ display: signup ? "block" : "none" }}>

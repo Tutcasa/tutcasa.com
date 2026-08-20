@@ -9,7 +9,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { T } from "@/lib/i18n";
 
 interface Msg {
   me: boolean;
@@ -43,10 +42,6 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
     if (b) b.scrollTop = b.scrollHeight;
   }, [log, busy]);
 
-  function waLink(msg: string) {
-    return `https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`;
-  }
-
   async function ask(text: string) {
     const v = text.trim();
     if (!v || busy) return;
@@ -68,7 +63,7 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
         setAiDown(true);
         setLog([...base, {
           me: false,
-          text: "I can't answer automatically right now — tap “Continue on WhatsApp” below and a real person will help you in minutes. \u{1F4AC}",
+          text: `I can't answer automatically right now — message a real person on WhatsApp and we'll help you in minutes: https://wa.me/${whatsapp} \u{1F4AC}`,
         }]);
         return;
       }
@@ -90,27 +85,23 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
       setAiDown(true);
       setLog([...logRef.current.filter((m) => m.text !== "…"), {
         me: false,
-        text: "Something went wrong on my side — please use “Continue on WhatsApp” below and we'll help you right away.",
+        text: `Something went wrong on my side — message us on WhatsApp and we'll help right away: https://wa.me/${whatsapp}`,
       }]);
     } finally {
       setBusy(false);
     }
   }
 
-  function handoff() {
-    const lines = logRef.current.filter((m) => m.me).map((m) => m.text);
-    const txt = lines.length
-      ? `Hi TutCasa! ${lines.join("\n")} \u{1F44B}`
-      : "Hi TutCasa! I’d like some help planning my stay \u{1F44B}";
-    window.open(waLink(txt), "_blank");
-  }
-
   /** the bot cites site paths like /stays/casa-selva or prefilled
       /booking?stay=… links — make them tappable */
   function renderText(text: string) {
-    const parts = text.split(/(\/(?:stays|tours|experiences|faq|policies|loyalty|contact|concierge|invite|booking)(?:\/[a-z0-9-]*)?(?:\?[a-zA-Z0-9=&%-]+)?)/g);
+    const parts = text.split(/(https:\/\/wa\.me\/[0-9]+|\/(?:stays|tours|experiences|faq|policies|loyalty|contact|concierge|invite|booking)(?:\/[a-z0-9-]*)?(?:\?[a-zA-Z0-9=&%-]+)?)/g);
     return parts.map((p, i) =>
-      p.startsWith("/") ? (
+      p.startsWith("https://wa.me/") ? (
+        <a key={i} href={p} target="_blank" rel="noopener" style={{ color: "var(--rosa)", fontWeight: 700 }}>
+          WhatsApp
+        </a>
+      ) : p.startsWith("/") ? (
         <Link key={i} href={p} style={{ color: "var(--rosa)", fontWeight: 700 }} onClick={() => setOpen(false)}>
           {p}
         </Link>
@@ -122,8 +113,9 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
 
   return (
     <>
-      <button className="wa-float" onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
-        &#128172; <T k="wa_title" />
+      <button className="wa-float" aria-label="Chat with us"
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}>
+        &#128172;
       </button>
       <div className={`mchat${open ? " open" : ""}`} onClick={(e) => e.stopPropagation()}>
         <div className="mchat-head">
@@ -166,7 +158,6 @@ export function ChatMay({ whatsapp }: { whatsapp: string }) {
           <button className="mchat-send alt" disabled={busy} onClick={() => void ask(draft)}>
             &#10148; {busy ? "Thinking…" : "Send"}
           </button>
-          <button className="mchat-send" onClick={handoff}>&#9990; Continue on WhatsApp</button>
         </div>
       </div>
     </>

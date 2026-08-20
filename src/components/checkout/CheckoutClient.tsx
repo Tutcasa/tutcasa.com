@@ -77,6 +77,7 @@ export function CheckoutClient({
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [agreed, setAgreed] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,6 +134,7 @@ export function CheckoutClient({
     const okEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
     if (!name || !okEmail) { setError(ERRORS.INVALID_CONTACT); return; }
     if (!phone.trim()) { setError("Please add your phone number with country code."); return; }
+    if (!agreed) { setError("Please read and agree to TutCasa's terms and conditions first."); return; }
     setPaying(true);
     try {
       const res =
@@ -239,6 +241,15 @@ export function CheckoutClient({
                 <option>Mexico</option><option>United States</option><option>Canada</option><option>Egypt</option><option>United Kingdom</option><option>France</option>
               </select>
             </div>
+            <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "13px", margin: "4px 0 10px", cursor: "pointer" }}>
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ marginTop: 2 }} />
+              <span>
+                I have read and agree to TutCasa&rsquo;s{" "}
+                <Link href="/policies" target="_blank" style={{ color: "var(--rosa)", fontWeight: 700 }}>
+                  terms &amp; conditions
+                </Link>.
+              </span>
+            </label>
             {error && (
               <div style={{ color: "var(--rosa)", fontSize: "13px", fontWeight: 700, marginBottom: 10 }}>{error}</div>
             )}

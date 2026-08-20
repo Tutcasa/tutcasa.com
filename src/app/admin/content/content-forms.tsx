@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveContactAction, saveFxAction, saveGoogleReviewsAction, uploadDeckAction, type ContentFormState } from "./actions";
-import type { ContactSettings, InvestorSettings } from "@/modules/settings";
+import { saveContactAction, saveFamilyAction, saveFxAction, saveGoogleReviewsAction, saveListPropertyAction, uploadDeckAction, type ContentFormState } from "./actions";
+import type { ContactSettings, FamilyContent, InvestorSettings, ListPropertyContent } from "@/modules/settings";
 
 const initial: ContentFormState = { ok: true, message: "" };
 const inputCls =
@@ -129,6 +129,142 @@ export function GoogleReviewsForm({
         <button disabled={pending}
           className="rounded-pill bg-rosa px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50">
           {pending ? "Syncing…" : "Save & sync now"}
+        </button>
+        {state.message && (
+          <span className={`text-sm font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</span>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function StatsRow({ stats }: { stats: { big: string; label: string }[] }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-3">
+      {stats.map((st, i) => (
+        <div key={i} className="grid gap-2">
+          <label className="text-xs font-bold">STAT {i + 1} NUMBER
+            <input name={`stat_big_${i}`} defaultValue={st.big} className={inputCls} />
+          </label>
+          <label className="text-xs font-bold">STAT {i + 1} LABEL
+            <input name={`stat_label_${i}`} defaultValue={st.label} className={inputCls} />
+          </label>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const emptyHint = (
+  <p className="text-xs text-grey">
+    Leave a field empty to keep the built-in text (which is translated EN/FR/ES).
+    Anything you type here shows in ALL languages.
+  </p>
+);
+
+export function ListPropertyForm({ content }: { content: ListPropertyContent }) {
+  const [state, action, pending] = useActionState(saveListPropertyAction, initial);
+  return (
+    <form action={action} className="grid gap-3">
+      {emptyHint}
+      <label className="text-xs font-bold">PAGE TITLE
+        <input name="title" defaultValue={content.title} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">INTRO
+        <textarea name="intro" rows={2} defaultValue={content.intro} className={inputCls} />
+      </label>
+      <StatsRow stats={content.stats} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">FORM TITLE
+          <input name="formTitle" defaultValue={content.formTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">FORM INTRO
+          <input name="formIntro" defaultValue={content.formIntro} className={inputCls} />
+        </label>
+      </div>
+      <div className="flex items-center gap-3">
+        <button disabled={pending}
+          className="rounded-pill bg-rosa px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+          {pending ? "Saving…" : "Save & publish"}
+        </button>
+        {state.message && (
+          <span className={`text-sm font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</span>
+        )}
+      </div>
+    </form>
+  );
+}
+
+export function FamilyForm({ content }: { content: FamilyContent }) {
+  const [state, action, pending] = useActionState(saveFamilyAction, initial);
+  return (
+    <form action={action} className="grid gap-3">
+      {emptyHint}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">EYEBROW
+          <input name="eyebrow" defaultValue={content.eyebrow} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">PAGE TITLE
+          <input name="title" defaultValue={content.title} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">INTRO
+        <textarea name="intro" rows={2} defaultValue={content.intro} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">STORY TAG
+          <input name="tag" defaultValue={content.tag} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">STORY TITLE
+          <input name="storyTitle" defaultValue={content.storyTitle} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">STORY — PARAGRAPH 1
+        <textarea name="p1" rows={2} defaultValue={content.p1} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">STORY — PARAGRAPH 2
+        <textarea name="p2" rows={2} defaultValue={content.p2} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">STORY — PARAGRAPH 3
+        <textarea name="p3" rows={2} defaultValue={content.p3} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">SIGNATURE LINE
+        <input name="sign" defaultValue={content.sign} className={inputCls} />
+      </label>
+      <StatsRow stats={content.stats} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">VALUES SECTION TITLE
+          <input name="valuesTitle" defaultValue={content.valuesTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">VALUES SECTION SUBTITLE
+          <input name="valuesSub" defaultValue={content.valuesSub} className={inputCls} />
+        </label>
+      </div>
+      {content.values.map((v, i) => (
+        <div key={i} className="grid gap-3 sm:grid-cols-[80px_1fr_2fr]">
+          <label className="text-xs font-bold">ICON
+            <input name={`val_icon_${i}`} defaultValue={v.icon} className={inputCls} />
+          </label>
+          <label className="text-xs font-bold">VALUE {i + 1} TITLE
+            <input name={`val_title_${i}`} defaultValue={v.title} className={inputCls} />
+          </label>
+          <label className="text-xs font-bold">VALUE {i + 1} TEXT
+            <input name={`val_text_${i}`} defaultValue={v.text} className={inputCls} />
+          </label>
+        </div>
+      ))}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">CLOSING BANNER TITLE
+          <input name="ctaTitle" defaultValue={content.ctaTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">CLOSING BANNER TEXT
+          <input name="ctaText" defaultValue={content.ctaText} className={inputCls} />
+        </label>
+      </div>
+      <div className="flex items-center gap-3">
+        <button disabled={pending}
+          className="rounded-pill bg-rosa px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+          {pending ? "Saving…" : "Save & publish"}
         </button>
         {state.message && (
           <span className={`text-sm font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</span>

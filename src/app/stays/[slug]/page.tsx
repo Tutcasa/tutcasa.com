@@ -106,7 +106,9 @@ export default async function ListingPage({ params }: Props) {
     // approximate map pin: coordinates rounded to ~100 m (the exact
     // address is only shared after booking, as the page promises); the
     // admin's address itself never appears in the embed URL
-    mapQ: hasPin(listing) ? roundedPin(listing) : listing.city,
+    // no pin yet → search the map for the home's NAME in its city (finds
+    // the complex, e.g. "Mareazul") instead of dropping on the city centre
+    mapQ: hasPin(listing) ? roundedPin(listing) : `${listing.title}, ${listing.city}`,
     minStay: listing.minStay,
     desc: listing.description,
     amen: listing.amenities,

@@ -135,7 +135,7 @@ function TourCard({
     <div className="tt-card">
       <div className="tt-img">
         {t.img ? (
-          <div className="ph" style={{ backgroundImage: `url(${t.img})`, backgroundSize: "cover", backgroundPosition: "center" }}></div>
+          <div className="ph" style={{ backgroundImage: `url(${t.img})`, backgroundSize: "cover", backgroundPosition: "center 30%" }}></div>
         ) : (
           <>
             <div className={`ph ${t.g}`}></div>

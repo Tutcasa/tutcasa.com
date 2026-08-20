@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { saveListingAction, type ListingFormState } from "./actions";
+import { BedTypesEditor } from "./bed-types-editor";
 
 export interface AdminListing {
   id: string;
@@ -139,10 +140,11 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
         </label>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-xs font-bold">BED TYPES <span className="font-normal text-grey">(one per line, e.g. “2 x Queen”)</span>
-          <textarea name="bedTypes" rows={2} className={inputCls}
-            defaultValue={listing.bedTypes.map((b) => `${b.count} x ${b.type}`).join("\n")} />
-        </label>
+        <div className="text-xs font-bold">BED TYPES
+          <div className="mt-1 font-normal">
+            <BedTypesEditor initial={listing.bedTypes} />
+          </div>
+        </div>
         <label className="text-xs font-bold">AMENITIES <span className="font-normal text-grey">(comma-separated)</span>
           <textarea name="amenities" rows={2} className={inputCls}
             defaultValue={listing.amenities.join(", ")} />
