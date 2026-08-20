@@ -48,10 +48,9 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
 }
 
 export default async function HomePage() {
-  const [listings, tours, fx, gReviews] = await Promise.all([
+  const [listings, tours, gReviews] = await Promise.all([
     getListingsRepo().listPublished(),
     listTours({ category: "tour" }),
-    getSetting("fx"),
     getSetting("google_reviews_cache"),
   ]);
   const expItems = tours
@@ -61,7 +60,7 @@ export default async function HomePage() {
       name: t.title,
       sub: `${t.durationLabel || "Full day"} · ${t.city ?? "Riviera Maya"}`,
       img: t.photoUrl,
-      priceLabel: t.priceCents > 0 ? `from $${Math.round(t.priceCents / 100 / fx.mxnPerUsd).toLocaleString("en-US")} USD` : "on request",
+      priceMXN: t.priceCents > 0 ? Math.round(t.priceCents / 100) : null,
     }));
   // the admin's "featured" toggle decides the homepage strip
   const featured: CasaCardData[] = listings

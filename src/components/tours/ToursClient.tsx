@@ -210,14 +210,14 @@ function TourCard({
                       <span className="byo-ic">{x.icon}</span>
                       <span className="byo-nm">{x.name}</span>
                       {x.priceMXN !== null
-                        ? <span className="byo-price">${fmtN(x.priceMXN)} {x.unit || "MXN/person"}</span>
+                        ? <span className="byo-price">{fromMXN(x.priceMXN)} {x.unit?.includes("group") ? "/ group" : "/ person"}</span>
                         : <span className="byo-onreq" dangerouslySetInnerHTML={{ __html: tr("byo_onreq") }} />}
                     </label>
                   ))}
                 </div>
                 <div className="tt-addon-line" style={{ display: selAddons.length ? "flex" : "none" }}>
                   <span>Tour + <span>{selAddons.length}</span> activities</span>
-                  <span>+{fmtN(addSum * n)} MXN included</span>
+                  <span>+{fromMXN(addSum * n)} included</span>
                 </div>
               </>
             )}
@@ -242,6 +242,7 @@ export function ToursClient({
 }) {
   const router = useRouter();
   const { t: tr, tPh } = useLang();
+  const { fromMXN: fromMXNTop } = useCurrency();
   const [view, setView] = useState<"tours" | "parks">(initialView);
   const [town, setTown] = useState("Playa del Carmen");
   const [destInput, setDestInput] = useState("Playa del Carmen");
@@ -443,7 +444,7 @@ export function ToursClient({
                       <span className="byo-nm">{x.name}</span>
                       <span className="byo-i" data-tip="Full details included in your custom quote.">i</span>
                       {x.priceMXN !== null
-                        ? <span className="byo-price">${fmtN(x.priceMXN)} {x.unit ? x.unit : (tPh("byo_person") || "MXN/person")}</span>
+                        ? <span className="byo-price">{fromMXNTop(x.priceMXN)} {x.unit?.includes("group") ? "/ group" : "/ person"}</span>
                         : <span className="byo-onreq" dangerouslySetInnerHTML={{ __html: tr("byo_onreq") }} />}
                     </label>
                   ))}

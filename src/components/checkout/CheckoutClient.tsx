@@ -92,6 +92,10 @@ export function CheckoutClient({
   }, []);
 
   const { cur: displayCur, fromUSD, fromMXN } = useCurrency();
+  /** every quoted number renders in the DISPLAY currency (USD by default,
+      the picker switches it); the charge stays in the cart's native
+      currency and is shown once, honestly, under the total */
+  const show = (a: number) => (cur === "MXN" ? fromMXN(a) : fromUSD(a));
   const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
   const discount = Math.min(coupon?.discount ?? 0, totalBefore);
   const total = totalBefore - discount;
@@ -176,7 +180,7 @@ export function CheckoutClient({
               {lines.map((it, i) => (
                 <div className="co-line" key={i}>
                   <div><div className="co-n">{it.n}</div><div className="co-m">{it.m || ""}</div></div>
-                  <div className="co-a">${money(it.a)} {cur}</div>
+                  <div className="co-a">{show(it.a)}</div>
                 </div>
               ))}
             </div>
@@ -192,30 +196,29 @@ export function CheckoutClient({
             )}
             {coupon && (
               <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
-                <span>Coupon {coupon.code}</span><span>&minus;${money(discount)} {cur}</span>
+                <span>Coupon {coupon.code}</span><span>&minus;{show(discount)}</span>
               </div>
             )}
-            <div className="co-row"><span>Subtotal</span><span>${money(totalBefore)} {cur}</span></div>
-            <div className="co-row big"><span>Total</span><span>${money(total)} {cur}</span></div>
-            {cur === "MXN" && displayCur === "USD" && <div className="co-usd">&#8776; {fromMXN(total)}</div>}
-            {displayCur !== cur && !(cur === "MXN" && displayCur === "USD") && (
-              <div className="co-usd">&#8776; {cur === "USD" ? fromUSD(total) : fromMXN(total)}</div>
+            <div className="co-row"><span>Subtotal</span><span>{show(totalBefore)}</span></div>
+            <div className="co-row big"><span>Total</span><span>{show(total)}</span></div>
+            {displayCur !== cur && (
+              <div className="co-usd">Charged in {cur}: ${money(total)} {cur}</div>
             )}
             {schedule && schedule.balance > 0 && (
               <>
                 <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
-                  <span>Due today</span><span>${money(Math.max(0, schedule.dueNow - discount))} {cur}</span>
+                  <span>Due today</span><span>{show(Math.max(0, schedule.dueNow - discount))}</span>
                 </div>
                 <div className="co-row">
                   <span>Balance{schedule.balanceBy ? ` — due by ${schedule.balanceBy}` : ""}</span>
                   {/* balance = discounted total minus what's due today */}
-                  <span>${money(Math.max(0, total - Math.max(0, schedule.dueNow - discount)))} {cur}</span>
+                  <span>{show(Math.max(0, total - Math.max(0, schedule.dueNow - discount)))}</span>
                 </div>
               </>
             )}
             {schedule?.securityDeposit ? (
               <div style={{ fontSize: "12.5px", color: "var(--grey, #8a7a72)", marginTop: 6 }}>
-                + ${money(schedule.securityDeposit)} {cur} security deposit.
+                + {show(schedule.securityDeposit)} security deposit.
               </div>
             ) : null}
           </div>
@@ -243,7 +246,7 @@ export function CheckoutClient({
               <span>
                 {paying
                   ? "Holding your dates…"
-                  : `Reserve — $${money(schedule && schedule.balance > 0 ? Math.max(0, schedule.dueNow - discount) : total)} ${cur} due${schedule && schedule.balance > 0 ? " now" : ""}`}
+                  : `Reserve — ${show(schedule && schedule.balance > 0 ? Math.max(0, schedule.dueNow - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
               </span>
             </button>
             <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
@@ -257,7 +260,7 @@ export function CheckoutClient({
             its way. <b>No payment has been taken yet</b>: our team will confirm your
             booking and send a secure payment link for the amount due.
           </p>
-          <div className="amt">Total to pay: ${money(total)} {cur}</div>
+          <div className="amt">Total to pay: {show(total)}{displayCur !== cur ? ` (charged in ${cur}: $${money(total)} ${cur})` : ""}</div>
           <Link className="btn-rosa" href="/">Back to home</Link>
         </div>
       </div>

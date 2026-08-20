@@ -19,7 +19,7 @@ const TTL_MS = 5 * 60 * 1000;
 
 async function buildKnowledge(): Promise<string> {
   const db = getDb();
-  const [homes, tours, faq, contact] = await Promise.all([
+  const [homes, tours, faq, contact, fx] = await Promise.all([
     db.query(
       `select l.title, l.slug, l.city, l.country, l.max_guests, l.bedrooms,
               l.min_stay, coalesce(l.instant_book,false) as instant_book,
@@ -34,7 +34,9 @@ async function buildKnowledge(): Promise<string> {
     ),
     getSetting("page_faq"),
     getSetting("contact"),
+    getSetting("fx"),
   ]);
+  const usd = (mxn: number) => Math.round(mxn / fx.mxnPerUsd);
 
   const homeLines = homes.rows.map((h) => {
     const allIn = h.nightly_cents
@@ -44,7 +46,7 @@ async function buildKnowledge(): Promise<string> {
   });
 
   const tourLines = tours.rows.map((t) =>
-    `- ${t.title}${t.city ? ` (${t.city})` : ""} · ${t.category}${t.price_cents > 0 ? ` · from $${Math.round(t.price_cents / 100)} MXN` : " · price on request"}${t.duration_label ? ` · ${t.duration_label}` : ""}`,
+    `- ${t.title}${t.city ? ` (${t.city})` : ""} · ${t.category}${t.price_cents > 0 ? ` · from ~$${usd(t.price_cents / 100)} USD ($${Math.round(t.price_cents / 100)} MXN)` : " · price on request"}${t.duration_label ? ` · ${t.duration_label}` : ""}`,
   );
 
   const faqLines = faq.items.map((f) => `Q: ${f.q}\nA: ${f.a}`);
@@ -79,8 +81,9 @@ export async function getSystemPrompt(): Promise<string> {
     `- Only state facts from the knowledge below or from your tools. If you still don't know, say so and hand off to WhatsApp.`,
     `- AVAILABILITY & EXACT PRICES: never guess — use check_availability_and_price with the home's slug and the guest's dates. Use get_busy_dates when they ask "when is it free" without dates. Quote the tool's numbers exactly (total, due today, balance, security deposit).`,
     `- BOOKING: you complete bookings by preparing checkout. Once the guest confirms home + dates + guests and the availability check passes, give them the bookingLink from the tool result and say: opening that link shows the exact price breakdown and reserves the dates — no charge is taken until the booking is confirmed. Never claim you booked something yourself.`,
-    `- Base prices in the knowledge are USD all-in estimates ("from"); tools give exact totals. Tours are MXN.`,
-    `- TOUR RECOMMENDATIONS: before recommending tours, ask (if not already known) how many people are going and the kids' ages. Then call get_tours_for_group with the group size and pick 2-3 tours that genuinely fit: use the descriptions/highlights to judge age suitability (gentle beach/park days for small kids; longer adventure days for teens/adults), respect min/max group limits, and quote the group-tier total in MXN when one exists (else per-person × group). Point them to /tours to book, and mention park tickets need at least a day's notice if the description says so.`,
+    `- Base prices in the knowledge are estimates ("from"); tools give exact totals.`,
+    `- TOUR RECOMMENDATIONS: before recommending tours, ask (if not already known) how many people are going and the kids' ages. Then call get_tours_for_group with the group size and pick 2-3 tours that genuinely fit: use the descriptions/highlights to judge age suitability (gentle beach/park days for small kids; longer adventure days for teens/adults), respect min/max group limits, and use the group-tier total when one exists (else per-person × group). Point them to /tours to book, and mention park tickets need at least a day's notice if the description says so.`,
+    `- CURRENCY: quote every price in USD by default (use the tools' USD fields). Tours are CHARGED in MXN — add the MXN amount in parentheses for tour totals. If the guest asks in pesos or clearly prefers MXN, quote MXN first instead.`,
     `- When you mention a home or page, give its path (e.g. /stays/casa-selva) so the site can link it.`,
     `- Payment questions: card via Stripe, PayPal, Zelle, bank wire; InstaPay from Egypt. Deposits: a security deposit may apply — never call it refundable, just "security deposit".`,
     `- For anything personal (existing booking changes, complaints, discounts beyond listed coupons, urgent matters) hand off to WhatsApp.`,

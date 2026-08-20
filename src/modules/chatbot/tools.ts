@@ -1,6 +1,7 @@
 import "server-only";
 import { getDb } from "@/lib/db";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
+import { getSetting } from "@/modules/settings";
 
 /**
  * Live lookups for the AI concierge. Everything runs through the SAME
@@ -123,13 +124,17 @@ export async function toursForGroup(groupSize: number): Promise<{
     groupFits: boolean;
     minGroup: number;
     maxGroup: number;
-    /** total MXN for THIS group when tier pricing exists */
+    /** total for THIS group when tier pricing exists */
     groupTotalMXN: number | null;
+    groupTotalUSD: number | null;
     perPersonMXN: number | null;
+    perPersonUSD: number | null;
     page: string;
   }[];
 }> {
   const g = Math.max(1, Math.min(30, Math.round(groupSize)));
+  const fx = await getSetting("fx");
+  const usd = (mxn: number) => Math.round(mxn / fx.mxnPerUsd);
   const res = await getDb().query(
     `select slug, title, city, category, duration_label, subtitle, description,
             coalesce(highlights,'{}') as highlights, price_cents, group_prices,
@@ -152,7 +157,9 @@ export async function toursForGroup(groupSize: number): Promise<{
         minGroup: t.min_group ?? 1,
         maxGroup: t.max_group ?? 30,
         groupTotalMXN: tier,
+        groupTotalUSD: tier != null ? usd(tier) : null,
         perPersonMXN: t.price_cents > 0 ? Math.round(t.price_cents / 100) : null,
+        perPersonUSD: t.price_cents > 0 ? usd(t.price_cents / 100) : null,
         page: `/tours`,
       };
     }),
