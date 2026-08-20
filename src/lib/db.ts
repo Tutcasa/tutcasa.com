@@ -16,7 +16,13 @@ export function getDb(): Pool {
     pool = new Pool({
       connectionString: url,
       ssl: { rejectUnauthorized: false },
-      max: 5,
+      // DATABASE_URL points at Supabase's TRANSACTION-mode pooler (:6543),
+      // which multiplexes many clients — keep each serverless instance's
+      // footprint small and release idle connections fast, or concurrent
+      // lambdas exhaust the pooler ("max clients reached").
+      max: 3,
+      idleTimeoutMillis: 10_000,
+      allowExitOnIdle: true,
     });
   }
   return pool;
