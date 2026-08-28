@@ -291,7 +291,15 @@ export function StaysClient({
     </div>
   );
 
-  const chipVisible = (label: string) => label.toLowerCase().includes(destFilter.toLowerCase());
+  const CITY_COUNTRY: Record<string, string> = {
+    "Playa del Carmen": "mexico", Tulum: "mexico",
+    Nuba: "egypt nubia", Orlando: "usa united states america florida",
+  };
+  const chipVisible = (label: string) => {
+    const q = destFilter.trim().toLowerCase();
+    if (!q) return true;
+    return label.toLowerCase().includes(q) || (CITY_COUNTRY[label] ?? "").includes(q);
+  };
   const draftTok = (v: string, on: boolean) =>
     setDraft((d) => ({ ...d, toks: on ? [...d.toks, v] : d.toks.filter((x) => x !== v) }));
 

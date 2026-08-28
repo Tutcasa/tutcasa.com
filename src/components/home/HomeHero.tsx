@@ -167,7 +167,16 @@ export function HomeHero() {
   }
 
   const wzDatesOk = !!(wCi && wCo && wCo > wCi);
-  const chipVisible = (label: string) => label.toLowerCase().includes(destFilter.toLowerCase());
+  const CITY_COUNTRY: Record<string, string> = {
+    "Playa del Carmen": "mexico", Tulum: "mexico", "Cancún": "mexico cancun",
+    Nuba: "egypt nubia", Cairo: "egypt",
+    Orlando: "usa united states america florida", Miami: "usa united states america florida",
+  };
+  const chipVisible = (label: string) => {
+    const q = destFilter.trim().toLowerCase();
+    if (!q) return true;
+    return label.toLowerCase().includes(q) || (CITY_COUNTRY[label] ?? "").includes(q);
+  };
   const progress = wz.step;
 
   const stepper = (k: GuestKey, label: string, sub: string) => (

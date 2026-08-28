@@ -227,6 +227,24 @@ export function computeQuote(input: QuoteInput): Quote {
     }
   }
 
+  // NEVER STACK DISCOUNTS: when both a length-of-stay discount and an
+  // early-bird discount apply, only the SMALLER one is granted (owner's
+  // rule — one discount per booking, the cheaper of the two).
+  if (lengthDiscountCents > 0 && earlyBirdDiscountCents > 0) {
+    if (earlyBirdDiscountCents <= lengthDiscountCents) {
+      // recompute early-bird on the FULL accommodation (no length cut)
+      earlyBirdDiscountCents = Math.round(accommodationCents * (config.earlyBirdPct / 100));
+      if (earlyBirdDiscountCents <= lengthDiscountCents) {
+        lengthDiscountCents = 0;
+        lengthDiscountKind = null;
+      } else {
+        earlyBirdDiscountCents = 0;
+      }
+    } else {
+      earlyBirdDiscountCents = 0;
+    }
+  }
+
   const accommodationNetCents =
     accommodationCents - lengthDiscountCents - earlyBirdDiscountCents;
 

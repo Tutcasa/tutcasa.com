@@ -2,6 +2,7 @@ import { getDb } from "@/lib/db";
 import { fmtMoney } from "@/modules/pricing";
 import { CopyLink } from "./copy-link";
 import { AdminSearch, rowMatches } from "../search-box";
+import { DeleteBookingButton } from "../delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -91,7 +92,13 @@ export default async function AdminInvoices({
                 <td className="p-3">
                   <span className={`rounded-pill px-2.5 py-1 text-xs font-bold ${BADGE[inv.status] ?? ""}`}>{inv.status}</span>
                 </td>
-                <td className="p-3"><CopyLink bookingId={inv.id} /></td>
+                <td className="p-3">
+                  <div className="flex items-center gap-3">
+                    <CopyLink bookingId={inv.id} />
+                    <DeleteBookingButton id={inv.id} kind={inv.kind} compact
+                      what={`invoice #${inv.invoiceNo} and its ${inv.kind} booking`} />
+                  </div>
+                </td>
               </tr>
             ))}
             {invoices.length === 0 && (

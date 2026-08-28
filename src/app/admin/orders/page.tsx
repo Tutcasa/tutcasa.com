@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { fmtMoney } from "@/modules/pricing";
 import { AdminSearch, rowMatches } from "../search-box";
+import { DeleteBookingButton } from "../delete-button";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,10 @@ export default async function AdminOrders({
                 )}
                 <div className="text-xs text-grey">
                   Payment: {o.provider ?? "not charged yet (preview checkout)"} · {new Date(o.createdAt).toLocaleString()}
+                </div>
+                <div className="mt-1">
+                  <DeleteBookingButton id={o.id} kind="stay" compact
+                    what={`order #${o.invoiceNo} and its booking`} />
                 </div>
               </div>
             </details>

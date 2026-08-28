@@ -147,29 +147,38 @@ export async function uploadPhotoAction(formData: FormData): Promise<ListingForm
     return { ok: false, message: "Photo uploads need the Supabase service key (SUPABASE_SERVICE_ROLE_KEY) — paste it in .env.local to activate." };
   }
   const listingId = String(formData.get("listingId") ?? "");
-  const file = formData.get("photo") as File | null;
-  if (!listingId || !file || file.size === 0) return { ok: false, message: "Choose an image first." };
-  if (file.size > MAX_PHOTO_BYTES) return { ok: false, message: "Image too large (max 8 MB)." };
-  if (!/^image\/(jpeg|png|webp|avif)$/.test(file.type)) {
-    return { ok: false, message: "Use a JPEG, PNG, WebP or AVIF image." };
-  }
+  const files = (formData.getAll("photo") as File[]).filter((f) => f && f.size > 0);
+  if (!listingId || files.length === 0) return { ok: false, message: "Choose one or more images first." };
+  if (files.length > 24) return { ok: false, message: "Max 24 photos per upload — split it in two." };
 
-  const ext = file.type.split("/")[1].replace("jpeg", "jpg");
-  const path = `${listingId}/${Date.now()}.${ext}`;
-  const { error } = await sb.storage.from("listing-photos")
-    .upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type });
-  if (error) return { ok: false, message: `Upload failed: ${error.message}` };
-
-  const { data } = sb.storage.from("listing-photos").getPublicUrl(path);
   const db = getDb();
   const next = await db.query<{ n: number }>(
     "select coalesce(max(sort),-1)+1 as n from listing_photos where listing_id=$1", [listingId]);
-  await db.query(
-    "insert into listing_photos (listing_id, url, alt, sort) values ($1,$2,$3,$4)",
-    [listingId, data.publicUrl, String(formData.get("alt") ?? ""), next.rows[0].n],
-  );
+  let sort = Number(next.rows[0].n);
+  const alt = String(formData.get("alt") ?? "");
+  let added = 0;
+  const errors: string[] = [];
+  for (const file of files) {
+    if (file.size > MAX_PHOTO_BYTES) { errors.push(`${file.name}: too large (max 8 MB)`); continue; }
+    if (!/^image\/(jpeg|png|webp|avif)$/.test(file.type)) { errors.push(`${file.name}: not a JPEG/PNG/WebP/AVIF`); continue; }
+    const ext = file.type.split("/")[1].replace("jpeg", "jpg");
+    const path = `${listingId}/${Date.now()}-${added}.${ext}`;
+    const { error } = await sb.storage.from("listing-photos")
+      .upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type });
+    if (error) { errors.push(`${file.name}: ${error.message}`); continue; }
+    const { data } = sb.storage.from("listing-photos").getPublicUrl(path);
+    await db.query(
+      "insert into listing_photos (listing_id, url, alt, sort) values ($1,$2,$3,$4)",
+      [listingId, data.publicUrl, alt, sort++],
+    );
+    added++;
+  }
   revalidatePublic();
-  return { ok: true, message: "Photo added." };
+  if (added === 0) return { ok: false, message: errors[0] ?? "Upload failed." };
+  return {
+    ok: true,
+    message: `${added} photo${added > 1 ? "s" : ""} added.${errors.length ? ` Skipped: ${errors.join("; ")}` : ""}`,
+  };
 }
 
 export async function deletePhotoAction(photoId: string): Promise<void> {
@@ -473,8 +482,13 @@ export async function applyCalendarDaysAction(
     : null;
   const minStay = formData.get("minStay") ? num(formData.get("minStay")) : null;
   const blocked = on(formData.get("blocked"));
+  const unblocked = on(formData.get("unblocked"));
+  if (blocked && unblocked) {
+    return { ok: false, message: "Pick either Block or Unblock, not both." };
+  }
   const note = orNull(formData.get("note"));
 
+  // is_blocked: Block wins → true, Unblock → false, neither → keep as-is
   await getDb().query(
     `insert into listing_price_days (listing_id, day, nightly_cents, min_stay, is_blocked, note)
      select $1, d::date, $2, $3, $4, $5
@@ -482,10 +496,10 @@ export async function applyCalendarDaysAction(
      on conflict (listing_id, day) do update set
        nightly_cents = coalesce($2, listing_price_days.nightly_cents),
        min_stay      = coalesce($3, listing_price_days.min_stay),
-       is_blocked    = listing_price_days.is_blocked or $4,
+       is_blocked    = case when $8 then false else listing_price_days.is_blocked or $4 end,
        note          = coalesce($5, listing_price_days.note),
        updated_at    = now()`,
-    [id, price, minStay, blocked, note, from, to],
+    [id, price, minStay, blocked, note, from, to, unblocked],
   );
   revalidatePublic();
   return { ok: true, message: `Applied to ${from} → ${to}.` };

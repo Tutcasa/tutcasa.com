@@ -6,12 +6,12 @@ import { useState } from "react";
 import { BackBar } from "@/components/site/BackBar";
 import { submitContactLead } from "@/app/leads-actions";
 
-export function ContactClient({ whatsapp, email }: { whatsapp: string; email: string }) {
+export function ContactClient({ whatsapp, email, initialSubject }: { whatsapp: string; email: string; initialSubject?: string }) {
   const [sent, setSent] = useState(false);
   const [name, setName] = useState("");
   const [mail, setMail] = useState("");
   const [phone, setPhone] = useState("");
-  const [subj, setSubj] = useState("A booking or reservation");
+  const [subj, setSubj] = useState(initialSubject ?? "A booking or reservation");
   const [msg, setMsg] = useState("");
 
   async function submit() {
@@ -49,6 +49,7 @@ export function ContactClient({ whatsapp, email }: { whatsapp: string; email: st
                   <option>A specific home</option>
                   <option>Tours &amp; transfers</option>
                   <option>Listing my property</option>
+                  <option>Partnership &amp; collaboration</option>
                   <option>Something else</option>
                 </select>
               </div>

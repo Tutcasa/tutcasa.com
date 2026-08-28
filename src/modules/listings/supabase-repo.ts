@@ -23,6 +23,7 @@ interface ListingRow {
   featured: boolean | null;
   instant_book: boolean | null;
   self_check_in: boolean | null;
+  keep_calendar_clean: boolean | null;
   allow_pets: boolean | null;
   allow_children: boolean | null;
   allow_smoking: boolean | null;
@@ -49,7 +50,7 @@ interface ListingRow {
 const SELECT = `
   id, slug, title, city, country, region, lat, lng, property_type,
   max_guests, bedrooms, bathrooms, headline, description, amenities,
-  min_stay, featured, instant_book, self_check_in, allow_pets,
+  min_stay, featured, instant_book, self_check_in, keep_calendar_clean, allow_pets,
   allow_children, allow_smoking, allow_party,
   checkin_from, checkout_until, house_rules, cancellation_policy,
   other_rules, bed_types, address,
@@ -88,6 +89,7 @@ function toListing(row: ListingRow): Listing {
     featured: row.featured ?? false,
     instantBook: row.instant_book ?? false,
     selfCheckIn: row.self_check_in ?? false,
+    keepCalendarClean: row.keep_calendar_clean ?? false,
     allowPets: row.allow_pets ?? false,
     allowChildren: row.allow_children ?? true,
     allowSmoking: row.allow_smoking ?? false,

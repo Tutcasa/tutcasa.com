@@ -76,10 +76,11 @@ export async function createPartnerHold(input: {
     const res = await db.query<{ id: string; hold_expires_at: string }>(
       `insert into bookings
          (listing_id, guest_name, guest_email, stay, guests, status,
-          hold_expires_at, total_cents, currency, price_breakdown, source, partner_ref)
+          hold_expires_at, total_cents, currency, price_breakdown, source, partner_ref, no_block)
        values ($1, 'Amanah guest (pending payment)', 'pending@amanahvacations.com',
                daterange($2::date, $3::date), $4, 'pending',
-               now() + ($5 || ' minutes')::interval, $6, $7, $8, 'amanah', $9)
+               now() + ($5 || ' minutes')::interval, $6, $7, $8, 'amanah', $9,
+               (select coalesce(keep_calendar_clean,false) from listings where id=$1))
        returning id, hold_expires_at`,
       [
         quoted.listing.id, input.checkIn, input.checkOut, input.guests,

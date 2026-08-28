@@ -169,7 +169,7 @@ export function CalendarEditor({
         <div className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey">
           Set prices &amp; rules for a date range <span className="font-normal normal-case">(click days above or type dates)</span>
         </div>
-        <form action={applyAction} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
+        <form action={applyAction} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-8">
           <input type="hidden" name="id" value={listingId} />
           <input name="from" type="date" required value={from}
                  onChange={(e) => setFrom(e.target.value)} className={inputCls} />
@@ -180,6 +180,9 @@ export function CalendarEditor({
           <input name="note" placeholder="Note (shows on hover, blank = keep)" className={inputCls} />
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input type="checkbox" name="blocked" className="h-4 w-4 accent-rosa" /> Block these nights
+          </label>
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" name="unblocked" className="h-4 w-4 accent-rosa" /> Unblock these nights
           </label>
           <button disabled={applyPending || !from}
             className="rounded-pill bg-rosa px-4 py-2 text-sm font-bold text-white disabled:opacity-50">

@@ -22,16 +22,17 @@ const DEMO_TYPE_LABEL: Record<string, string> = {
   "coral-suite": "Entire suite",
 };
 
-/** "Nuba" → "Nuba, Egypt", "Orlando" → "Orlando, Florida" (demo display) */
+const COUNTRY_NAME: Record<string, string> = {
+  MX: "Mexico", EG: "Egypt", US: "USA", CA: "Canada",
+  DO: "Dominican Republic", CR: "Costa Rica",
+};
+
+/** "Playa del Carmen / Mexico", "Nuba / Egypt", "Orlando / USA" */
 export function displayCity(l: Listing): string {
-  if (l.country === "EG") return `${l.city}, Egypt`;
-  if (l.country === "US") return `${l.city}, ${l.region ?? "Florida"}`;
-  return l.city;
+  return `${l.city} / ${COUNTRY_NAME[l.country] ?? l.country}`;
 }
 
-/** demo city display incl. country for MX (property page: "Tulum, Mexico") */
 export function displayCityCountry(l: Listing): string {
-  if (l.country === "MX") return `${l.city}, Mexico`;
   return displayCity(l);
 }
 

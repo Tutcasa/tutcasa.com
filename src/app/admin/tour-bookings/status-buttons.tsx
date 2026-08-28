@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { setStatusAction } from "./actions";
 import type { TourBooking } from "@/modules/tours";
+import { DeleteBookingButton } from "../delete-button";
 
 const NEXT: Record<string, { to: TourBooking["status"]; label: string }[]> = {
   pending: [
@@ -25,7 +26,6 @@ const NEXT: Record<string, { to: TourBooking["status"]; label: string }[]> = {
 export function StatusButtons({ id, status }: { id: string; status: TourBooking["status"] }) {
   const [pending, start] = useTransition();
   const opts = NEXT[status] ?? [];
-  if (!opts.length) return null;
   return (
     <div className="flex flex-col gap-1.5">
       {opts.map((o) => (
@@ -42,6 +42,7 @@ export function StatusButtons({ id, status }: { id: string; status: TourBooking[
           {o.label}
         </button>
       ))}
+      <DeleteBookingButton id={id} kind="tour" what="this tour booking" />
     </div>
   );
 }

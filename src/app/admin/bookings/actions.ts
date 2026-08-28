@@ -58,6 +58,33 @@ export async function setBookingStatusAction(
   revalidate();
 }
 
+/**
+ * Permanently delete a stay booking (and its invoice/order — they are the
+ * same row). Child records go with it: emails log, review, transfer,
+ * referral reward; gift-card ledger lines are kept for accounting but
+ * unlinked. An unused coupon redemption is given back.
+ */
+export async function deleteBookingAction(id: string): Promise<void> {
+  await requireAdmin();
+  const db = getDb();
+  const res = await db.query<{ coupon_code: string | null; status: string }>(
+    `with n as (delete from notifications_log where booking_id = $1),
+          g as (update gift_card_ledger set booking_id = null where booking_id = $1),
+          r as (delete from reviews where booking_id = $1)
+     delete from bookings where id = $1
+     returning coupon_code, status`,
+    [id],
+  );
+  const row = res.rows[0];
+  if (row?.coupon_code && row.status !== "cancelled") {
+    const { unredeemCoupon } = await import("@/modules/coupons");
+    await unredeemCoupon(row.coupon_code).catch(() => {});
+  }
+  revalidate();
+  revalidatePath("/admin/invoices");
+  revalidatePath("/admin/orders");
+}
+
 /** Postgres exclusion-constraint violation (booking overlap). */
 const isOverlap = (e: unknown) =>
   typeof e === "object" && e !== null && (e as { code?: string }).code === "23P01";
@@ -89,8 +116,8 @@ export async function createManualBookingAction(
   if (guests < 1) return { ok: false, message: "At least one guest." };
 
   const db = getDb();
-  const listing = await db.query<{ slug: string }>(
-    "select slug from listings where id=$1", [listingId]);
+  const listing = await db.query<{ slug: string; keep_calendar_clean: boolean }>(
+    "select slug, coalesce(keep_calendar_clean,false) as keep_calendar_clean from listings where id=$1", [listingId]);
   if (!listing.rows[0]) return { ok: false, message: "That home no longer exists." };
 
   // auto-quote with the real pricing model; a typed total overrides it
@@ -136,12 +163,13 @@ export async function createManualBookingAction(
     await db.query(
       `insert into bookings
          (listing_id, guest_name, guest_email, guest_phone, stay, guests,
-          status, total_cents, currency, price_breakdown, source, payment_provider)
-       values ($1,$2,$3,$4, daterange($5::date,$6::date,'[)'), $7, $8, $9,'USD',$10,'manual')`,
+          status, total_cents, currency, price_breakdown, source, payment_provider, no_block)
+       values ($1,$2,$3,$4, daterange($5::date,$6::date,'[)'), $7, $8, $9,'USD',$10,'manual',$11)`,
       [listingId, guestName, guestEmail || "manual@tutcasa.com",
        String(formData.get("guestPhone") ?? "").trim() || null,
        checkIn, checkOut, guests, status, totalCents,
-       breakdown ? JSON.stringify(breakdown) : null],
+       breakdown ? JSON.stringify(breakdown) : null,
+       listing.rows[0].keep_calendar_clean],
     );
   } catch (e) {
     if (isOverlap(e)) return { ok: false, message: "Those dates collide with another booking on that home." };

@@ -22,6 +22,8 @@ export interface Listing {
   /** guest booking-option filters */
   instantBook: boolean;
   selfCheckIn: boolean;
+  /** hotel mode: bookings never block dates */
+  keepCalendarClean: boolean;
   allowPets: boolean;
   allowChildren: boolean;
   allowSmoking: boolean;

@@ -101,10 +101,10 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
       `insert into bookings
          (listing_id, guest_name, guest_email, guest_phone, stay, guests,
           status, hold_expires_at, total_cents, currency, price_breakdown, source,
-          coupon_code, coupon_discount_cents)
+          coupon_code, coupon_discount_cents, no_block)
        values ($1, $2, $3, $4, daterange($5::date, $6::date), $7,
                'pending', now() + ($8 || ' minutes')::interval,
-               $9, $10, $11, 'direct', $12, $13)
+               $9, $10, $11, 'direct', $12, $13, $14)
        returning id`,
       [
         listing.id, name, email, req.guestPhone?.trim() || null,
@@ -131,7 +131,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           balanceCents: Math.max(0, q.schedule.balanceCents - couponDiscountCents),
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
-        couponCode, couponDiscountCents,
+        couponCode, couponDiscountCents, listing.keepCalendarClean,
       ],
     );
     // M3: request-received emails (guest + team) — never blocks the booking

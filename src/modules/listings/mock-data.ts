@@ -9,7 +9,7 @@ const MOCK_FEATURED = new Set(["spiritum-marea", "vista-playa", "casa-selva", "n
 
 type RawListing = Omit<
   Listing,
-  | "featured" | "instantBook" | "selfCheckIn" | "allowPets"
+  | "featured" | "instantBook" | "selfCheckIn" | "keepCalendarClean" | "allowPets"
   | "allowChildren" | "allowSmoking" | "allowParty"
   | "checkinFrom" | "checkoutUntil" | "houseRules" | "cancellationPolicy"
   | "otherRules" | "bedTypes" | "address"
@@ -265,6 +265,7 @@ export const MOCK_LISTINGS: Listing[] = RAW.map((l) => ({
   featured: MOCK_FEATURED.has(l.slug),
   instantBook: true,
   selfCheckIn: false,
+  keepCalendarClean: false,
   allowPets: false,
   allowChildren: true,
   allowSmoking: false,

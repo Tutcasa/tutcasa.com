@@ -9,11 +9,18 @@ export const metadata: Metadata = {
     "Questions about a home, a booking, or listing your property? Message the TutCasa family — or contact us on WhatsApp for the fastest reply.",
 };
 
-export default async function ContactPage() {
-  const contact = await getSetting("contact");
+export default async function ContactPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ subject?: string }>;
+}) {
+  const [contact, params] = await Promise.all([getSetting("contact"), searchParams]);
+  // the footer's "Partnerships & collaborations" link lands here pre-filled
+  const initialSubject =
+    params.subject === "partnership" ? "Partnership & collaboration" : undefined;
   return (
     <div className="pg-contact">
-      <ContactClient whatsapp={contact.whatsapp} email={contact.email} />
+      <ContactClient whatsapp={contact.whatsapp} email={contact.email} initialSubject={initialSubject} />
     </div>
   );
 }

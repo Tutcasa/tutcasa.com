@@ -87,7 +87,7 @@ export function PhotoManager({
           <input type="hidden" name="listingId" value={listingId} />
           <input
             type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/avif"
-            required className="text-sm"
+            multiple required className="text-sm"
           />
           <input
             type="text" name="alt" placeholder="Label (e.g. Living room)"

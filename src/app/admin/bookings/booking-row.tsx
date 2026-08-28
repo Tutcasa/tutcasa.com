@@ -7,6 +7,7 @@ import {
   updateBookingAction,
   type BookingFormState,
 } from "./actions";
+import { DeleteBookingButton } from "../delete-button";
 
 const BADGE: Record<string, string> = {
   pending: "bg-sol/15 text-terra",
@@ -101,6 +102,8 @@ export function BookingRow({
             >
               {open ? "Close" : "Edit"}
             </button>
+            <DeleteBookingButton id={b.id} kind="stay"
+              what={b.invoiceNo ? `booking #${b.invoiceNo}` : "this booking"} />
           </div>
         </td>
       </tr>

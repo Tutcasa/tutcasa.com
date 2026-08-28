@@ -94,22 +94,23 @@ test("early-bird applies only when booked far enough ahead", () => {
   assert.equal(near.earlyBirdDiscountCents, 0);
 });
 
-test("early-bird stacks after length discount", () => {
+test("discounts never stack — only the smaller of length/early-bird applies", () => {
   const q = computeQuote(
     base({
       nights: uniformNights(D("2026-11-01"), D("2026-11-08"), 10_000),
       checkIn: D("2026-11-01"),
       bookedAt: D("2026-08-01"),
       config: defaultPricingConfig({
-        weeklyDiscountPct: 10,
-        earlyBirdPct: 5,
+        weeklyDiscountPct: 10, // would be 7,000
+        earlyBirdPct: 5, // 3,500 on full accommodation — smaller, wins
         earlyBirdMinDays: 60,
       }),
     }),
   );
-  assert.equal(q.lengthDiscountCents, 7_000);
-  assert.equal(q.earlyBirdDiscountCents, Math.round(63_000 * 0.05)); // 3150
-  assert.equal(q.totalCents, 70_000 - 7_000 - 3_150);
+  assert.equal(q.lengthDiscountCents, 0);
+  assert.equal(q.lengthDiscountKind, null);
+  assert.equal(q.earlyBirdDiscountCents, 3_500);
+  assert.equal(q.totalCents, 70_000 - 3_500);
 });
 
 test("extra-guest fee charges guests beyond the included count", () => {
