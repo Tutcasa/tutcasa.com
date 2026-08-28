@@ -9,7 +9,7 @@
  * which re-prices everything server-side.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { T, useLang } from "@/lib/i18n";
@@ -21,7 +21,8 @@ export interface TourCardData {
   sub: string;
   dur: string;
   desc: string;
-  priceMXN: number | null; // per-person fallback; null = on request
+  priceMXN: number | null; // per-person fallback (native units); null = on request
+  currency: "MXN" | "USD"; // the tour's charge currency
   /** Amanah tier model: TOTAL MXN per group size (price authority) */
   groupPrices?: Record<string, number> | null;
   /** Amanah tour photo (absolute URL); gradient placeholder when absent */
@@ -82,7 +83,7 @@ function TourCard({
 }) {
   const router = useRouter();
   const { t: tr } = useLang();
-  const { cur, fromMXN, mxnPerUsd } = useCurrency();
+  const { cur, fromMXN, fromUSD: fromUSDCur, mxnPerUsd } = useCurrency();
   const fmtUSD = (m: number) => `≈ ${Math.round(m / mxnPerUsd).toLocaleString("en-US")} USD`;
   const [date, setDate] = useState("");
   const [n, setN] = useState(1);
@@ -95,7 +96,7 @@ function TourCard({
   const itinRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
 
-  const visibleAddons = addons.filter((x) => t.name.indexOf(x.name.split(" ")[0]) === -1);
+  const visibleAddons = t.currency === "USD" ? [] : addons.filter((x) => t.name.indexOf(x.name.split(" ")[0]) === -1);
   const selAddons = visibleAddons.filter((x) => sel.includes(x.name));
   const addSum = selAddons.reduce((a, x) => a + (x.priceMXN ?? 0), 0);
   // Amanah tier totals are the price authority (group total, discount built
@@ -189,8 +190,12 @@ function TourCard({
             <div className="tt-price-row">
               <div className="tt-plabel">Total</div>
               <div className="tt-amount">
-                <span className="tt-total">{cur === "MXN" ? <>{fmtN(tot)} <span className="cur">MXN</span></> : fromMXN(tot)}</span>
-                <span className="tt-per">{cur === "MXN" ? fmtUSD(tot) : `${fmtN(tot)} MXN`}</span>
+                <span className="tt-total">{t.currency === "USD"
+                  ? fromUSDCur(tot)
+                  : cur === "MXN" ? <>{fmtN(tot)} <span className="cur">MXN</span></> : fromMXN(tot)}</span>
+                <span className="tt-per">{t.currency === "USD"
+                  ? `${fmtN(tot)} USD`
+                  : cur === "MXN" ? fmtUSD(tot) : `${fmtN(tot)} MXN`}</span>
               </div>
             </div>
             {!t.park && (
@@ -259,7 +264,7 @@ export function ToursClient({
   const [byoCo, setByoCo] = useState("");
   const [byoA, setByoA] = useState(2);
   const [byoC, setByoC] = useState(0);
-  const [byoAcc, setByoAcc] = useState<"yes" | "no">("no");
+
   const [byoActsOpen, setByoActsOpen] = useState(false);
   const [byoPicks, setByoPicks] = useState<string[]>([]);
   const [byoDream, setByoDream] = useState("");
@@ -281,11 +286,25 @@ export function ToursClient({
     toastTimer.current = setTimeout(() => setToast(""), 3000);
   }
 
+  // case-insensitive town match — the admin may type "NUBA"/"nuba"
+  const norm = (v: string) => v.trim().toLowerCase();
   const list = tours.filter((t) =>
-    view === "parks" ? t.park : !t.park && (t.city || "Playa del Carmen") === town
+    view === "parks" ? t.park : !t.park && norm(t.city || "Playa del Carmen") === norm(town)
   );
 
-  const townMatches = TT_TOWNS.filter((c) => c.toLowerCase().includes(destInput.trim().toLowerCase()));
+  // towns = the built-in list PLUS any city an admin-added tour uses,
+  // so client-created destinations are always pickable
+  const allTowns = useMemo(() => {
+    const seen = new Map(TT_TOWNS.map((c) => [norm(c), c]));
+    for (const t of tours) {
+      if (t.park) continue;
+      const c = (t.city || "").trim();
+      if (c && !seen.has(norm(c))) seen.set(norm(c), c);
+    }
+    return [...seen.values()];
+     
+  }, [tours]);
+  const townMatches = allTowns.filter((c) => norm(c).includes(norm(destInput)));
 
   const pickedPriced = byoPicks.some((n) => byoActs.find((a) => a.name === n)?.priceMXN != null);
   const pickedOnreq = byoPicks.some((n) => byoActs.find((a) => a.name === n)?.priceMXN == null);
@@ -300,7 +319,7 @@ export function ToursClient({
 
   function byoSubmit() {
     let msg = "Hi TutCasa! \u{1F44B} I’d like to build my own custom tour:\n";
-    msg += `\n\u{1F4C5} Dates: ${byoCi || "—"} → ${byoCo || "—"}\n\u{1F465} Adults: ${byoA} · Children: ${byoC}\n\u{1F3E0} Accommodation: ${byoAcc === "yes" ? "Yes" : "No"}`;
+    msg += `\n\u{1F4C5} Dates: ${byoCi || "—"} → ${byoCo || "—"}\n\u{1F465} Adults: ${byoA} · Children: ${byoC}`;
     if (byoPicks.length) msg += "\n\n✨ Activities of interest:\n- " + byoPicks.join("\n- ");
     if (byoDream.trim()) msg += "\n\n\u{1F4AD} Dreaming of: " + byoDream.trim();
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(msg)}`, "_blank");
@@ -427,7 +446,7 @@ export function ToursClient({
               <div className="byo-row3">
                 <div className="byo-f"><T as="label" k="byo_adults" /><div className="byo-step"><button type="button" onClick={() => setByoA((v) => Math.max(1, v - 1))}>&minus;</button><span>{byoA}</span><button type="button" onClick={() => setByoA((v) => v + 1)}>+</button></div></div>
                 <div className="byo-f"><T as="label" k="byo_children" /><div className="byo-step"><button type="button" onClick={() => setByoC((v) => Math.max(0, v - 1))}>&minus;</button><span>{byoC}</span><button type="button" onClick={() => setByoC((v) => v + 1)}>+</button></div></div>
-                <div className="byo-f"><T as="label" k="byo_accom" /><div className="byo-toggle"><button type="button" className={byoAcc === "yes" ? "on" : undefined} onClick={() => setByoAcc("yes")}><T k="byo_yes" /></button><button type="button" className={byoAcc === "no" ? "on" : undefined} onClick={() => setByoAcc("no")}><T k="byo_no" /></button></div></div>
+
               </div>
               <button type="button" className={`byo-browse${byoActsOpen ? " open" : ""}`} onClick={() => setByoActsOpen((o) => !o)}>
                 <span>+ <T k="byo_browse" /></span><span className="pl">+</span>

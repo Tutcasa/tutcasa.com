@@ -139,7 +139,7 @@ export async function toursForGroup(groupSize: number): Promise<{
   const usd = (mxn: number) => Math.round(mxn / fx.mxnPerUsd);
   const res = await getDb().query(
     `select slug, title, city, category, duration_label, subtitle, description,
-            coalesce(highlights,'{}') as highlights, price_cents, group_prices,
+            coalesce(highlights,'{}') as highlights, price_cents, currency, group_prices,
             min_group, max_group
        from tours where status='published'
       order by category, title limit 80`,
@@ -160,8 +160,10 @@ export async function toursForGroup(groupSize: number): Promise<{
         maxGroup: t.max_group ?? 30,
         groupTotalMXN: tier,
         groupTotalUSD: tier != null ? usd(tier) : null,
-        perPersonMXN: t.price_cents > 0 ? Math.round(t.price_cents / 100) : null,
-        perPersonUSD: t.price_cents > 0 ? usd(t.price_cents / 100) : null,
+        perPersonMXN: t.price_cents > 0 && t.currency !== "USD" ? Math.round(t.price_cents / 100) : null,
+        perPersonUSD: t.price_cents > 0
+          ? (t.currency === "USD" ? Math.round(t.price_cents / 100) : usd(t.price_cents / 100))
+          : null,
         page: `/tours`,
       };
     }),

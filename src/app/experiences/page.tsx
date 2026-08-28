@@ -1,7 +1,6 @@
 import "@/styles/demo/experiences.css";
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 
 export const dynamic = "force-dynamic";
@@ -40,18 +39,6 @@ export default async function ExperiencesPage() {
   return (
     <div className="pg-experiences">
       <BackBar />
-      <div className="page-hero">
-        <div className="sun"></div>
-        <div className="eyebrow">Partner prices for TutCasa guests</div>
-        <h1>Explore experiences</h1>
-        <p>
-          Tours, parks and adventures across the Riviera Maya &amp; Yucat&aacute;n
-          &mdash; curated with our trusted partner, Amanah Vacations.
-        </p>
-        <div style={{ marginTop: 18 }}>
-          <Link className="btn-rosa" href="/tours">Book tours &amp; parks here &rarr;</Link>
-        </div>
-      </div>
 
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "26px 18px 60px" }}>
         {activities.length === 0 ? (

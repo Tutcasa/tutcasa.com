@@ -42,6 +42,7 @@ export default async function TourCheckoutPage({
   const q = await searchParams;
   const lines: CheckoutLine[] = [];
   let payload: CheckoutPayload = { kind: "none" };
+  let currency: "USD" | "MXN" = "MXN";
   const dates = q.dates;
 
   const n = Math.min(20, Math.max(1, parseInt(q.n ?? "1", 10) || 1));
@@ -49,6 +50,7 @@ export default async function TourCheckoutPage({
   if (q.tour && q.date) {
     // tour checkout — tour + add-on prices come from the server catalog
     const tour = await tourBySlug(q.tour);
+    if (tour) currency = tour.currency === "USD" ? "USD" : "MXN";
     if (tour && (tour.priceCents > 0 || tour.groupPrices)) {
       // EXACTLY the numbers createTourBooking will charge: group size
       // clamped to the tour's limits, Amanah tier total when tiers exist
@@ -60,7 +62,7 @@ export default async function TourCheckoutPage({
         m: `${dateLong(q.date)} · ${g} ${g > 1 ? "people" : "person"}${tierTotal != null ? " · group rate" : ""}`,
         a: tourTotal,
       });
-      const addonNames = parseNames(q.addons);
+      const addonNames = tour.currency === "MXN" ? parseNames(q.addons) : [];
       const noteParts: string[] = [];
       for (const name of addonNames) {
         const p = priceForActivity(name);
@@ -82,18 +84,22 @@ export default async function TourCheckoutPage({
       };
     }
   } else {
-    // BYO / my-tour activity cart — priced from the server catalog;
-    // confirmed as a quote request (no backing tour entity yet)
-    for (const name of parseNames(q.acts)) {
+    // BYO / my-tour activity cart — priced from the server catalog and
+    // submitted as a REAL plan request (lead + team email)
+    const actNames = parseNames(q.acts);
+    for (const name of actNames) {
       const p = priceForActivity(name);
-      if (p != null) lines.push({ n: name, m: `Activity · ${p.toLocaleString("en-US")} MXN/person × ${n}`, a: p * n });
+      if (p != null) lines.push({ n: name, m: `Activity · per person × ${n}`, a: p * n });
       else lines.push({ n: name, m: "On request — we’ll quote you personally", a: 0 });
+    }
+    if (actNames.length) {
+      payload = { kind: "plan", acts: actNames, people: n, dates: q.dates };
     }
   }
 
   return (
     <div className="pg-checkout">
-      <CheckoutClient lines={lines} currency="MXN" dates={dates} payload={payload} />
+      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} />
     </div>
   );
 }

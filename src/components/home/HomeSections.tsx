@@ -151,13 +151,14 @@ export interface ExpCardData {
   name: string;
   sub: string;
   img: string | null;
-  /** per-person MXN — rendered in the guest's display currency (USD default) */
+  /** per-person price in the tour's NATIVE currency */
   priceMXN: number | null;
+  currency: "MXN" | "USD";
 }
 
 export function PopularExperiences({ items = [] }: { items?: ExpCardData[] }) {
   const router = useRouter();
-  const { fromMXN } = useCurrency();
+  const { fromMXN, fromUSD } = useCurrency();
   if (items.length > 0) {
     return (
       <section className="pop-sec wrap">
@@ -173,7 +174,7 @@ export function PopularExperiences({ items = [] }: { items?: ExpCardData[] }) {
             <article className="exp" key={i} onClick={() => router.push("/tours")} style={{ cursor: "pointer" }}>
               <div className={`exp-ph e${(i % 4) + 1}`} style={e.img ? { position: "relative", overflow: "hidden" } : undefined}>
                 {e.img && <Image src={e.img} alt="" fill sizes="300px" style={{ objectFit: "cover" }} />}
-                <span className="exp-price" style={{ position: "absolute" }}>{e.priceMXN != null ? <>from {fromMXN(e.priceMXN)}</> : "on request"}</span>
+                <span className="exp-price" style={{ position: "absolute" }}>{e.priceMXN != null ? <>from {e.currency === "USD" ? fromUSD(e.priceMXN) : fromMXN(e.priceMXN)}</> : "on request"}</span>
               </div>
               <div className="exp-b">
                 <h4>{e.name}</h4>

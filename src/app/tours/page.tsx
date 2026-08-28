@@ -22,6 +22,7 @@ function toCard(t: Tour): TourCardData {
     dur: t.durationLabel,
     desc: t.description,
     priceMXN: t.priceCents > 0 ? Math.round(t.priceCents / 100) : null,
+    currency: t.currency === "USD" ? "USD" as const : "MXN" as const,
     groupPrices: t.groupPrices,
     img: t.photoUrl,
     park: t.category === "park",

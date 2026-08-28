@@ -29,7 +29,7 @@ async function buildKnowledge(): Promise<string> {
         where l.status = 'published' order by l.city, l.title`,
     ),
     db.query(
-      `select title, city, category, price_cents, duration_label
+      `select title, city, category, price_cents, currency, duration_label
          from tours where status = 'published' order by category, title limit 60`,
     ),
     getSetting("page_faq"),
@@ -45,9 +45,14 @@ async function buildKnowledge(): Promise<string> {
     return `- ${h.title} — ${h.city}${h.country === "EG" ? ", Egypt" : h.country === "US" ? ", Florida" : ", Mexico"} · sleeps ${h.max_guests} · ${h.bedrooms} BR · min ${h.min_stay} nights${allIn ? ` · from ~$${allIn} USD/night all-in` : ""}${h.instant_book ? " · instant book" : ""}${h.allow_pets ? " · pets OK" : ""} · page: /stays/${h.slug}`;
   });
 
-  const tourLines = tours.rows.map((t) =>
-    `- ${t.title}${t.city ? ` (${t.city})` : ""} · ${t.category}${t.price_cents > 0 ? ` · from ~$${usd(t.price_cents / 100)} USD ($${Math.round(t.price_cents / 100)} MXN)` : " · price on request"}${t.duration_label ? ` · ${t.duration_label}` : ""}`,
-  );
+  const tourLines = tours.rows.map((t) => {
+    const price = t.price_cents > 0
+      ? (t.currency === "USD"
+          ? ` · $${Math.round(t.price_cents / 100)} USD/person`
+          : ` · from ~$${usd(t.price_cents / 100)} USD ($${Math.round(t.price_cents / 100)} MXN)`)
+      : " · price on request";
+    return `- ${t.title}${t.city ? ` (${t.city})` : ""} · ${t.category}${price}${t.duration_label ? ` · ${t.duration_label}` : ""}`;
+  });
 
   const faqLines = faq.items.map((f) => `Q: ${f.q}\nA: ${f.a}`);
 
@@ -84,7 +89,7 @@ export async function getSystemPrompt(): Promise<string> {
     `- BOOKING: you complete bookings by preparing checkout. Once the guest confirms home + dates + guests and the availability check passes, give them the bookingLink from the tool result and say: opening that link shows the exact price breakdown and reserves the dates — no charge is taken until the booking is confirmed. Never claim you booked something yourself.`,
     `- Base prices in the knowledge are estimates ("from"); tools give exact totals.`,
     `- TOUR RECOMMENDATIONS: before recommending tours, ask (if not already known) how many people are going and the kids' ages. Then call get_tours_for_group with the group size and pick 2-3 tours that genuinely fit: use the descriptions/highlights to judge age suitability (gentle beach/park days for small kids; longer adventure days for teens/adults), respect min/max group limits, and use the group-tier total when one exists (else per-person × group). Point them to /tours to book, and mention park tickets need at least a day's notice if the description says so.`,
-    `- CURRENCY: quote every price in USD by default (use the tools' USD fields). Tours are CHARGED in MXN — add the MXN amount in parentheses for tour totals. If the guest asks in pesos or clearly prefers MXN, quote MXN first instead.`,
+    `- CURRENCY: quote every price in USD by default (use the tools' USD fields). Most tours are CHARGED in MXN — for those add the MXN amount in parentheses; tours listed in USD are charged in USD (no MXN needed). If the guest asks in pesos, quote MXN first instead.`,
     `- When you mention a home or page, give its path (e.g. /stays/casa-selva) so the site can link it.`,
     `- Payment questions: card via Stripe, PayPal, Zelle, bank wire; InstaPay from Egypt. Deposits: a security deposit may apply — never call it refundable, just "security deposit".`,
     `- TALK TO A HUMAN: the moment a guest asks for a human, an agent, a real person, or seems frustrated, stop assisting and give the WhatsApp link (https://wa.me/${contact.whatsapp}) — say a real person replies within minutes. Same for anything personal: existing booking changes, complaints, discounts beyond listed coupons, urgent matters.`,

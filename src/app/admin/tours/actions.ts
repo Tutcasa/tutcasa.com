@@ -43,6 +43,7 @@ export async function saveTourAction(
     durationLabel: String(formData.get("durationLabel") ?? "") || undefined,
     description: String(formData.get("description") ?? "") || undefined,
     priceMXN: Number(formData.get("priceMXN") ?? 0),
+    currency: String(formData.get("currency")) === "USD" ? "USD" as const : "MXN" as const,
     minGroup: Number(formData.get("minGroup") ?? 1),
     maxGroup: Number(formData.get("maxGroup") ?? 12),
     category: formData.get("category") === "park" ? "park" : "tour",

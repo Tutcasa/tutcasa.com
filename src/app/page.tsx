@@ -61,6 +61,7 @@ export default async function HomePage() {
       sub: `${t.durationLabel || "Full day"} · ${t.city ?? "Riviera Maya"}`,
       img: t.photoUrl,
       priceMXN: t.priceCents > 0 ? Math.round(t.priceCents / 100) : null,
+      currency: t.currency === "USD" ? "USD" as const : "MXN" as const,
     }));
   // the admin's "featured" toggle decides the homepage strip
   const featured: CasaCardData[] = listings

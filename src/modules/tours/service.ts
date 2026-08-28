@@ -77,7 +77,8 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
 
   // add-ons are per-person, priced from OUR catalog (client names only)
   const { priceForActivity } = await import("./addons");
-  const addonCents = (req.addons ?? []).slice(0, 12).reduce((sum, nm) => {
+  // add-ons are MXN partner activities — they can only ride MXN tours
+  const addonCents = tour.currency !== "MXN" ? 0 : (req.addons ?? []).slice(0, 12).reduce((sum, nm) => {
     const p = priceForActivity(String(nm));
     return p != null ? sum + Math.round(p * 100) * req.groupSize : sum;
   }, 0);
@@ -97,7 +98,7 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     tourTitle: tour.title,
     tourDate: req.tourDate,
     groupSize: req.groupSize,
-    totalLabel: fmtMXN(total),
+    totalLabel: tour.currency === "MXN" ? fmtMXN(total) : `$${Math.round(total / 100).toLocaleString("en-US")} ${tour.currency}`,
     guestName: name,
     guestEmail: email,
     guestPhone: req.guestPhone,
@@ -152,9 +153,11 @@ export async function listTourBookings(): Promise<TourBooking[]> {
 export async function upsertTour(input: {
   id?: string; title: string; subtitle?: string; city?: string;
   durationLabel?: string; description?: string; priceMXN: number;
+  currency?: "MXN" | "USD";
   minGroup: number; maxGroup: number; category: "tour" | "park";
   status: "draft" | "published" | "archived";
 }): Promise<{ ok: boolean; error?: string }> {
+  const currency = input.currency === "USD" ? "USD" : "MXN";
   const slugBase = input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   if (!input.title.trim() || input.priceMXN < 0) return { ok: false, error: "INVALID" };
   const db = getDb();
@@ -162,22 +165,24 @@ export async function upsertTour(input: {
     await db.query(
       `update tours set title=$2, subtitle=$3, city=$4, duration_label=$5,
          description=$6, price_cents=$7, min_group=$8, max_group=$9,
-         category=$10, status=$11 where id=$1`,
+         category=$10, status=$11,
+         currency = case when source='amanah' then currency else $12 end
+       where id=$1`,
       [input.id, input.title, input.subtitle ?? null, input.city ?? null,
        input.durationLabel ?? null, input.description ?? null,
        Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
-       input.category, input.status],
+       input.category, input.status, currency],
     );
   } else {
     await db.query(
       `insert into tours (slug, title, subtitle, city, duration_label,
          description, price_cents, currency, min_group, max_group, category, status)
-       values ($1,$2,$3,$4,$5,$6,$7,'MXN',$8,$9,$10,$11)
+       values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11)
        on conflict (slug) do nothing`,
       [slugBase, input.title, input.subtitle ?? null, input.city ?? null,
        input.durationLabel ?? null, input.description ?? null,
        Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
-       input.category, input.status],
+       input.category, input.status, currency],
     );
   }
   return { ok: true };

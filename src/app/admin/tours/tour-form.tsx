@@ -39,16 +39,23 @@ export function TourForm({ tour }: { tour?: Tour }) {
           <input name="subtitle" defaultValue={tour?.subtitle ?? ""} className={inputCls} />
         </label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-bold">CITY
           <input name="city" defaultValue={tour?.city ?? ""} className={inputCls} />
         </label>
         <label className="text-xs font-bold">DURATION LABEL
           <input name="durationLabel" placeholder="e.g. Full day" defaultValue={tour?.durationLabel} className={inputCls} />
         </label>
-        <label className="text-xs font-bold">PRICE (MXN / person) *
+        <label className="text-xs font-bold">PRICE (per person) *
           <input name="priceMXN" type="number" min="0" step="1" required
                  defaultValue={tour ? tour.priceCents / 100 : ""} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">CURRENCY
+          <select name="currency" defaultValue={tour?.currency ?? "MXN"} className={inputCls}
+            disabled={tour?.source === "amanah"}>
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+          </select>
         </label>
       </div>
       <label className="text-xs font-bold">DESCRIPTION

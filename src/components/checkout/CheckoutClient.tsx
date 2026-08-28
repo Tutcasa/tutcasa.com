@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
+import { submitPlanRequest } from "@/app/leads-actions";
 import { reserveTourAction } from "@/app/tours/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
 
@@ -24,7 +25,8 @@ export interface CheckoutLine {
 export type CheckoutPayload =
   | { kind: "stay"; slug: string; ci: string; co: string; guests: number }
   | { kind: "tour"; slug: string; date: string; groupSize: number; addons?: string[]; notes?: string }
-  | { kind: "none" }; // demo-style preview confirm (acts-only carts)
+  | { kind: "plan"; acts: string[]; people: number; dates?: string } // build-your-own request
+  | { kind: "none" }; // demo-style preview confirm
 
 /** Deposit split + security-deposit info, display units. */
 export interface CheckoutSchedule {
@@ -132,6 +134,26 @@ export function CheckoutClient({
     if (payload.kind === "none") {
       if (!agreed) { setError("Please read and agree to TutCasa's terms and conditions first."); return; }
       setPaid(true); window.scrollTo(0, 0); return;
+    }
+    if (payload.kind === "plan") {
+      const nm = guestName.trim();
+      const okMail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+      if (!nm || !okMail) { setError("Please add your name and a valid email."); return; }
+      if (!phone.trim()) { setError("Please add your phone number with country code."); return; }
+      if (!agreed) { setError("Please read and agree to TutCasa's terms and conditions first."); return; }
+      setPaying(true);
+      try {
+        const r = await submitPlanRequest({
+          name: nm, email: email.trim(), phone: phone.trim(),
+          activities: payload.acts, people: payload.people, dates: payload.dates,
+          totalLabel: `${money(total)} ${cur}`,
+        });
+        if (r.ok) { setPaid(true); window.scrollTo(0, 0); }
+        else setError("Something went wrong — please try again.");
+      } finally {
+        setPaying(false);
+      }
+      return;
     }
     const name = guestName.trim() || ccName.trim();
     const okEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
@@ -268,12 +290,21 @@ export function CheckoutClient({
           </div>
         </div>
         <div className="paid" style={{ display: paid ? "block" : "none" }}>
-          <div className="c">&#10003;</div><h2>Booking request received!</h2>
-          <p>
-            Thank you &mdash; your dates are on hold and a confirmation email is on
-            its way. <b>No payment has been taken yet</b>: our team will confirm your
-            booking and send a secure payment link for the amount due.
-          </p>
+          <div className="c">&#10003;</div>
+          <h2>{payload.kind === "plan" ? "Plan request received!" : "Booking request received!"}</h2>
+          {payload.kind === "plan" ? (
+            <p>
+              Thank you &mdash; we got your custom plan and we&rsquo;ll come back
+              within 24 hours with your exact quote. <b>Nothing is charged</b> until
+              you approve it.
+            </p>
+          ) : (
+            <p>
+              Thank you &mdash; your dates are on hold and a confirmation email is on
+              its way. <b>No payment has been taken yet</b>: our team will confirm your
+              booking and send a secure payment link for the amount due.
+            </p>
+          )}
           <div className="amt">Total to pay: {show(total)}{displayCur !== cur ? ` (charged in ${cur}: $${money(total)} ${cur})` : ""}</div>
           <Link className="btn-rosa" href="/">Back to home</Link>
         </div>

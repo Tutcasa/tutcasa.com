@@ -51,3 +51,25 @@ export async function submitReferralLead(input: {
     },
   });
 }
+
+/** Build-your-own-plan request from the tours page — lands in admin →
+    Leads and emails the team (it used to vanish into a fake confirm). */
+export async function submitPlanRequest(input: {
+  name: string; email: string; phone?: string;
+  activities: string[]; people: number; dates?: string; totalLabel?: string;
+}): Promise<{ ok: boolean }> {
+  if (!input.name?.trim() || !input.email?.trim()) return { ok: false };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`lead:${ip}`, 6, 10 * 60 * 1000)) return { ok: false };
+  return createLead({
+    kind: "contact",
+    name: input.name, email: input.email, phone: input.phone,
+    payload: {
+      type: "Custom plan request",
+      activities: input.activities.slice(0, 20).join(", "),
+      people: String(input.people),
+      dates: input.dates ?? "—",
+      estimated: input.totalLabel ?? "—",
+    },
+  });
+}
