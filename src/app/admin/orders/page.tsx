@@ -50,6 +50,7 @@ const LINES: [string, string][] = [
   ["cleaningCents", "Cleaning"],
   ["cityFeeCents", "City fee"],
   ["taxCents", "Taxes"],
+  ["securityDepositCents", "Security deposit"],
 ];
 
 export default async function AdminOrders({

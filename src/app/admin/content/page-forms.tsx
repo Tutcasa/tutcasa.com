@@ -58,16 +58,15 @@ export function PoliciesForm({ content }: { content: PoliciesContent }) {
   return (
     <form action={action} className="grid gap-4">
       <Hero hero={content.hero} />
-      {content.sections.map((sec, i) => (
-        <div key={sec.id} className="grid gap-2 border-t border-line pt-3">
-          <label className="text-xs font-bold">SECTION TITLE
-            <input name={`sec_title_${i}`} defaultValue={sec.title} className={inputCls} />
-          </label>
-          <label className="text-xs font-bold">BODY <span className="font-normal text-grey">(start a line with “- ” for a bullet, “# ” for a heading, “## ” for a subheading)</span>
-            <textarea name={`sec_body_${i}`} rows={4} defaultValue={sec.body} className={inputCls} />
-          </label>
-        </div>
-      ))}
+      <label className="text-xs font-bold">SECTIONS{" "}
+        <span className="font-normal text-grey">
+          — a line starting with &ldquo;== &rdquo; begins a new section (its title).
+          Add, remove or reorder sections freely; &ldquo;- &rdquo; makes a bullet,
+          &ldquo;# &rdquo;/&ldquo;## &rdquo; make headings inside a section.
+        </span>
+        <textarea name="sections" rows={18} className={`${inputCls} font-mono text-xs`}
+          defaultValue={content.sections.map((sec) => `== ${sec.title}\n${sec.body}`).join("\n\n")} />
+      </label>
       <SaveRow state={state} pending={pending} />
     </form>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { uploadPhotoAction, deletePhotoAction } from "./actions";
+import { uploadPhotoAction, deletePhotoAction, movePhotoAction, makeCoverPhotoAction } from "./actions";
 
 export interface AdminPhoto { id: string; url: string; alt: string }
 
@@ -32,11 +32,19 @@ export function PhotoManager({
       <h3 className="mb-3 font-display text-base font-bold">Photos</h3>
 
       {photos.length > 0 ? (
+        <>
+        <p className="mb-2 text-xs text-grey">
+          The FIRST photo is the cover (cards, homepage, search). Use the
+          arrows to arrange, ★ to make a photo the cover.
+        </p>
         <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {photos.map((p) => (
+          {photos.map((p, i) => (
             <div key={p.id} className="relative overflow-hidden rounded-xl border border-line">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.url} alt={p.alt} className="h-24 w-full object-cover" />
+              {i === 0 && (
+                <span className="absolute left-1.5 top-1.5 rounded-pill bg-rosa px-2 py-0.5 text-[10px] font-bold text-white">COVER</span>
+              )}
               <button
                 type="button"
                 aria-label="Delete photo"
@@ -50,9 +58,23 @@ export function PhotoManager({
               >
                 🗑
               </button>
+              <div className="absolute bottom-1.5 left-1.5 right-1.5 flex justify-between gap-1">
+                <button type="button" aria-label="Move photo earlier" title="Move earlier" disabled={busy || i === 0}
+                  onClick={() => start(async () => { await movePhotoAction(p.id, "up"); })}
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-xs text-white hover:bg-rosa disabled:opacity-30">←</button>
+                {i !== 0 && (
+                  <button type="button" aria-label="Make cover photo" title="Make cover" disabled={busy}
+                    onClick={() => start(async () => { await makeCoverPhotoAction(p.id); })}
+                    className="flex h-6 items-center justify-center rounded-full bg-ink/70 px-2 text-xs text-white hover:bg-rosa disabled:opacity-30">★ cover</button>
+                )}
+                <button type="button" aria-label="Move photo later" title="Move later" disabled={busy || i === photos.length - 1}
+                  onClick={() => start(async () => { await movePhotoAction(p.id, "down"); })}
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-xs text-white hover:bg-rosa disabled:opacity-30">→</button>
+              </div>
             </div>
           ))}
         </div>
+        </>
       ) : (
         <p className="mb-4 text-sm text-grey">
           No photos yet — guests currently see colored placeholders. The first

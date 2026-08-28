@@ -14,6 +14,8 @@ export interface Tour {
       it is the price authority; smallest key = minimum bookable group. */
   groupPrices: Record<string, number> | null;
   photoUrl: string | null;
+  /** 'amanah' rows sync daily; 'local' rows are the admin's own */
+  source: string;
   stops: { time: string; place: string; desc: string }[];
   minGroup: number;
   maxGroup: number;

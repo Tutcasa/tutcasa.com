@@ -76,7 +76,9 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     couponCode = cp.code;
     couponDiscountCents = cp.discountCents;
   }
-  const chargeCents = q.totalCents - couponDiscountCents;
+  // the security deposit is COLLECTED WITH THE BOOKING (returned after
+  // checkout per policy) — it joins the charge, untaxed and un-couponed
+  const chargeCents = q.totalCents - couponDiscountCents + q.securityDepositCents;
 
   const db = getDb();
   await db.query("select release_expired_holds()"); // lazy expiry
@@ -122,9 +124,9 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           securityDepositCents: q.securityDepositCents,
           couponCode,
           couponDiscountCents,
+          depositInTotal: q.securityDepositCents > 0,
           // the coupon eats the LATER balance first — whatever remains of
-          // the discounted total is collected at booking (a coupon larger
-          // than the balance must never leave money to chase later)
+          // the discounted total (plus the deposit) is collected at booking
           dueNowCents: chargeCents - Math.max(0, q.schedule.balanceCents - couponDiscountCents),
           balanceCents: Math.max(0, q.schedule.balanceCents - couponDiscountCents),
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,

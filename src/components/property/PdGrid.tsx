@@ -187,12 +187,15 @@ export function PdGrid({ p }: { p: PdData }) {
           {q.cleaningCents > 0 && <div className="row"><span>Cleaning fee</span><span>{d(q.cleaningCents)}</span></div>}
           {q.cityFeeCents > 0 && <div className="row"><span>City fee</span><span>{d(q.cityFeeCents)}</span></div>}
           <div className="row"><span>Taxes</span><span>{d(total - netAccom - q.extraGuestFeeCents - q.cleaningCents - q.cityFeeCents)}</span></div>
+          {q.securityDepositCents > 0 && (
+            <div className="row"><span>Security deposit (held)</span><span>{d(q.securityDepositCents)}</span></div>
+          )}
           {warn}
-          <div className="tot"><span>Total (all-in)</span><span>{fromUSD(Math.round(total / 100))}</span></div>
+          <div className="tot"><span>Total (all-in)</span><span>{fromUSD(Math.round((total + q.securityDepositCents) / 100))}</span></div>
           {quote.quote.schedule.balanceCents > 0 && (
             <div className="row" style={{ color: "var(--cactus)" }}>
               <span>Due today</span>
-              <span>{fromUSD(Math.round(quote.quote.schedule.dueNowCents / 100))}</span>
+              <span>{fromUSD(Math.round((quote.quote.schedule.dueNowCents + q.securityDepositCents) / 100))}</span>
             </div>
           )}
         </>

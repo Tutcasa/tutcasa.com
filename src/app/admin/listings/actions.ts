@@ -200,8 +200,19 @@ export async function saveListingAction(
   if (!id || !title) {
     return { ok: false, message: "A title is required." };
   }
+  // page address: lowercase/dashes only; must stay unique. Critical for
+  // SEO — recreated homes should reuse the OLD site's exact slug.
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  if (slug && !/^[a-z0-9-]+$/.test(slug)) {
+    return { ok: false, message: "Page address can only use lowercase letters, numbers and dashes." };
+  }
 
   const db = getDb();
+  if (slug) {
+    const clash = await db.query(
+      "select 1 from listings where slug=$1 and id<>$2", [slug, id]);
+    if (clash.rows[0]) return { ok: false, message: "That page address is already used by another home." };
+  }
 
   // The admin enters an ADDRESS; we geocode it (OpenStreetMap) into the
   // lat/lng the public map uses. A failed lookup keeps the previous pin.
@@ -261,6 +272,7 @@ export async function saveListingAction(
        bathrooms=$11, min_stay=$12, status=$13, size_sqft=$14,
        bed_types=$15, checkin_from=$16, checkout_until=$17,
        lat=$18, lng=$19, address=$39, self_check_in=$40,
+       slug = coalesce(nullif($41, ''), slug),
        amenities=$20, house_rules=$21,
        instant_book=$22, keep_calendar_clean=$23, affiliate_url=$24,
        notify_emails=$25, cancellation_policy=$26, other_rules=$27,
@@ -308,6 +320,7 @@ export async function saveListingAction(
       Math.max(0, num(formData.get("reviewCount"))),
       address,
       on(formData.get("selfCheckIn")),
+      slug,
     ],
   );
 
@@ -613,4 +626,77 @@ export async function deleteAddonAction(addonId: string): Promise<void> {
   await requireAdmin();
   await getDb().query("delete from listing_addons where id=$1", [addonId]);
   revalidatePublic();
+}
+
+/* ------------------------------------------------------------------ */
+/* photo ordering & cover                                              */
+/* ------------------------------------------------------------------ */
+
+/** Move a photo one step left/right in the gallery order. */
+export async function movePhotoAction(photoId: string, dir: "up" | "down"): Promise<void> {
+  await requireAdmin();
+  const db = getDb();
+  const cur = await db.query<{ id: string; listing_id: string; sort: number }>(
+    "select id, listing_id, sort from listing_photos where id=$1", [photoId]);
+  const photo = cur.rows[0];
+  if (!photo) return;
+  const neighbor = await db.query<{ id: string; sort: number }>(
+    dir === "up"
+      ? "select id, sort from listing_photos where listing_id=$1 and sort < $2 order by sort desc limit 1"
+      : "select id, sort from listing_photos where listing_id=$1 and sort > $2 order by sort asc limit 1",
+    [photo.listing_id, photo.sort],
+  );
+  const other = neighbor.rows[0];
+  if (!other) return; // already at the edge
+  await db.query("update listing_photos set sort=$2 where id=$1", [photo.id, other.sort]);
+  await db.query("update listing_photos set sort=$2 where id=$1", [other.id, photo.sort]);
+  revalidatePublic();
+}
+
+/** Make a photo the cover — it becomes sort 0 and leads everywhere. */
+export async function makeCoverPhotoAction(photoId: string): Promise<void> {
+  await requireAdmin();
+  const db = getDb();
+  const cur = await db.query<{ listing_id: string }>(
+    "select listing_id from listing_photos where id=$1", [photoId]);
+  if (!cur.rows[0]) return;
+  const listingId = cur.rows[0].listing_id;
+  // resequence: chosen photo first, everything else keeps its relative order
+  await db.query(
+    `with ordered as (
+       select id, row_number() over (order by (id <> $2), sort) - 1 as new_sort
+         from listing_photos where listing_id=$1)
+     update listing_photos p set sort = o.new_sort
+       from ordered o where o.id = p.id`,
+    [listingId, photoId],
+  );
+  revalidatePublic();
+}
+
+/* ------------------------------------------------------------------ */
+/* tour photo upload (local excursions — Amanah tours sync their own)  */
+/* ------------------------------------------------------------------ */
+
+export async function uploadTourPhotoAction(formData: FormData): Promise<ListingFormState> {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, message: "Photo uploads need the Supabase service key." };
+  const tourId = String(formData.get("tourId") ?? "");
+  const file = formData.get("photo") as File | null;
+  if (!tourId || !file || file.size === 0) return { ok: false, message: "Choose an image first." };
+  if (file.size > MAX_PHOTO_BYTES) return { ok: false, message: "Image too large (max 8 MB)." };
+  if (!/^image\/(jpeg|png|webp|avif)$/.test(file.type)) {
+    return { ok: false, message: "Use a JPEG, PNG, WebP or AVIF image." };
+  }
+  const ext = file.type.split("/")[1].replace("jpeg", "jpg");
+  const path = `tours/${tourId}/${Date.now()}.${ext}`;
+  const { error } = await sb.storage.from("listing-photos")
+    .upload(path, Buffer.from(await file.arrayBuffer()), { contentType: file.type });
+  if (error) return { ok: false, message: `Upload failed: ${error.message}` };
+  const { data } = sb.storage.from("listing-photos").getPublicUrl(path);
+  await getDb().query("update tours set photo_url=$2 where id=$1", [tourId, data.publicUrl]);
+  revalidatePath("/admin/tours");
+  revalidatePath("/tours");
+  revalidatePath("/");
+  return { ok: true, message: "Photo set as the excursion's cover." };
 }

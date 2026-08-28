@@ -78,8 +78,10 @@ export async function checkStay(
     found: true,
     available: true,
     nights: q.nights,
-    totalUSD: d(q.totalCents),
-    dueNowUSD: d(q.schedule.dueNowCents),
+    // matches checkout exactly: the security deposit is collected with
+    // the booking (held, returned per policy) so it's inside the total
+    totalUSD: d(q.totalCents + q.securityDepositCents),
+    dueNowUSD: d(q.schedule.dueNowCents + q.securityDepositCents),
     balanceUSD: d(q.schedule.balanceCents),
     securityDepositUSD: q.securityDepositCents > 0 ? d(q.securityDepositCents) : undefined,
     bookingLink: `/booking?stay=${l.slug}&ci=${checkIn}&co=${checkOut}&guests=${Math.max(1, guests)}`,

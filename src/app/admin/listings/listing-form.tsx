@@ -85,6 +85,10 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
           <input name="headline" defaultValue={listing.headline} placeholder="e.g. Oceanfront" className={inputCls} />
         </label>
       </div>
+      <label className="text-xs font-bold">PAGE ADDRESS (slug) <span className="font-normal text-grey">— /stays/… · re-creating a home from the old site? Set this to EXACTLY the old page address to keep its Google ranking. Changing it later breaks existing links.</span>
+        <input name="slug" defaultValue={listing.slug} pattern="[a-z0-9-]+"
+          title="lowercase letters, numbers and dashes only" className={`${inputCls} font-mono`} />
+      </label>
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-bold">CITY
           <input name="city" defaultValue={listing.city} className={inputCls} />

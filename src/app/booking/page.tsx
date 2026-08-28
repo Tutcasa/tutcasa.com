@@ -55,14 +55,18 @@ export default async function BookingCheckoutPage({
       // tax as the closing line, sized so the lines sum exactly to the total
       const soFar = lines.reduce((a, l) => a + l.a, 0);
       lines.push({ n: "Taxes", m: "", a: d(qt.totalCents) - soFar });
+      if (qt.securityDepositCents > 0) {
+        lines.push({ n: "Security deposit", m: "held for the stay — returned per policy", a: d(qt.securityDepositCents) });
+      }
       currency = "USD";
       dates = `${q.ci} → ${q.co}`;
       payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests };
       schedule = {
+        // the deposit rides with the first payment (checkout derives
+        // "due today" = total - balance, so it lands there automatically)
         dueNow: d(qt.schedule.dueNowCents),
         balance: d(qt.schedule.balanceCents),
         balanceBy: qt.schedule.balanceDueDate?.toISOString().slice(0, 10),
-        securityDeposit: qt.securityDepositCents > 0 ? d(qt.securityDepositCents) : undefined,
       };
     }
   } else if (q.items) {

@@ -132,7 +132,7 @@ async function calendarFor(listingId: string): Promise<{
               to_char(upper(season),'YYYY-MM-DD') as to_day
          from listing_rates where listing_id=$1`, [listingId]),
     db.query(
-      `select to_char(day,'YYYY-MM-DD') as day, nightly_cents, min_stay, is_blocked
+      `select to_char(day,'YYYY-MM-DD') as day, nightly_cents, min_stay, is_blocked, note
          from listing_price_days
         where listing_id=$1 and day >= $2::date and day < $3::date`,
       [listingId, start.toISOString().slice(0, 10), end.toISOString().slice(0, 10)]),
@@ -165,7 +165,7 @@ async function calendarFor(listingId: string): Promise<{
     byDay[day] = {
       priceCents: season?.nightly_cents ?? base,
       override: false, minStay: null, blocked: false,
-      booked: false, blockReason: null,
+      booked: false, blockReason: null, note: null,
     };
   }
   for (const o of overrides.rows) {
@@ -174,6 +174,7 @@ async function calendarFor(listingId: string): Promise<{
     if (o.nightly_cents != null) { d.priceCents = o.nightly_cents; d.override = true; }
     if (o.min_stay != null) d.minStay = o.min_stay;
     if (o.is_blocked) d.blocked = true;
+    if (o.note) d.note = o.note;
   }
   for (const b of blockRes.rows) {
     for (const day of Object.keys(byDay)) {

@@ -111,12 +111,14 @@ export async function createManualBookingAction(
     };
   } else if (quoted.ok) {
     const q = quoted.quote;
-    totalCents = q.totalCents;
+    totalCents = q.totalCents + q.securityDepositCents;
     breakdown = {
       nights: q.nights, nightlyCents: q.nightlyCents,
       accommodationCents: q.accommodationCents, cleaningCents: q.cleaningCents,
       taxCents: q.taxCents, lengthDiscountCents: q.lengthDiscountCents,
       extraGuestFeeCents: q.extraGuestFeeCents, cityFeeCents: q.cityFeeCents,
+      securityDepositCents: q.securityDepositCents,
+      depositInTotal: q.securityDepositCents > 0,
     };
   } else {
     const why = quoted.error === "DATES_TAKEN"

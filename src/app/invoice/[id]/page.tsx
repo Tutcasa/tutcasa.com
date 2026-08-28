@@ -59,6 +59,9 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     if (p.cleaningCents > 0) lines.push({ label: "Cleaning fee", cents: p.cleaningCents });
     if (p.cityFeeCents > 0) lines.push({ label: "City fee", cents: p.cityFeeCents });
     if (p.taxCents > 0) lines.push({ label: "Taxes", cents: p.taxCents });
+    if (p.depositInTotal && p.securityDepositCents > 0) {
+      lines.push({ label: "Security deposit (held)", cents: p.securityDepositCents });
+    }
     return {
       invoiceNo: String(b.invoice_no ?? ""), createdAt: b.created_at, status: b.status,
       guestName: b.guest_name, guestEmail: b.guest_email,
@@ -74,7 +77,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
         ? Math.max(0, b.total_cents - Math.min(p.dueNowCents, b.total_cents))
         : (p.balanceCents ?? null),
       balanceDueDate: p.balanceDueDate ? String(p.balanceDueDate).slice(0, 10) : null,
-      securityDepositCents: p.securityDepositCents ?? 0,
+      securityDepositCents: p.depositInTotal ? 0 : (p.securityDepositCents ?? 0),
     };
   }
 

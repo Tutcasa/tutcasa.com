@@ -20,6 +20,7 @@ export interface AdminDay {
   blocked: boolean;        // blocked via price-days override
   booked: boolean;         // covered by a pending/confirmed booking
   blockReason: string | null; // covered by an availability_block
+  note: string | null;     // admin note pinned to this date
 }
 
 export interface AdminBlock {
@@ -124,12 +125,13 @@ export function CalendarEditor({
                 key={date}
                 disabled={past}
                 onClick={() => pick(date)}
-                title={
+                title={[
                   info?.booked ? "Booked"
                   : info?.blockReason ? `Blocked (${info.blockReason})`
                   : info?.blocked ? "Blocked (calendar)"
-                  : info?.override ? "Custom price" : undefined
-                }
+                  : info?.override ? "Custom price" : "",
+                  info?.note ? `Note: ${info.note}` : "",
+                ].filter(Boolean).join(" — ") || undefined}
                 className={`flex min-h-[54px] flex-col items-center justify-center rounded-lg border-[1.5px] p-1 text-xs
                   ${past ? "cursor-default border-transparent text-grey/40"
                     : inRange(date) ? "border-rosa bg-rosa/10 font-bold"
@@ -146,6 +148,9 @@ export function CalendarEditor({
                 {!past && info?.minStay ? (
                   <span className="text-[9px] text-grey">{info.minStay}n min</span>
                 ) : null}
+                {info?.note ? (
+                  <span className="text-[9px] leading-none" aria-label={`Note: ${info.note}`}>&#128221;</span>
+                ) : null}
               </button>
             );
           })}
@@ -155,6 +160,7 @@ export function CalendarEditor({
           <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-grey/15 align-middle" />blocked</span>
           <span><span className="mr-1 inline-block h-2.5 w-2.5 rounded-sm border border-rosa bg-rosa/10 align-middle" />selected</span>
           <span className="font-extrabold text-rosa">$ bold</span> = custom price
+          <span>&#128221; = has a note (hover to read)</span>
         </div>
       </div>
 
@@ -163,7 +169,7 @@ export function CalendarEditor({
         <div className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey">
           Set prices &amp; rules for a date range <span className="font-normal normal-case">(click days above or type dates)</span>
         </div>
-        <form action={applyAction} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+        <form action={applyAction} className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
           <input type="hidden" name="id" value={listingId} />
           <input name="from" type="date" required value={from}
                  onChange={(e) => setFrom(e.target.value)} className={inputCls} />
@@ -171,6 +177,7 @@ export function CalendarEditor({
                  onChange={(e) => setTo(e.target.value)} className={inputCls} />
           <input name="nightlyUSD" type="number" min="1" placeholder="$/night (blank = keep current)" className={inputCls} />
           <input name="minStay" type="number" min="1" placeholder="Min stay (blank = keep)" className={inputCls} />
+          <input name="note" placeholder="Note (shows on hover, blank = keep)" className={inputCls} />
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input type="checkbox" name="blocked" className="h-4 w-4 accent-rosa" /> Block these nights
           </label>

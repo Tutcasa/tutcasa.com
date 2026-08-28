@@ -11,6 +11,7 @@ interface TourRow {
   currency: string; min_group: number; max_group: number;
   group_prices: Record<string, number> | null;
   photo_url: string | null;
+  source: string | null;
   stops: { time: string; place: string; desc: string }[] | null;
   category: "tour" | "park"; status: Tour["status"];
 }
@@ -21,7 +22,7 @@ function toTour(r: TourRow): Tour {
     partner: r.partner, city: r.city, durationLabel: r.duration_label ?? "",
     description: r.description ?? "", highlights: r.highlights ?? [],
     priceCents: r.price_cents, currency: r.currency,
-    groupPrices: r.group_prices, photoUrl: r.photo_url,
+    groupPrices: r.group_prices, photoUrl: r.photo_url, source: r.source ?? 'local',
     stops: r.stops ?? [],
     minGroup: r.min_group, maxGroup: r.max_group,
     category: r.category, status: r.status,
@@ -30,7 +31,7 @@ function toTour(r: TourRow): Tour {
 
 const SELECT = `id, slug, title, subtitle, partner, city, duration_label,
   description, highlights, price_cents, currency, min_group, max_group,
-  group_prices, photo_url, stops, category, status`;
+  group_prices, photo_url, source, stops, category, status`;
 
 export async function listTours(opts?: { category?: "tour" | "park"; includeUnpublished?: boolean }): Promise<Tour[]> {
   const wh: string[] = [];

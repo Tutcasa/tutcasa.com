@@ -59,16 +59,31 @@ export async function savePoliciesAction(
   formData: FormData,
 ): Promise<ContentFormState> {
   await requireAdmin();
-  const current = await getSetting("page_policies");
-  const sections: PoliciesContent["sections"] = current.sections.map((sec, i) => ({
-    id: sec.id,
-    title: s(formData.get(`sec_title_${i}`)) || sec.title,
-    body: String(formData.get(`sec_body_${i}`) ?? sec.body).trim(),
-  }));
+  // free-form editor: a line starting with "== " begins a NEW section
+  // (its title); everything under it is that section's body. Sections
+  // can be added, removed and reordered at will.
+  const raw = String(formData.get("sections") ?? "");
+  const sections: PoliciesContent["sections"] = [];
+  let cur: { id: string; title: string; body: string[] } | null = null;
+  const slug = (t: string) =>
+    t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || `section-${sections.length + 1}`;
+  for (const line of raw.split("\n")) {
+    if (line.startsWith("== ")) {
+      if (cur) sections.push({ id: cur.id, title: cur.title, body: cur.body.join("\n").trim() });
+      const title = line.slice(3).trim();
+      cur = { id: slug(title), title, body: [] };
+    } else if (cur) {
+      cur.body.push(line);
+    }
+  }
+  if (cur) sections.push({ id: cur.id, title: cur.title, body: cur.body.join("\n").trim() });
+  if (sections.length === 0) {
+    return { ok: false, message: "Add at least one section (a line starting with \"== \" is a section title)." };
+  }
   await setSetting("page_policies", { hero: hero(formData), sections });
   revalidatePath("/policies");
   revalidatePath("/admin/content");
-  return { ok: true, message: "Help & policies updated — live now." };
+  return { ok: true, message: `Help & policies updated — ${sections.length} sections live now.` };
 }
 
 export async function saveWhyAction(
