@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/sync-ical",
-      "schedule": "30 * * * *"
+      "schedule": "30 6 * * *"
     },
     {
       "path": "/api/email-dispatch",
