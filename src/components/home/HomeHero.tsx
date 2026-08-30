@@ -24,12 +24,12 @@ const RESULTS = [
 ];
 
 const WIZ_DESTS = [
-  { v: "Playa del Carmen", ic: "\u{1F3DD}\uFE0F", label: "Playa del Carmen", small: "beachfront" },
-  { v: "Tulum", ic: "\u{1F6DB}", label: "Tulum", small: "jungle & villas" },
-  { v: "Cancún", ic: "\u{1F3D6}\uFE0F", label: "Cancún", small: "resorts" },
-  { v: "Nuba, Egypt", ic: "\u{1F3DC}\uFE0F", label: "Nuba, Egypt", small: "Nile-side" },
-  { v: "Orlando", ic: "\u{1F3A2}", label: "Orlando", small: "parks & pools" },
-  { v: "Surprise me", ic: "\u{1F3B2}", label: "Surprise me", small: "show the best" },
+  { v: "Playa del Carmen", ic: "\u{1F3DD}\uFE0F", label: "Playa del Carmen", small: "beachfront", kw: "mexico riviera maya playa" },
+  { v: "Tulum", ic: "\u{1F6DB}", label: "Tulum", small: "jungle & villas", kw: "mexico riviera maya" },
+  { v: "Cancún", ic: "\u{1F3D6}\uFE0F", label: "Cancún", small: "resorts", kw: "mexico cancun" },
+  { v: "Nuba, Egypt", ic: "\u{1F3DC}\uFE0F", label: "Nuba, Egypt", small: "Nile-side", kw: "egypt nubia nile aswan" },
+  { v: "Orlando", ic: "\u{1F3A2}", label: "Orlando", small: "parks & pools", kw: "usa united states america florida disney" },
+  { v: "Surprise me", ic: "\u{1F3B2}", label: "Surprise me", small: "show the best", kw: "" },
 ];
 
 const WIZ_VIBES = [
@@ -310,7 +310,7 @@ export function HomeHero() {
                         <div
                           key={d.v}
                           className="opt"
-                          style={(d.label + d.small).toLowerCase().includes(wizFilter.toLowerCase()) ? undefined : { display: "none" }}
+                          style={(d.label + " " + d.small + " " + d.kw).toLowerCase().includes(wizFilter.trim().toLowerCase()) ? undefined : { display: "none" }}
                           onClick={() => { setDest(d.v); goStep(2); }}
                         >
                           <span className="ic">{d.ic}</span>{d.label}<small>{d.small}</small>

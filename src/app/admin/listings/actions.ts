@@ -368,12 +368,22 @@ export async function savePricingAction(
   const monthly = modal(formData.get("monthlyMode"), formData.get("monthlyValue"));
 
   const db = getDb();
-  await db.query(
+  // update-then-insert: a listing whose base rate row is missing (e.g.
+  // rates cleaned out by hand) must still SAVE, not silently no-op
+  const upd = await db.query(
     `update listing_rates set nightly_cents=$2, cleaning_cents=$3, tax_pct=$4
      where listing_id=$1 and season is null`,
     [id, usd(formData.get("nightlyUSD")), usd(formData.get("cleaningUSD")),
      num(formData.get("taxPct"))],
   );
+  if (upd.rowCount === 0) {
+    await db.query(
+      `insert into listing_rates (listing_id, nightly_cents, cleaning_cents, tax_pct, currency)
+       values ($1, $2, $3, $4, 'USD')`,
+      [id, usd(formData.get("nightlyUSD")), usd(formData.get("cleaningUSD")),
+       num(formData.get("taxPct"))],
+    );
+  }
   await db.query(
     `insert into listing_pricing (listing_id, weekend_pct, weekend_cents,
        extra_guest_cents, extra_guest_after, cleaning_fee_mode, city_fee_cents,

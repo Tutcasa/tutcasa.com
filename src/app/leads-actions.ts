@@ -61,7 +61,7 @@ export async function submitPlanRequest(input: {
   if (!input.name?.trim() || !input.email?.trim()) return { ok: false };
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (overLimit(`lead:${ip}`, 6, 10 * 60 * 1000)) return { ok: false };
-  return createLead({
+  const res = await createLead({
     kind: "contact",
     name: input.name, email: input.email, phone: input.phone,
     payload: {
@@ -72,4 +72,36 @@ export async function submitPlanRequest(input: {
       estimated: input.totalLabel ?? "—",
     },
   });
+
+  // the guest gets a copy too - otherwise "request sent" leaves no trace
+  const apiKey = process.env.RESEND_API_KEY;
+  const guestEmail = input.email.trim();
+  if (res.ok && apiKey && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(guestEmail)) {
+    const send = () => fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>",
+        to: [guestEmail],
+        subject: "We got your custom tour request \u{1F334} \u2014 TutCasa",
+        text: [
+          `Hola ${input.name.trim()}! \u{1F44B}`,
+          "",
+          "Thanks for your custom tour request \u2014 our team is on it and will get back to you shortly (usually within a few hours) with a plan and final price.",
+          "",
+          "Your request:",
+          `\u2022 Activities: ${input.activities.slice(0, 20).join(", ") || "—"}`,
+          `\u2022 People: ${input.people}`,
+          `\u2022 Dates: ${input.dates ?? "—"}`,
+          input.totalLabel ? `\u2022 Estimated total: ${input.totalLabel}` : "",
+          "",
+          "Want to add or change anything? Just reply to this email.",
+          "",
+          "\u2014 The TutCasa family",
+        ].filter(Boolean).join("\n"),
+      }),
+    }).catch(() => {});
+    void import("next/server").then(({ after }) => after(send)).catch(() => void send());
+  }
+  return res;
 }

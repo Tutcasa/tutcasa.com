@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { getListingsRepo, type Listing } from "@/modules/listings";
 import { advertisedNightly } from "@/modules/pricing";
 import { getUnavailableRanges } from "@/modules/bookings";
@@ -75,6 +76,13 @@ export default async function ListingPage({ params, searchParams }: Props) {
     getSetting("contact"),
     advertisedNightly(listing.id).catch(() => null),
   ]);
+
+  // channel feeds older than a few hours re-pull in the background, so
+  // imported Airbnb/VRBO blocks stay fresh between the hourly cron runs
+  after(async () => {
+    const { syncStaleFeeds } = await import("@/modules/ical");
+    await syncStaleFeeds(listing.id).catch(() => {});
+  });
 
   const g = demoGradient(listing, 6);
   const start = Math.max(0, GS.indexOf(g));

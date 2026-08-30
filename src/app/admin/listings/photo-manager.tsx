@@ -5,6 +5,32 @@ import { uploadPhotoAction, deletePhotoAction, movePhotoAction, makeCoverPhotoAc
 
 export interface AdminPhoto { id: string; url: string; alt: string }
 
+/**
+ * Shrink a photo in the browser before upload. Hosting rejects request
+ * bodies over ~4.5 MB, so phone photos (3–8 MB) must come down to web
+ * size client-side — 2200px long edge / JPEG is plenty for the site.
+ */
+export async function compressPhoto(file: File): Promise<File> {
+  try {
+    if (file.size < 900_000) return file; // already small
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 2200 / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale);
+    const h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d")?.drawImage(bmp, 0, 0, w, h);
+    bmp.close();
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.82));
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.\w+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch {
+    return file; // unreadable format — let the server validate it
+  }
+}
+
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // stay under the platform's 4.5 MB cap
+
 export function PhotoManager({
   listingId,
   photos,
@@ -18,12 +44,42 @@ export function PhotoManager({
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, start] = useTransition();
 
+  // one request per photo (compressed first) — a single big multi-file
+  // request gets rejected by the host and shows "This page couldn't load"
   function upload(formData: FormData) {
     setMsg(null);
+    const files = (formData.getAll("photo") as File[]).filter((f) => f && f.size > 0);
+    const alt = String(formData.get("alt") ?? "");
+    if (files.length === 0) { setMsg({ ok: false, text: "Choose one or more images first." }); return; }
     start(async () => {
-      const res = await uploadPhotoAction(formData);
-      setMsg({ ok: res.ok, text: res.message });
-      if (res.ok) formRef.current?.reset();
+      let added = 0;
+      const errors: string[] = [];
+      for (let i = 0; i < files.length; i++) {
+        setMsg({ ok: true, text: `Uploading photo ${i + 1} of ${files.length}…` });
+        try {
+          const file = await compressPhoto(files[i]);
+          if (file.size > MAX_UPLOAD_BYTES) {
+            errors.push(`${files[i].name}: too large even after compressing`);
+            continue;
+          }
+          const fd = new FormData();
+          fd.set("listingId", String(formData.get("listingId") ?? ""));
+          fd.set("alt", alt);
+          fd.set("photo", file);
+          const res = await uploadPhotoAction(fd);
+          if (res.ok) added++;
+          else errors.push(`${files[i].name}: ${res.message}`);
+        } catch {
+          errors.push(`${files[i].name}: upload failed — check your connection and try again`);
+        }
+      }
+      if (added > 0) formRef.current?.reset();
+      setMsg({
+        ok: added > 0,
+        text: added > 0
+          ? `${added} photo${added > 1 ? "s" : ""} added.${errors.length ? ` Skipped: ${errors.join("; ")}` : ""}`
+          : errors[0] ?? "Upload failed.",
+      });
     });
   }
 

@@ -3,13 +3,19 @@
 import { useActionState } from "react";
 import { saveTourAction, type TourFormState } from "./actions";
 import { uploadTourPhotoAction } from "../listings/actions";
+import { compressPhoto } from "../listings/photo-manager";
 import type { Tour } from "@/modules/tours";
 
 const initial: TourFormState = { ok: true, message: "" };
 
 function TourPhotoUpload({ tourId }: { tourId: string }) {
   const [state, action, pending] = useActionState(
-    async (_prev: TourFormState, fd: FormData) => uploadTourPhotoAction(fd), initial);
+    async (_prev: TourFormState, fd: FormData) => {
+      // shrink in the browser first — the host rejects >4.5 MB requests
+      const file = fd.get("photo") as File | null;
+      if (file && file.size > 0) fd.set("photo", await compressPhoto(file));
+      return uploadTourPhotoAction(fd);
+    }, initial);
   return (
     <form action={action} className="flex items-center gap-2">
       <input type="hidden" name="tourId" value={tourId} />

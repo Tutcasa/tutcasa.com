@@ -3,21 +3,24 @@ import { TourForm } from "./tour-form";
 import { deleteTourAction } from "./actions";
 import { DeleteButton } from "@/components/DeleteButton";
 import { SyncButton } from "./sync-button";
+import { AdminSearch, rowMatches } from "../search-box";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminTours({
   searchParams,
-}: { searchParams: Promise<{ edit?: string }> }) {
-  const { edit } = await searchParams;
-  const tours = await listTours({ includeUnpublished: true });
-  const editing = edit ? tours.find((t) => t.id === edit) : undefined;
+}: { searchParams: Promise<{ edit?: string; q?: string }> }) {
+  const { edit, q = "" } = await searchParams;
+  const allTours = await listTours({ includeUnpublished: true });
+  const tours = allTours.filter((t) => rowMatches(q, t.title, t.city, t.category));
+  const editing = edit ? allTours.find((t) => t.id === edit) : undefined;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
       <div>
         <h1 className="mb-4 text-2xl font-extrabold">Tours &amp; parks</h1>
         <SyncButton />
+        <AdminSearch placeholder="Search by tour name, city or type…" q={q} />
         <div className="grid gap-2">
           {tours.map((t) => (
             <a
@@ -36,7 +39,7 @@ export default async function AdminTours({
                 <div className="text-xs text-grey">{t.city} · {t.durationLabel}</div>
               </div>
               <div className="whitespace-nowrap text-sm font-bold text-rosa">
-                ${(t.priceCents / 100).toLocaleString("en-US")} MXN
+                ${(t.priceCents / 100).toLocaleString("en-US")} {t.currency}
               </div>
             </a>
           ))}

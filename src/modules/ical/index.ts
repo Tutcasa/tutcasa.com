@@ -46,6 +46,7 @@ export async function buildExportFeed(token: string): Promise<{ title: string; i
     db.query(
       `select id, to_char(lower(stay),'YYYY-MM-DD') as f, to_char(upper(stay),'YYYY-MM-DD') as t
          from bookings where listing_id=$1 and status in ('pending','confirmed')
+          and not no_block
           and upper(stay) >= current_date`, [L.id]),
     db.query(
       `select id, reason, to_char(lower(span),'YYYY-MM-DD') as f, to_char(upper(span),'YYYY-MM-DD') as t
@@ -210,4 +211,21 @@ export async function syncIcalFeeds(listingId?: string): Promise<IcalSyncResult>
   }
 
   return { ok: errors.length === 0, feeds: feeds.rowCount ?? 0, imported, removed, errors };
+}
+
+/**
+ * Re-pull a listing's feeds when they haven't synced recently — called in
+ * the background whenever a guest looks at the calendar, so imported
+ * blocks stay fresh between cron runs without slowing any page down.
+ */
+export async function syncStaleFeeds(listingId: string): Promise<void> {
+  const db = getDb();
+  const stale = await db.query(
+    `select 1 from listing_ical_feeds
+      where listing_id = $1 and active
+        and (last_synced_at is null or last_synced_at < now() - interval '3 hours')
+      limit 1`,
+    [listingId],
+  );
+  if (stale.rowCount) await syncIcalFeeds(listingId);
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import {
   addCouponAction,
   toggleCouponAction,
@@ -28,6 +28,7 @@ export interface AdminCoupon {
   redeemedBookings: number;
 }
 
+const REPORT_YEARS = Array.from({ length: 4 }, (_, i) => new Date().getFullYear() - i);
 const initial: CouponFormState = { ok: true, message: "" };
 const inputCls =
   "w-full rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-rosa";
@@ -40,6 +41,8 @@ export function CouponsClient({
   listings: { id: string; title: string }[];
 }) {
   const [state, action, pending] = useActionState(addCouponAction, initial);
+  const [repYear, setRepYear] = useState("");
+  const [repMonth, setRepMonth] = useState("");
   const [busy, start] = useTransition();
 
   return (
@@ -76,8 +79,19 @@ export function CouponsClient({
         )}
       </div>
 
-      <div className="flex justify-end">
-        <a href="/admin/coupons/report"
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <select value={repYear} onChange={(e) => setRepYear(e.target.value)}
+          className="rounded-pill border-[1.5px] border-line bg-paper px-3 py-2 text-sm font-bold">
+          <option value="">All years</option>
+          {REPORT_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select value={repMonth} onChange={(e) => setRepMonth(e.target.value)} disabled={!repYear}
+          className="rounded-pill border-[1.5px] border-line bg-paper px-3 py-2 text-sm font-bold disabled:opacity-50">
+          <option value="">Whole year</option>
+          {["January","February","March","April","May","June","July","August","September","October","November","December"]
+            .map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+        </select>
+        <a href={`/admin/coupons/report${repYear ? `?year=${repYear}${repMonth ? `&month=${repMonth}` : ""}` : ""}`}
           className="rounded-pill border-[1.5px] border-line bg-paper px-4 py-2 text-sm font-bold hover:border-rosa hover:text-rosa">
           ⬇ Download usage report (CSV)
         </a>
