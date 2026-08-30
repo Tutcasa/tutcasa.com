@@ -30,6 +30,7 @@ interface InvoiceData {
   balanceCents: number | null;
   balanceDueDate: string | null;
   securityDepositCents: number;
+  amountPaidCents: number;
 }
 
 async function loadInvoice(id: string): Promise<InvoiceData | null> {
@@ -39,7 +40,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
   const stay = await db.query(
     `select b.invoice_no, b.created_at, b.status, b.guest_name, b.guest_email,
             b.guests, b.total_cents, b.currency, b.price_breakdown,
-            b.coupon_code, b.coupon_discount_cents,
+            b.coupon_code, b.coupon_discount_cents, b.amount_paid_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') as check_in,
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
             l.title, l.city
@@ -78,6 +79,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
         : (p.balanceCents ?? null),
       balanceDueDate: p.balanceDueDate ? String(p.balanceDueDate).slice(0, 10) : null,
       securityDepositCents: p.depositInTotal ? 0 : (p.securityDepositCents ?? 0),
+      amountPaidCents: b.amount_paid_cents ?? 0,
     };
   }
 
@@ -101,6 +103,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       totalCents: b.total_cents, currency: b.currency,
       dueNowCents: null, balanceCents: null, balanceDueDate: null,
       securityDepositCents: 0,
+      amountPaidCents: 0,
     };
   }
   return null;
@@ -189,6 +192,26 @@ export default async function InvoicePage({
           <p className="mt-3 text-xs text-grey">
             A security deposit of {money(inv.securityDepositCents)} applies.
           </p>
+        )}
+
+        {inv.status !== "cancelled" && inv.amountPaidCents < inv.totalCents && (
+          <div className="mt-3 rounded-xl border-[1.5px] border-rosa/40 bg-rosa/5 p-3 text-sm">
+            <div className="flex justify-between font-bold">
+              <span>Paid so far</span><span>{money(inv.amountPaidCents)}</span>
+            </div>
+            <div className="flex justify-between font-extrabold text-rosa">
+              <span>Amount due</span><span>{money(inv.totalCents - inv.amountPaidCents)} {inv.currency}</span>
+            </div>
+            <p className="mt-2 text-xs text-grey">
+              To pay, reply to your confirmation email or message us on WhatsApp
+              and we&rsquo;ll send your secure card payment link.
+            </p>
+          </div>
+        )}
+        {inv.status !== "cancelled" && inv.amountPaidCents >= inv.totalCents && inv.totalCents > 0 && (
+          <div className="mt-3 rounded-xl bg-cactus/10 p-3 text-sm font-bold text-cactus">
+            ✓ Paid in full — thank you!
+          </div>
         )}
 
         <p className="mt-6 text-xs text-grey">

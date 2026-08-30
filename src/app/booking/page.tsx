@@ -30,6 +30,7 @@ export default async function BookingCheckoutPage({
   let payload: CheckoutPayload = { kind: "none" };
 
   let schedule: CheckoutSchedule | undefined;
+  let requestToBook = false;
 
   if (q.stay && q.ci && q.co) {
     // stay checkout — price is ALWAYS recomputed server-side from the
@@ -61,6 +62,8 @@ export default async function BookingCheckoutPage({
       currency = "USD";
       dates = `${q.ci} → ${q.co}`;
       payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests };
+      // request-to-book homes take a request — no payment step at checkout
+      requestToBook = !res.listing.instantBook;
       schedule = {
         // the deposit rides with the first payment (checkout derives
         // "due today" = total - balance, so it lands there automatically)
@@ -87,7 +90,7 @@ export default async function BookingCheckoutPage({
 
   return (
     <div className="pg-checkout">
-      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} schedule={schedule} />
+      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} schedule={schedule} requestToBook={requestToBook} />
     </div>
   );
 }

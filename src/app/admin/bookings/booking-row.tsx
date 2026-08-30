@@ -5,6 +5,7 @@ import type { Booking, BookingStatus } from "@/modules/bookings";
 import {
   setBookingStatusAction,
   updateBookingAction,
+  recordPaymentAction,
   type BookingFormState,
 } from "./actions";
 import { DeleteBookingButton } from "../delete-button";
@@ -45,6 +46,7 @@ export function BookingRow({
   const [open, setOpen] = useState(false);
   const [busy, start] = useTransition();
   const [state, action, pending] = useActionState(updateBookingAction, initial);
+  const [payState, payAction, payPending] = useActionState(recordPaymentAction, initial);
   const nextOpts = NEXT[b.status] ?? [];
 
   return (
@@ -73,7 +75,11 @@ export function BookingRow({
             </span>
           )}
         </td>
-        <td className="p-3 font-bold">{money(b.totalCents)}</td>
+        <td className="p-3 font-bold">{money(b.totalCents)}
+          {(b.amountPaidCents ?? 0) > 0 && (
+            <div className="text-[10px] font-semibold text-cactus">paid {money(b.amountPaidCents ?? 0)}</div>
+          )}
+        </td>
         <td className="p-3">
           <span className={`rounded-pill px-2.5 py-1 text-xs font-bold ${BADGE[b.status]}`}>{b.status}</span>
           {b.status === "pending" && b.holdExpiresAt && (
@@ -153,6 +159,19 @@ export function BookingRow({
                   </span>
                 )}
               </div>
+            </form>
+            <form action={payAction} className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+              <input type="hidden" name="id" value={b.id} />
+              <span className="text-xs font-bold">RECORD PAYMENT</span>
+              <input name="amountUSD" type="number" min="0.01" step="0.01" required
+                     placeholder="Amount (USD)" className={`${inputCls} w-40`} />
+              <button disabled={payPending}
+                className="rounded-pill border-[1.5px] border-cactus px-4 py-2 text-xs font-bold text-cactus hover:bg-cactus hover:text-white disabled:opacity-50">
+                {payPending ? "Recording…" : "Record & send receipts"}
+              </button>
+              {payState.message && (
+                <span className={`text-xs font-semibold ${payState.ok ? "text-cactus" : "text-rosa-deep"}`}>{payState.message}</span>
+              )}
             </form>
           </td>
         </tr>

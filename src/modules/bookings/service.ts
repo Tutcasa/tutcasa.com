@@ -96,6 +96,10 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     return { ok: false, error: "DATES_TAKEN" };
   }
 
+  // Request-to-book homes take a REQUEST, not a payment hold: the owner
+  // reviews it, so it must never auto-expire after HOLD_MINUTES.
+  const isRequest = !listing.instantBook;
+
   try {
     const res = await db.query<{ id: string }>(
       `insert into bookings
@@ -103,12 +107,14 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           status, hold_expires_at, total_cents, currency, price_breakdown, source,
           coupon_code, coupon_discount_cents, no_block)
        values ($1, $2, $3, $4, daterange($5::date, $6::date), $7,
-               'pending', now() + ($8 || ' minutes')::interval,
+               'pending', case when $8::text is null then null
+                               else now() + ($8 || ' minutes')::interval end,
                $9, $10, $11, 'direct', $12, $13, $14)
        returning id`,
       [
         listing.id, name, email, req.guestPhone?.trim() || null,
-        req.checkIn, req.checkOut, req.guests, String(HOLD_MINUTES),
+        req.checkIn, req.checkOut, req.guests,
+        isRequest ? null : String(HOLD_MINUTES),
         chargeCents, q.currency,
         JSON.stringify({
           nights: q.nights,
@@ -124,6 +130,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           securityDepositCents: q.securityDepositCents,
           couponCode,
           couponDiscountCents,
+          requestToBook: isRequest,
           depositInTotal: q.securityDepositCents > 0,
           // the coupon eats the LATER balance first — whatever remains of
           // the discounted total (plus the deposit) is collected at booking
@@ -180,6 +187,7 @@ interface BookingRow {
   guest_phone: string | null;
   source: string;
   invoice_no: number | null;
+  amount_paid_cents: number | null;
   partner_ref: string | null;
   created_at: string;
 }
@@ -194,7 +202,7 @@ export async function listBookings(): Promise<Booking[]> {
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
             b.guests, b.status, b.hold_expires_at, b.total_cents,
             b.currency, b.price_breakdown, b.guest_name, b.guest_email, b.guest_phone,
-            b.source, b.partner_ref, b.invoice_no, b.created_at
+            b.source, b.partner_ref, b.invoice_no, b.amount_paid_cents, b.created_at
        from bookings b join listings l on l.id = b.listing_id
       order by b.created_at desc limit 200`,
   );
@@ -203,7 +211,7 @@ export async function listBookings(): Promise<Booking[]> {
     listingCity: r.city, checkIn: r.check_in, checkOut: r.check_out,
     guests: r.guests, status: r.status, holdExpiresAt: r.hold_expires_at,
     totalCents: r.total_cents, currency: r.currency,
-    source: r.source, partnerRef: r.partner_ref, invoiceNo: String(r.invoice_no ?? ''),
+    source: r.source, partnerRef: r.partner_ref, invoiceNo: String(r.invoice_no ?? ''), amountPaidCents: r.amount_paid_cents ?? 0,
     priceBreakdown: r.price_breakdown, guestName: r.guest_name,
     guestEmail: r.guest_email, guestPhone: r.guest_phone, createdAt: r.created_at,
   }));
@@ -219,7 +227,7 @@ export async function getBooking(id: string): Promise<Booking | null> {
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
             b.guests, b.status, b.hold_expires_at, b.total_cents,
             b.currency, b.price_breakdown, b.guest_name, b.guest_email, b.guest_phone,
-            b.source, b.partner_ref, b.invoice_no, b.created_at
+            b.source, b.partner_ref, b.invoice_no, b.amount_paid_cents, b.created_at
        from bookings b join listings l on l.id = b.listing_id
       where b.id = $1`,
     [id],
@@ -241,6 +249,7 @@ export async function getBooking(id: string): Promise<Booking | null> {
     source: r.source,
     partnerRef: r.partner_ref,
     invoiceNo: String(r.invoice_no ?? ''),
+    amountPaidCents: r.amount_paid_cents ?? 0,
     priceBreakdown: r.price_breakdown,
     guestName: r.guest_name,
     guestEmail: r.guest_email,

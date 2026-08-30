@@ -37,6 +37,8 @@ export interface Booking {
   source: string;
   partnerRef: string | null;
   invoiceNo: string;
+  /** cents already collected (manual records + partner/Stripe payments) */
+  amountPaidCents?: number;
   createdAt: string;
 }
 

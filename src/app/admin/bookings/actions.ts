@@ -85,6 +85,42 @@ export async function deleteBookingAction(id: string): Promise<void> {
   revalidatePath("/admin/orders");
 }
 
+/**
+ * Record a payment on a booking (bank transfer, card link, cash…).
+ * Adds to amount_paid and sends the payment receipts to the guest and
+ * the team — step 5/6 of the request-to-book flow.
+ */
+export async function recordPaymentAction(
+  _prev: BookingFormState,
+  formData: FormData,
+): Promise<BookingFormState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const amountUSD = Number(formData.get("amountUSD") ?? 0);
+  if (!id || !Number.isFinite(amountUSD) || amountUSD <= 0) {
+    return { ok: false, message: "Enter the amount that was paid." };
+  }
+  const res = await getDb().query<{ amount_paid_cents: number; total_cents: number }>(
+    `update bookings set
+       amount_paid_cents = coalesce(amount_paid_cents, 0) + $2,
+       payment_provider = coalesce(payment_provider, 'manual')
+     where id = $1 and status in ('pending','confirmed','completed')
+     returning amount_paid_cents, total_cents`,
+    [id, Math.round(amountUSD * 100)],
+  );
+  const row = res.rows[0];
+  if (!row) return { ok: false, message: "Booking not found (or cancelled)." };
+  const { fireAutomations } = await import("@/modules/emails/dispatch");
+  fireAutomations(["guest_payment_receipt", "admin_payment_receipt"], id);
+  revalidate();
+  const paid = Math.round(row.amount_paid_cents / 100);
+  const total = Math.round(row.total_cents / 100);
+  return {
+    ok: true,
+    message: `Payment recorded — $${paid.toLocaleString("en-US")} of $${total.toLocaleString("en-US")} paid. Receipts sent to the guest and the team.`,
+  };
+}
+
 /** Postgres exclusion-constraint violation (booking overlap). */
 const isOverlap = (e: unknown) =>
   typeof e === "object" && e !== null && (e as { code?: string }).code === "23P01";

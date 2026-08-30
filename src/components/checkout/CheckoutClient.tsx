@@ -59,12 +59,15 @@ export function CheckoutClient({
   dates,
   payload,
   schedule,
+  requestToBook = false,
 }: {
   lines: CheckoutLine[];
   currency: "USD" | "MXN";
   dates?: string;
   payload: CheckoutPayload;
   schedule?: CheckoutSchedule;
+  /** request-to-book home: collect a request, show NO payment step */
+  requestToBook?: boolean;
 }) {
   const [guestName, setGuestName] = useState("");
   const [email, setEmail] = useState("");
@@ -189,8 +192,8 @@ export function CheckoutClient({
       <BackBar />
       <div className="page-hero" style={{ padding: "26px 0 2px", display: paid ? "none" : undefined }}>
         <div className="sun"></div>
-        <div className="eyebrow">Secure checkout</div>
-        <h1>Review &amp; pay</h1>
+        <div className="eyebrow">{requestToBook ? "Booking request" : "Secure checkout"}</div>
+        <h1>{requestToBook ? "Review & request" : "Review & pay"}</h1>
       </div>
       <div className="co-wrap">
         <div className="co-empty" style={{ display: empty && !paid ? "block" : "none" }}>
@@ -234,7 +237,7 @@ export function CheckoutClient({
             {schedule && schedule.balance > 0 && (
               <>
                 <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>
-                  <span>Due today</span><span>{show(total - Math.max(0, schedule.balance - discount))}</span>
+                  <span>{requestToBook ? "Due once approved" : "Due today"}</span><span>{show(total - Math.max(0, schedule.balance - discount))}</span>
                 </div>
                 <div className="co-row">
                   <span>Balance{schedule.balanceBy ? ` — due by ${schedule.balanceBy}` : ""}</span>
@@ -250,22 +253,30 @@ export function CheckoutClient({
             ) : null}
           </div>
           <div className="co-card">
-            <h3>Payment</h3>
-            <div className="co-sub">Card details are handled by Stripe. TutCasa never sees your card number.</div>
+            <h3>{requestToBook ? "Your details" : "Payment"}</h3>
+            <div className="co-sub">
+              {requestToBook
+                ? "No payment now — the owner reviews your request first. You'll get a secure payment link once it's approved."
+                : "Card details are handled by Stripe. TutCasa never sees your card number."}
+            </div>
             <div className="co-fld"><label>Guest full name</label><input placeholder="Maria Lopez" value={guestName} onChange={(e) => setGuestName(e.target.value)} /></div>
             <div className="co-fld"><label>Email for confirmation</label><input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="co-fld"><label>Phone / WhatsApp (with country code)</label><input type="tel" placeholder="+52 984 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-            <div className="co-fld"><label>Name on card</label><input placeholder="MARIA LOPEZ" value={ccName} onChange={(e) => setCcName(e.target.value)} /></div>
-            <div className="co-fld"><label>Card number</label><input inputMode="numeric" placeholder="1234 1234 1234 1234" value={ccNum} onChange={(e) => setCcNum(fmtCard(e.target.value))} /></div>
-            <div className="co-two">
-              <div className="co-fld"><label>Expiry</label><input inputMode="numeric" placeholder="MM / YY" value={ccExp} onChange={(e) => setCcExp(fmtExp(e.target.value))} /></div>
-              <div className="co-fld"><label>CVC</label><input inputMode="numeric" placeholder="123" value={ccCvc} onChange={(e) => setCcCvc(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} /></div>
-            </div>
-            <div className="co-fld"><label>Country</label>
-              <select value={country} onChange={(e) => setCountry(e.target.value)}>
-                <option>Mexico</option><option>United States</option><option>Canada</option><option>Egypt</option><option>United Kingdom</option><option>France</option>
-              </select>
-            </div>
+            {!requestToBook && (
+              <>
+                <div className="co-fld"><label>Name on card</label><input placeholder="MARIA LOPEZ" value={ccName} onChange={(e) => setCcName(e.target.value)} /></div>
+                <div className="co-fld"><label>Card number</label><input inputMode="numeric" placeholder="1234 1234 1234 1234" value={ccNum} onChange={(e) => setCcNum(fmtCard(e.target.value))} /></div>
+                <div className="co-two">
+                  <div className="co-fld"><label>Expiry</label><input inputMode="numeric" placeholder="MM / YY" value={ccExp} onChange={(e) => setCcExp(fmtExp(e.target.value))} /></div>
+                  <div className="co-fld"><label>CVC</label><input inputMode="numeric" placeholder="123" value={ccCvc} onChange={(e) => setCcCvc(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} /></div>
+                </div>
+                <div className="co-fld"><label>Country</label>
+                  <select value={country} onChange={(e) => setCountry(e.target.value)}>
+                    <option>Mexico</option><option>United States</option><option>Canada</option><option>Egypt</option><option>United Kingdom</option><option>France</option>
+                  </select>
+                </div>
+              </>
+            )}
             <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "13px", margin: "4px 0 10px", cursor: "pointer" }}>
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ marginTop: 2 }} />
               <span>
@@ -281,22 +292,35 @@ export function CheckoutClient({
             <button className="co-pay" onClick={pay} disabled={paying}>
               <span>
                 {paying
-                  ? "Holding your dates…"
-                  : `Reserve — ${show(schedule && schedule.balance > 0 ? total - Math.max(0, schedule.balance - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
+                  ? (requestToBook ? "Sending your request…" : "Holding your dates…")
+                  : requestToBook
+                    ? "Send booking request — no charge now"
+                    : `Reserve — ${show(schedule && schedule.balance > 0 ? total - Math.max(0, schedule.balance - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
               </span>
             </button>
-            <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
-            <div className="co-note">Preview mode: this shows the full checkout flow. The live Stripe charge is switched on at the backend step &mdash; no real payment is taken here.</div>
+            {!requestToBook && (
+              <>
+                <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
+                <div className="co-note">Preview mode: this shows the full checkout flow. The live Stripe charge is switched on at the backend step &mdash; no real payment is taken here.</div>
+              </>
+            )}
           </div>
         </div>
         <div className="paid" style={{ display: paid ? "block" : "none" }}>
           <div className="c">&#10003;</div>
-          <h2>{payload.kind === "plan" ? "Plan request received!" : "Booking request received!"}</h2>
+          <h2>{payload.kind === "plan" ? "Plan request received!" : requestToBook ? "Booking request sent!" : "Booking request received!"}</h2>
           {payload.kind === "plan" ? (
             <p>
               Thank you &mdash; we got your custom plan and we&rsquo;ll come back
               within 24 hours with your exact quote. <b>Nothing is charged</b> until
               you approve it.
+            </p>
+          ) : requestToBook ? (
+            <p>
+              Thank you &mdash; your request is now <b>under review by the owner</b> and
+              a confirmation email of your request is on its way to your inbox.
+              <b> Nothing has been charged.</b> As soon as the owner approves it,
+              you&rsquo;ll receive an email with your secure payment link.
             </p>
           ) : (
             <p>
