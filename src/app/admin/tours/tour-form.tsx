@@ -30,7 +30,13 @@ function TourPhotoUpload({ tourId }: { tourId: string }) {
 }
 
 export function TourForm({ tour }: { tour?: Tour }) {
-  const [state, action, pending] = useActionState(saveTourAction, initial);
+  const [state, action, pending] = useActionState(
+    async (_prev: TourFormState, fd: FormData) => {
+      // shrink an attached cover photo before it travels
+      const file = fd.get("photo") as File | null;
+      if (file && file.size > 0) fd.set("photo", await compressPhoto(file));
+      return saveTourAction(_prev, fd);
+    }, initial);
   const inputCls =
     "w-full rounded-xl border-[1.5px] border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-rosa";
 
@@ -67,7 +73,7 @@ export function TourForm({ tour }: { tour?: Tour }) {
       <label className="text-xs font-bold">DESCRIPTION
         <textarea name="description" rows={3} defaultValue={tour?.description} className={inputCls} />
       </label>
-      {tour && (
+      {tour ? (
         <div className="text-xs font-bold">COVER PHOTO
           <div className="mt-1 flex items-center gap-3 font-normal">
             {tour.photoUrl ? (
@@ -84,6 +90,12 @@ export function TourForm({ tour }: { tour?: Tour }) {
             </p>
           )}
         </div>
+      ) : (
+        <label className="text-xs font-bold">COVER PHOTO
+          <input type="file" name="photo" accept="image/jpeg,image/png,image/webp,image/avif"
+                 className="mt-1 block text-sm font-normal" />
+          <span className="font-normal text-grey">Optional — uploads together with the new tour.</span>
+        </label>
       )}
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-bold">MIN GROUP

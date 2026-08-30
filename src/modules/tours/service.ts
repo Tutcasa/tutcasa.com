@@ -156,7 +156,7 @@ export async function upsertTour(input: {
   currency?: "MXN" | "USD";
   minGroup: number; maxGroup: number; category: "tour" | "park";
   status: "draft" | "published" | "archived";
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
   const currency = input.currency === "USD" ? "USD" : "MXN";
   const slugBase = input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   if (!input.title.trim() || input.priceMXN < 0) return { ok: false, error: "INVALID" };
@@ -173,19 +173,23 @@ export async function upsertTour(input: {
        Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
        input.category, input.status, currency],
     );
-  } else {
-    await db.query(
-      `insert into tours (slug, title, subtitle, city, duration_label,
-         description, price_cents, currency, min_group, max_group, category, status)
-       values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11)
-       on conflict (slug) do nothing`,
-      [slugBase, input.title, input.subtitle ?? null, input.city ?? null,
-       input.durationLabel ?? null, input.description ?? null,
-       Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
-       input.category, input.status, currency],
-    );
+    return { ok: true, id: input.id };
   }
-  return { ok: true };
+  const ins = await db.query<{ id: string }>(
+    `insert into tours (slug, title, subtitle, city, duration_label,
+       description, price_cents, currency, min_group, max_group, category, status)
+     values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11)
+     on conflict (slug) do nothing
+     returning id`,
+    [slugBase, input.title, input.subtitle ?? null, input.city ?? null,
+     input.durationLabel ?? null, input.description ?? null,
+     Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
+     input.category, input.status, currency],
+  );
+  // slug already taken → insert skipped; report the existing row instead
+  const id = ins.rows[0]?.id
+    ?? (await db.query<{ id: string }>("select id from tours where slug=$1", [slugBase])).rows[0]?.id;
+  return { ok: true, id };
 }
 
 export async function setTourBookingStatus(id: string, status: TourBooking["status"]): Promise<void> {

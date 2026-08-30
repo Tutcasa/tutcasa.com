@@ -49,11 +49,25 @@ export async function saveTourAction(
     category: formData.get("category") === "park" ? "park" : "tour",
     status: (formData.get("status") as "draft" | "published" | "archived") ?? "draft",
   });
+  if (!res.ok) {
+    return { ok: false, message: "Check the fields — title and a price of 0 or more are required." };
+  }
+
+  // a photo picked on the form uploads right after the tour exists
+  const photo = formData.get("photo") as File | null;
+  let photoNote = "";
+  if (photo && photo.size > 0 && res.id) {
+    const { uploadTourPhotoAction } = await import("../listings/actions");
+    const fd = new FormData();
+    fd.set("tourId", res.id);
+    fd.set("photo", photo);
+    const up = await uploadTourPhotoAction(fd);
+    photoNote = up.ok ? " Photo uploaded." : ` But the photo failed: ${up.message}`;
+  }
+
   revalidatePath("/admin/tours");
   revalidatePath("/tours");
-  return res.ok
-    ? { ok: true, message: id ? "Tour updated." : "Tour created." }
-    : { ok: false, message: "Check the fields — title and a price of 0 or more are required." };
+  return { ok: true, message: (id ? "Tour updated." : "Tour created.") + photoNote };
 }
 
 export async function syncAmanahAction(): Promise<{ ok: boolean; text: string }> {
