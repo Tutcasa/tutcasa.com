@@ -34,6 +34,7 @@ interface ListingRow {
   cancellation_policy: string | null;
   other_rules: string | null;
   bed_types: { count: number; type: string }[] | null;
+  faqs: { q: string; a: string }[] | null;
   address: string | null;
   rating_cached: number;
   review_count_cached: number;
@@ -53,7 +54,7 @@ const SELECT = `
   min_stay, featured, instant_book, self_check_in, keep_calendar_clean, allow_pets,
   allow_children, allow_smoking, allow_party,
   checkin_from, checkout_until, house_rules, cancellation_policy,
-  other_rules, bed_types, address,
+  other_rules, bed_types, faqs, address,
   rating_cached, review_count_cached,
   listing_rates ( nightly_cents, cleaning_cents, tax_pct, currency, season ),
   listing_photos ( url, alt, sort )
@@ -100,6 +101,7 @@ function toListing(row: ListingRow): Listing {
     cancellationPolicy: row.cancellation_policy ?? "",
     otherRules: row.other_rules ?? "",
     bedTypes: row.bed_types ?? [],
+    faqs: row.faqs ?? [],
     address: row.address,
     rating: Number(row.rating_cached),
     reviewCount: row.review_count_cached,

@@ -35,6 +35,8 @@ export interface Listing {
   cancellationPolicy: string;
   otherRules: string;
   bedTypes: { count: number; type: string }[];
+  /** admin-entered Q&A shown on the listing page */
+  faqs: { q: string; a: string }[];
   address: string | null;
   rating: number;
   reviewCount: number;

@@ -43,6 +43,7 @@ export interface PdData {
   houseRules: string;
   cancellationPolicy: string;
   otherRules: string;
+  faqs: { q: string; a: string }[];
   allowChildren: boolean;
   allowSmoking: boolean;
   allowParty: boolean;
@@ -387,6 +388,19 @@ export function PdGrid({ p }: { p: PdData }) {
             </div>
           </div>
         </div>
+        {p.faqs.length > 0 && (
+          <div className="pd-sec">
+            <h2>Frequently asked questions</h2>
+            <div className="pd-faqs">
+              {p.faqs.map((f, i) => (
+                <details key={i} className="pd-faq">
+                  <summary>{f.q}</summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <aside className="pd-book">
         <div className="pd-price">

@@ -131,6 +131,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
     houseRules: listing.houseRules,
     cancellationPolicy: listing.cancellationPolicy,
     otherRules: listing.otherRules,
+    faqs: listing.faqs,
     allowChildren: listing.allowChildren,
     allowSmoking: listing.allowSmoking,
     allowParty: listing.allowParty,

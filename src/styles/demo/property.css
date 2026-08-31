@@ -386,3 +386,12 @@ body:has([class^="pg-property"]) .wrap{padding-left:16px;padding-right:16px}
 @media(min-width:881px){
 body:has([class^="pg-property"]) .tcnav-drawer,body:has([class^="pg-property"]) .tcnav-scrim{display:none}
 }
+
+/* per-listing FAQs (admin-entered) */
+body:has([class^="pg-property"]) .pd-faqs{display:grid;gap:10px;margin-top:14px}
+body:has([class^="pg-property"]) .pd-faq{border:1.5px solid var(--line);border-radius:14px;background:#fff;padding:0 16px}
+body:has([class^="pg-property"]) .pd-faq summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:13px 0;font-weight:700;font-size:14.5px}
+body:has([class^="pg-property"]) .pd-faq summary::-webkit-details-marker{display:none}
+body:has([class^="pg-property"]) .pd-faq summary::after{content:"+";font-size:18px;font-weight:800;color:var(--rosa);flex:none}
+body:has([class^="pg-property"]) .pd-faq[open] summary::after{content:"\2212"}
+body:has([class^="pg-property"]) .pd-faq>p{margin:0;padding:0 0 14px;font-size:14px;color:var(--grey);line-height:1.55}

@@ -12,7 +12,7 @@ type RawListing = Omit<
   | "featured" | "instantBook" | "selfCheckIn" | "keepCalendarClean" | "allowPets"
   | "allowChildren" | "allowSmoking" | "allowParty"
   | "checkinFrom" | "checkoutUntil" | "houseRules" | "cancellationPolicy"
-  | "otherRules" | "bedTypes" | "address"
+  | "otherRules" | "bedTypes" | "faqs" | "address"
 >;
 const RAW: RawListing[] = [
   {
@@ -276,6 +276,7 @@ export const MOCK_LISTINGS: Listing[] = RAW.map((l) => ({
   cancellationPolicy: "",
   otherRules: "",
   bedTypes: [],
+  faqs: [],
   address: null,
 }));
 
