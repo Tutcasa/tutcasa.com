@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
+import { getDb } from "@/lib/db";
 import { getListingsRepo, type Listing } from "@/modules/listings";
 import { advertisedNightly } from "@/modules/pricing";
 import { getUnavailableRanges } from "@/modules/bookings";
@@ -70,11 +71,22 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const [unavailable, all, contact, adv] = await Promise.all([
+  const [unavailable, all, contact, adv, seasonRes] = await Promise.all([
     getUnavailableRanges(listing.id),
     repo.listPublished(),
     getSetting("contact"),
     advertisedNightly(listing.id).catch(() => null),
+    // upcoming seasonal rates, shown in the booking box so guests see
+    // holiday/high-season prices before picking dates
+    getDb().query<{ label: string; nightly_cents: number; from_day: string; to_day: string }>(
+      `select coalesce(label,'Seasonal rate') as label, nightly_cents,
+              to_char(lower(season),'YYYY-MM-DD') as from_day,
+              to_char(upper(season) - 1,'YYYY-MM-DD') as to_day
+         from listing_rates
+        where listing_id = $1 and season is not null and upper(season) > current_date
+        order by lower(season) limit 6`,
+      [listing.id],
+    ).catch(() => ({ rows: [] as { label: string; nightly_cents: number; from_day: string; to_day: string }[] })),
   ]);
 
   // channel feeds older than a few hours re-pull in the background, so
@@ -132,6 +144,12 @@ export default async function ListingPage({ params, searchParams }: Props) {
     cancellationPolicy: listing.cancellationPolicy,
     otherRules: listing.otherRules,
     faqs: listing.faqs,
+    seasons: seasonRes.rows.map((s) => ({
+      label: s.label,
+      from: s.from_day,
+      to: s.to_day,
+      allIn: Math.round((s.nightly_cents * (1 + taxPct / 100)) / 100),
+    })),
     allowChildren: listing.allowChildren,
     allowSmoking: listing.allowSmoking,
     allowParty: listing.allowParty,
