@@ -158,7 +158,7 @@ export async function createManualBookingAction(
 
   // auto-quote with the real pricing model; a typed total overrides it
   const { resolveStayQuote } = await import("@/modules/pricing/resolve");
-  const quoted = await resolveStayQuote(listing.rows[0].slug, checkIn, checkOut, guests);
+  const quoted = await resolveStayQuote(listing.rows[0].slug, checkIn, checkOut, guests, undefined, { skipAvailability: true });
   let totalCents: number;
   let breakdown: object | null = null;
   if (totalRaw !== "") {

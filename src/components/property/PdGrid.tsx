@@ -188,6 +188,16 @@ export function PdGrid({ p }: { p: PdData }) {
     const warn = nights < p.minStay
       ? <div className="row" style={{ color: "var(--rosa)" }}>Minimum stay is {p.minStay} nights</div>
       : null;
+    if (overlaps(ci, co)) {
+      return (
+        <>
+          <div className="row" style={{ color: "var(--rosa)", fontWeight: 700 }}>
+            <span>Some of those nights are blocked or already booked &mdash; pick different dates.</span>
+          </div>
+          {warn}
+        </>
+      );
+    }
     if (quote?.ok) {
       const q = quote.quote;
       const total = q.totalCents;

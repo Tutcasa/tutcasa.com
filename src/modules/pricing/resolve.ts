@@ -40,6 +40,7 @@ export async function resolveStayQuote(
   checkOut: string,
   guests: number,
   bookedAt?: Date,
+  opts?: { skipAvailability?: boolean },
 ): Promise<StayQuoteResult> {
   if (!YMD.test(checkIn) || !YMD.test(checkOut) || checkOut <= checkIn) {
     return { ok: false, error: "INVALID_DATES" };
@@ -102,6 +103,18 @@ export async function resolveStayQuote(
     });
   }
   if (nights.length < minStay) return { ok: false, error: "MIN_STAY_NOT_MET" };
+
+  // blocked ranges & existing bookings: a quote must never price dates a
+  // guest cannot actually book (admins may skip to quote over own blocks)
+  if (!opts?.skipAvailability) {
+    const clash = await db.query(
+      `select 1 from listing_unavailable_ranges($1) r
+        where daterange(r.from_date, r.to_date) && daterange($2::date, $3::date)
+        limit 1`,
+      [L.id, checkIn, checkOut],
+    );
+    if (clash.rows[0]) return { ok: false, error: "DATES_TAKEN" };
+  }
 
   const quote = computeQuote({
     nights,
