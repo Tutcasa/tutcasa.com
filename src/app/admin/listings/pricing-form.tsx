@@ -29,6 +29,7 @@ export interface AdminPricing {
   depositPct: number;
   secondPaymentDays: number;
   dynamicPricing: boolean;
+  thirdPartyCommissionPct: number;
 }
 
 export interface AdminSeason {
@@ -155,6 +156,16 @@ export function PricingForm({
             <label className="text-xs font-bold">EARLY-BIRD MIN DAYS AHEAD
               <input name="earlyBirdMinDays" type="number" min="0"
                      defaultValue={pricing.earlyBirdMinDays} className={inputCls} />
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <div className={sectionTitleCls}>Third-party marketing commission</div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-bold">COMMISSION % <span className="font-normal text-grey">(added ON TOP of the nightly — the guest pays it; shown only in your admin breakdown)</span>
+              <input name="thirdPartyCommissionPct" type="number" min="0" max="100" step="0.5"
+                     defaultValue={pricing.thirdPartyCommissionPct} className={inputCls} />
             </label>
           </div>
         </div>

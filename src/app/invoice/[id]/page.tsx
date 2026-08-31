@@ -63,7 +63,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     if (p.cityFeeCents > 0) lines.push({ label: "City fee", cents: p.cityFeeCents });
     if (p.taxCents > 0) lines.push({ label: "Taxes", cents: p.taxCents });
     if (p.depositInTotal && p.securityDepositCents > 0) {
-      lines.push({ label: "Security deposit (held)", cents: p.securityDepositCents });
+      lines.push({ label: "Security deposit", cents: p.securityDepositCents });
     }
     return {
       invoiceNo: String(b.invoice_no ?? ""), createdAt: b.created_at, status: b.status,

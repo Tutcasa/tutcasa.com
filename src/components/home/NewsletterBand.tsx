@@ -54,8 +54,16 @@ export function NewsletterBand() {
               style={{ ...fieldStyle, flex: "1 1 220px" }} />
             <input type="tel" name="phone" required placeholder="+52 984 123 4567"
               style={{ ...fieldStyle, flex: "1 1 180px" }} />
-            <button className="btn-rosa" disabled={pending} style={{ whiteSpace: "nowrap" }}>
-              {pending ? "Sending…" : "Send my coupon"}
+            <button disabled={pending}
+              style={{
+                whiteSpace: "nowrap", border: "none", cursor: "pointer",
+                background: "linear-gradient(90deg, var(--rosa, #E4326B), #F0764B)",
+                color: "#fff", fontWeight: 800, fontSize: 15,
+                borderRadius: 999, padding: "13px 28px",
+                boxShadow: "0 6px 18px rgba(228,50,107,.30)",
+                opacity: pending ? 0.6 : 1,
+              }}>
+              {pending ? "Sending…" : "Send my coupon 🎟️"}
             </button>
           </form>
         )}

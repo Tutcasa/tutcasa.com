@@ -55,7 +55,7 @@ export async function resolveStayQuote(
             p.cleaning_fee_mode, p.city_fee_cents, p.city_fee_mode,
             p.security_deposit_cents, p.weekly_discount_pct,
             p.monthly_discount_pct, p.early_bird_pct, p.early_bird_min_days,
-            p.deposit_pct, p.second_payment_days
+            p.deposit_pct, p.second_payment_days, p.third_party_commission_pct
        from listings l
        left join listing_pricing p on p.listing_id = l.id
       where l.slug = $1 and l.status in ('published','unlisted')`,
@@ -86,6 +86,14 @@ export async function resolveStayQuote(
   const seasons = ratesRes.rows.filter((r) => !r.is_base);
   const byDay = new Map(daysRes.rows.map((d) => [d.day, d]));
 
+  // third-party marketing commission: the guest's nightly is raised by
+  // the configured pct (host keeps their rate; the uplift is recorded
+  // separately for the admin/owner breakdown, never shown to guests)
+  const commissionPct = Number(L.third_party_commission_pct ?? 0);
+  const withCommission = (cents: number) =>
+    commissionPct > 0 ? Math.round(cents * (1 + commissionPct / 100)) : cents;
+  let commissionCents = 0;
+
   // night-by-night rates: per-date override → seasonal rate → base rate
   const nights: NightRate[] = [];
   let minStay: number = L.min_stay;
@@ -97,10 +105,10 @@ export async function resolveStayQuote(
     if (o?.is_blocked) return { ok: false, error: "DATES_TAKEN" };
     if (o?.min_stay != null) minStay = Math.max(minStay, o.min_stay);
     const season = seasons.find((s) => day >= s.from_day && day < s.to_day);
-    nights.push({
-      date: day,
-      nightlyCents: o?.nightly_cents ?? season?.nightly_cents ?? base.nightly_cents,
-    });
+    const hostRate = o?.nightly_cents ?? season?.nightly_cents ?? base.nightly_cents;
+    const guestRate = withCommission(hostRate);
+    commissionCents += guestRate - hostRate;
+    nights.push({ date: day, nightlyCents: guestRate });
   }
   if (nights.length < minStay) return { ok: false, error: "MIN_STAY_NOT_MET" };
 
@@ -143,6 +151,8 @@ export async function resolveStayQuote(
       secondPaymentDays: L.second_payment_days ?? 0,
     }),
   });
+
+  quote.thirdPartyCommissionCents = commissionCents;
 
   return {
     ok: true,

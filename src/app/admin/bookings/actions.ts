@@ -121,6 +121,48 @@ export async function recordPaymentAction(
   };
 }
 
+/**
+ * Set / recompute the third-party marketing commission on an EXISTING
+ * booking (e.g. it was agreed after the booking was made). Calculated
+ * from what the guest pays excluding tax (and excluding the security
+ * deposit); stored in the breakdown for the admin/owner view only —
+ * the guest total does not change.
+ */
+export async function setCommissionAction(
+  _prev: BookingFormState,
+  formData: FormData,
+): Promise<BookingFormState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const pct = Number(formData.get("commissionPct") ?? -1);
+  if (!id || !Number.isFinite(pct) || pct < 0 || pct > 100) {
+    return { ok: false, message: "Enter a commission between 0 and 100%." };
+  }
+  const res = await getDb().query<{ total_cents: number; price_breakdown: Record<string, number | boolean | null> }>(
+    "select total_cents, price_breakdown from bookings where id=$1", [id]);
+  const row = res.rows[0];
+  if (!row) return { ok: false, message: "Booking not found." };
+  const p = row.price_breakdown ?? {};
+  const basis = row.total_cents
+    - Number(p.taxCents ?? 0)
+    - (p.depositInTotal ? Number(p.securityDepositCents ?? 0) : 0);
+  const commission = Math.round(Math.max(0, basis) * (pct / 100));
+  await getDb().query(
+    `update bookings set price_breakdown =
+       coalesce(price_breakdown,'{}'::jsonb)
+       || jsonb_build_object('thirdPartyCommissionCents', $2::int,
+                             'thirdPartyCommissionPct', $3::numeric)
+     where id=$1`,
+    [id, commission, pct],
+  );
+  revalidate();
+  revalidatePath("/admin/orders");
+  return {
+    ok: true,
+    message: `Commission set: ${pct}% of $${Math.round(basis / 100).toLocaleString("en-US")} (guest total excl. tax) = $${Math.round(commission / 100).toLocaleString("en-US")}.`,
+  };
+}
+
 /** Postgres exclusion-constraint violation (booking overlap). */
 const isOverlap = (e: unknown) =>
   typeof e === "object" && e !== null && (e as { code?: string }).code === "23P01";

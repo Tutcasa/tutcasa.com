@@ -48,6 +48,12 @@ function TransferForm({
             <option value="">Choose a booking…</option>
             {bookings.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
           </select>
+          {bookings.length === 0 && (
+            <span className="mt-1 block font-normal text-rosa-deep">
+              No upcoming bookings to attach a transfer to — a transfer always
+              belongs to a stay booking. Create or confirm a booking first.
+            </span>
+          )}
         </label>
       )}
       <label className="text-xs font-bold">FULL NAME *

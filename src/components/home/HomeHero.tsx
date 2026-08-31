@@ -285,8 +285,8 @@ export function HomeHero() {
           <div className={`panel${mode === "guide" ? "" : " hidden"}`}>
             <div className="wizard">
               <div className="wz-head">
-                <div className="wz-avatar">M</div>
-                <div><b>If you need help, talk to May</b><span>&#9679; usually replies in minutes</span></div>
+                <div className="wz-avatar">TC</div>
+                <div><b>If you need help, talk to us</b><span>&#9679; usually replies in minutes</span></div>
                 <div className="wz-progress">
                   {[1, 2, 3, 4].map((i) => (
                     <i key={i} className={i <= progress ? "on" : undefined}></i>

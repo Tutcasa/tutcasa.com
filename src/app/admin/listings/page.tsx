@@ -107,6 +107,7 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
       depositPct: Number(c.deposit_pct ?? 100),
       secondPaymentDays: c.second_payment_days ?? 0,
       dynamicPricing: c.dynamic_pricing ?? false,
+      thirdPartyCommissionPct: Number(c.third_party_commission_pct ?? 0),
     },
     seasons: seasonRes.rows.map((s) => ({
       id: s.id, label: s.label, nightlyCents: s.nightly_cents,

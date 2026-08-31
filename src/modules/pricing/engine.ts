@@ -106,6 +106,8 @@ export interface Quote {
   currency: string;
   // ---- full breakdown ----
   weekendUpliftCents: number; // portion of accommodation from weekend markup
+  /** third-party marketing commission inside the accommodation (admin-only display) */
+  thirdPartyCommissionCents?: number;
   lengthDiscountCents: number;
   lengthDiscountKind: "monthly" | "weekly" | null;
   earlyBirdDiscountCents: number;

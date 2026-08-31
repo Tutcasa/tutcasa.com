@@ -390,15 +390,16 @@ export async function savePricingAction(
        city_fee_mode, security_deposit_cents, weekly_discount_pct,
        weekly_nightly_cents, monthly_discount_pct, monthly_nightly_cents,
        early_bird_pct, early_bird_min_days, deposit_pct, second_payment_days,
-       dynamic_pricing)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
+       dynamic_pricing, third_party_commission_pct)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
      on conflict (listing_id) do update set
        weekend_pct=$2, weekend_cents=$3, extra_guest_cents=$4,
        extra_guest_after=$5, cleaning_fee_mode=$6, city_fee_cents=$7,
        city_fee_mode=$8, security_deposit_cents=$9, weekly_discount_pct=$10,
        weekly_nightly_cents=$11, monthly_discount_pct=$12,
        monthly_nightly_cents=$13, early_bird_pct=$14, early_bird_min_days=$15,
-       deposit_pct=$16, second_payment_days=$17, dynamic_pricing=$18`,
+       deposit_pct=$16, second_payment_days=$17, dynamic_pricing=$18,
+       third_party_commission_pct=$19`,
     [
       id,
       weekend.pct, weekend.cents,
@@ -415,6 +416,7 @@ export async function savePricingAction(
       depositPct,
       num(formData.get("secondPaymentDays")),
       on(formData.get("dynamicPricing")),
+      num(formData.get("thirdPartyCommissionPct")),
     ],
   );
 

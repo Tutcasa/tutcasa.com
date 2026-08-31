@@ -9,7 +9,7 @@ async function bookingOptions(): Promise<BookingOption[]> {
     `select b.id, b.invoice_no, b.guest_name,
             to_char(lower(b.stay),'YYYY-MM-DD') as check_in, l.title
        from bookings b join listings l on l.id = b.listing_id
-      where b.status in ('pending','confirmed')
+      where b.status in ('pending','confirmed','completed')
         and upper(b.stay) >= current_date
       order by lower(b.stay)`,
   );

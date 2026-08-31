@@ -99,6 +99,12 @@ export default async function AdminOrders({
                     </div>
                   );
                 })}
+                {Number(o.breakdown.thirdPartyCommissionCents ?? 0) > 0 && (
+                  <div className="flex justify-between text-xs font-semibold text-terra">
+                    <span>· of which third-party marketing commission</span>
+                    <span>{fmtMoney(Number(o.breakdown.thirdPartyCommissionCents))}</span>
+                  </div>
+                )}
                 {o.couponCode && (
                   <div className="flex justify-between font-semibold text-cactus">
                     <span>Coupon {o.couponCode}</span><span>−{fmtMoney(o.couponDiscountCents)}</span>

@@ -123,7 +123,7 @@ const REVIEWS = [
   { face: "f1", init: "S", text: "“The airport pickup and WhatsApp concierge made this the easiest trip we’ve ever taken.”", who: <><b>Sarah M.</b> &middot; Toronto</>, src: "Airbnb" },
   { face: "f2", init: "J", text: "“They stocked the fridge before we landed and booked our cenote tour cheaper than any site.”", who: <><b>James &amp; Leila</b> &middot; Chicago</>, src: "Vrbo" },
   { face: "f3", init: "C", text: "“Paid by card, instant confirmation, zero surprises at checkout. Better than the photos.”", who: <><b>Camille D.</b> &middot; Montr&eacute;al</>, src: "Google" },
-  { face: "f2", init: "A", text: "“May answered every question on WhatsApp within minutes. Felt like we had a local friend.”", who: <><b>Ahmed R.</b> &middot; London</>, src: "Airbnb" },
+  { face: "f2", init: "A", text: "“TutCasa answered every question on WhatsApp within minutes. Felt like we had a local friend.”", who: <><b>Ahmed R.</b> &middot; London</>, src: "Airbnb" },
   { face: "f1", init: "M", text: "“The villa was spotless and exactly as pictured. Kids loved the pool, we loved the price.”", who: <><b>Maria &amp; Tom</b> &middot; Austin</>, src: "Google" },
   { face: "f3", init: "N", text: "“Booking direct saved us almost 20% versus the big sites for the same home. No-brainer.”", who: <><b>Nadia K.</b> &middot; Dubai</>, src: "Vrbo" },
 ];

@@ -128,6 +128,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           extraGuestFeeCents: q.extraGuestFeeCents,
           cityFeeCents: q.cityFeeCents,
           securityDepositCents: q.securityDepositCents,
+          thirdPartyCommissionCents: q.thirdPartyCommissionCents ?? 0,
           couponCode,
           couponDiscountCents,
           requestToBook: isRequest,

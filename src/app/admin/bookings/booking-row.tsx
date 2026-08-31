@@ -6,6 +6,7 @@ import {
   setBookingStatusAction,
   updateBookingAction,
   recordPaymentAction,
+  setCommissionAction,
   type BookingFormState,
 } from "./actions";
 import { DeleteBookingButton } from "../delete-button";
@@ -47,6 +48,7 @@ export function BookingRow({
   const [busy, start] = useTransition();
   const [state, action, pending] = useActionState(updateBookingAction, initial);
   const [payState, payAction, payPending] = useActionState(recordPaymentAction, initial);
+  const [comState, comAction, comPending] = useActionState(setCommissionAction, initial);
   const nextOpts = NEXT[b.status] ?? [];
 
   return (
@@ -171,6 +173,19 @@ export function BookingRow({
               </button>
               {payState.message && (
                 <span className={`text-xs font-semibold ${payState.ok ? "text-cactus" : "text-rosa-deep"}`}>{payState.message}</span>
+              )}
+            </form>
+            <form action={comAction} className="mt-2 flex flex-wrap items-center gap-2">
+              <input type="hidden" name="id" value={b.id} />
+              <span className="text-xs font-bold">3RD-PARTY COMMISSION</span>
+              <input name="commissionPct" type="number" min="0" max="100" step="0.5" required
+                     placeholder="%" className={`${inputCls} w-24`} />
+              <button disabled={comPending}
+                className="rounded-pill border-[1.5px] border-terra px-4 py-2 text-xs font-bold text-terra hover:bg-terra hover:text-white disabled:opacity-50">
+                {comPending ? "Saving…" : "Apply to breakdown"}
+              </button>
+              {comState.message && (
+                <span className={`text-xs font-semibold ${comState.ok ? "text-cactus" : "text-rosa-deep"}`}>{comState.message}</span>
               )}
             </form>
           </td>

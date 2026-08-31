@@ -186,7 +186,7 @@ const DEFAULTS: {
       { q: "What is the security deposit?", a: "A security deposit is held against accidental damage during your stay. The amount is shown on the home's page before you book." },
       { q: "Can I cancel my booking?", a: "Each home shows its cancellation policy before you book — most offer a full refund up to 30 days before arrival. See Help & policies for the details." },
       { q: "Are the tours really cheaper?", a: "Tours and parks are at partner prices through Amanah Vacations — the same private tours, at prices the big platforms don't get." },
-      { q: "Who do I talk to during my stay?", a: "May — our concierge on WhatsApp. Restaurant tips, early check-in, tour bookings, anything. Real person, minutes to reply, from your first message to your last night." },
+      { q: "Who do I talk to during my stay?", a: "Our concierge on WhatsApp. Restaurant tips, early check-in, tour bookings, anything. Real person, minutes to reply, from your first message to your last night." },
     ],
   },
 
