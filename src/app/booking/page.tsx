@@ -43,8 +43,11 @@ export default async function BookingCheckoutPage({
       lines = [{
         n: `${res.listing.title} — ${res.listing.city}`,
         m: `${qt.nights} nights · ${guests} guests · ${q.ci} → ${q.co}`,
-        a: d(qt.accommodationCents),
+        a: d(qt.accommodationCents - qt.weekendUpliftCents),
       }];
+      if (qt.weekendUpliftCents > 0) {
+        lines.push({ n: "Weekend rates", m: "Sat & Sun nights", a: d(qt.weekendUpliftCents) });
+      }
       if (qt.lengthDiscountCents > 0) lines.push({
         n: qt.lengthDiscountKind === "monthly" ? "Monthly stay discount" : "Weekly stay discount",
         m: "", a: -d(qt.lengthDiscountCents),

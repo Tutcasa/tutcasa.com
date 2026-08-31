@@ -54,7 +54,7 @@ function SimilarCard({ l }: { l: Listing }) {
         <h4>{l.title}</h4>
         <div className="m">&#128205; {displayCityCountry(l)} &middot; {l.bedrooms} bd</div>
         <div className="pr">
-          ${Math.round(l.nightlyCents / 100).toLocaleString("en-US")}{" "}
+          ${Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100).toLocaleString("en-US")}{" "}
           <span style={{ color: "var(--grey)", fontWeight: 500, fontSize: 12 }}>/ night</span>
         </div>
       </div>

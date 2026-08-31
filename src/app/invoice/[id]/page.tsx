@@ -52,8 +52,10 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     const b = stay.rows[0];
     const p = b.price_breakdown ?? {};
     const lines: { label: string; cents: number }[] = [
-      { label: `Accommodation — ${p.nights ?? "?"} nights`, cents: p.accommodationCents ?? 0 },
+      { label: `Accommodation — ${p.nights ?? "?"} nights`,
+        cents: (p.accommodationCents ?? 0) - (p.weekendUpliftCents ?? 0) },
     ];
+    if (p.weekendUpliftCents > 0) lines.push({ label: "Weekend rates (Sat & Sun)", cents: p.weekendUpliftCents });
     if (p.lengthDiscountCents > 0) lines.push({ label: "Length-of-stay discount", cents: -p.lengthDiscountCents });
     if (p.earlyBirdDiscountCents > 0) lines.push({ label: "Early-bird discount", cents: -p.earlyBirdDiscountCents });
     if (p.extraGuestFeeCents > 0) lines.push({ label: "Extra guests", cents: p.extraGuestFeeCents });

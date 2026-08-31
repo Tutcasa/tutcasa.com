@@ -205,7 +205,8 @@ export function PdGrid({ p }: { p: PdData }) {
       const netAccom = q.accommodationCents - q.lengthDiscountCents - q.earlyBirdDiscountCents;
       return (
         <>
-          <div className="row"><span>{d(Math.round(q.accommodationCents / q.nights))} &times; {q.nights} nights</span><span>{d(q.accommodationCents)}</span></div>
+          <div className="row"><span>{d(Math.round((q.accommodationCents - q.weekendUpliftCents) / q.nights))} &times; {q.nights} nights</span><span>{d(q.accommodationCents - q.weekendUpliftCents)}</span></div>
+          {q.weekendUpliftCents > 0 && <div className="row"><span>Weekend rates (Sat &amp; Sun nights)</span><span>{d(q.weekendUpliftCents)}</span></div>}
           {q.lengthDiscountCents > 0 && <div className="row" style={{ color: "var(--cactus)" }}><span>Stay discount</span><span>&minus;{d(q.lengthDiscountCents)}</span></div>}
           {q.earlyBirdDiscountCents > 0 && <div className="row" style={{ color: "var(--cactus)" }}><span>Early-bird discount</span><span>&minus;{d(q.earlyBirdDiscountCents)}</span></div>}
           {q.extraGuestFeeCents > 0 && <div className="row"><span>Extra guests</span><span>{d(q.extraGuestFeeCents)}</span></div>}

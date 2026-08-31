@@ -39,7 +39,7 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
     name: l.title,
     meta: `${city} · ${l.bedrooms} beds · ${feature ?? `sleeps ${l.maxGuests}`}`,
     wishMeta: city,
-    price: Math.round(l.nightlyCents / 100),
+    price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100), // all-in, like the label says
     rate: l.rating.toFixed(2),
     tag: l.headline,
     g: grad,
