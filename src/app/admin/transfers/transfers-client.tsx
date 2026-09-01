@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import type { Transfer } from "@/modules/transfers";
 import { saveTransferAction, cancelTransferAction, answerAmanahAction, deleteTransferAction, type TransferFormState } from "./actions";
 
@@ -36,6 +36,17 @@ function TransferForm({
   const [state, action, pending] = useActionState(saveTransferAction, initial);
   const [bookingId, setBookingId] = useState(transfer?.bookingId ?? "");
   const picked = bookings.find((b) => b.id === bookingId);
+
+  // close the form only AFTER the server confirms the save — closing on
+  // click unmounted the form and cancelled the submission entirely
+  const doneRef = useRef(onDone);
+  useEffect(() => { doneRef.current = onDone; });
+  useEffect(() => {
+    if (state.ok && state.message) {
+      const t = setTimeout(() => doneRef.current?.(), 1200); // let the ✓ message be seen
+      return () => clearTimeout(t);
+    }
+  }, [state]);
 
   return (
     <form action={action} className="grid gap-2 lg:grid-cols-3">
@@ -90,7 +101,7 @@ function TransferForm({
           defaultValue={transfer?.note ?? ""} />
       </label>
       <div className="flex items-center gap-3 lg:col-span-3">
-        <button disabled={pending} onClick={() => state.ok && onDone?.()}
+        <button disabled={pending}
           className="rounded-pill bg-rosa px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
           {pending ? "Sending…" : transfer ? "Update & resend to Amanah" : "Save & send to Amanah"}
         </button>
