@@ -22,7 +22,8 @@ export async function getQuoteAction(
   checkOut: string,
   guests = 2,
 ): Promise<QuoteResult> {
-  const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests));
+  const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined,
+    { commissionPct: (await (await import("@/modules/partners")).visitorCommission())?.pct });
   if (!res.ok) return res;
   return { ok: true, quote: res.quote };
 }
@@ -39,7 +40,12 @@ export async function reserveAction(input: {
 }): Promise<ReserveResult> {
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (overLimit(`reserve:${ip}`, 8, 10 * 60 * 1000)) return { ok: false, error: "DATES_TAKEN" };
-  return createBookingHold(input);
+  const via = await (await import("@/modules/partners")).visitorCommission();
+  return createBookingHold({
+    ...input,
+    marketingRef: via?.code,
+    marketingCommissionPct: via?.pct,
+  });
 }
 
 export type CouponResult =
@@ -59,7 +65,8 @@ export async function validateCouponAction(
   if (overLimit(`coupon:${ip}`, 15, 10 * 60 * 1000)) {
     return { ok: false, message: "Too many coupon attempts — try again in a few minutes." };
   }
-  const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests));
+  const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined,
+    { commissionPct: (await (await import("@/modules/partners")).visitorCommission())?.pct });
   if (!res.ok) return { ok: false, message: "Add valid dates first." };
   const cp = await checkCoupon(code, {
     nights: res.quote.nights,

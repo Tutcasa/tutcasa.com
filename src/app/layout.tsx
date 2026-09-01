@@ -7,6 +7,7 @@ import { CurrencyProvider } from "@/lib/currency";
 import { SiteHeader } from "@/components/site/SiteHeader";
 import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatMay } from "@/components/site/ChatMay";
+import { CaptureRef } from "@/components/site/CaptureRef";
 import { getSetting } from "@/modules/settings";
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default async function RootLayout({
             <main>{children}</main>
             <SiteFooter whatsapp={contact.whatsapp} />
             <ChatMay whatsapp={contact.whatsapp} />
+            <CaptureRef />
           </CurrencyProvider>
         </LangProvider>
       </body>

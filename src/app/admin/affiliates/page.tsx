@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
 import { AffiliatesClient, type AffiliateRow } from "./affiliates-client";
+import { PartnersClient, type PartnerRow } from "./partners-client";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,27 @@ async function listAffiliates(): Promise<AffiliateRow[]> {
   }));
 }
 
+async function listPartners(): Promise<PartnerRow[]> {
+  const res = await getDb().query(
+    `select p.id, p.code, p.name, p.commission_pct, p.active,
+            count(b.id) filter (where b.status <> 'cancelled') as bookings,
+            coalesce(sum((b.price_breakdown->>'thirdPartyCommissionCents')::int)
+                     filter (where b.status <> 'cancelled'), 0) as commission_cents
+       from marketing_partners p
+       left join bookings b on upper(b.marketing_ref) = upper(p.code)
+      group by p.id
+      order by p.created_at desc`,
+  );
+  return res.rows.map((r) => ({
+    id: r.id, code: r.code, name: r.name, pct: Number(r.commission_pct),
+    active: r.active, link: `${SITE}/?via=${r.code}`,
+    bookings: Number(r.bookings), commissionCents: Number(r.commission_cents),
+  }));
+}
+
 export default async function AdminAffiliates() {
   const affiliates = await listAffiliates();
+  const partners = await listPartners();
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Affiliate links</h1>
@@ -43,6 +63,7 @@ export default async function AdminAffiliates() {
         their own link on the Loyalty page.
       </p>
       <AffiliatesClient affiliates={affiliates} />
+      <PartnersClient partners={partners} />
     </div>
   );
 }

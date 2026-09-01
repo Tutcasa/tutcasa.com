@@ -9,6 +9,9 @@ export interface BookingRequest {
   guestEmail: string;
   guestPhone?: string;
   couponCode?: string;
+  /** ?via=CODE tracked-link attribution (server-verified, never trusted raw) */
+  marketingRef?: string;
+  marketingCommissionPct?: number;
 }
 
 export interface Booking {

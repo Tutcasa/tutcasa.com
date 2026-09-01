@@ -19,12 +19,13 @@ interface OrderRow {
   couponDiscountCents: number;
   provider: string | null;
   createdAt: string;
+  marketingRef: string | null;
 }
 
 async function allOrders(): Promise<OrderRow[]> {
   const res = await getDb().query(
     `select b.id, b.invoice_no, b.status, b.total_cents, b.currency,
-            b.price_breakdown, b.coupon_code, b.coupon_discount_cents,
+            b.marketing_ref, b.price_breakdown, b.coupon_code, b.coupon_discount_cents,
             b.payment_provider, b.created_at, b.guest_name, b.guests,
             to_char(lower(b.stay),'YYYY-MM-DD') || ' → ' || to_char(upper(b.stay),'YYYY-MM-DD') as dates,
             l.title, l.city
@@ -40,6 +41,7 @@ async function allOrders(): Promise<OrderRow[]> {
     totalCents: r.total_cents, breakdown: r.price_breakdown ?? {},
     couponCode: r.coupon_code, couponDiscountCents: r.coupon_discount_cents ?? 0,
     provider: r.payment_provider, createdAt: r.created_at,
+    marketingRef: r.marketing_ref,
   }));
 }
 
@@ -101,7 +103,7 @@ export default async function AdminOrders({
                 })}
                 {Number(o.breakdown.thirdPartyCommissionCents ?? 0) > 0 && (
                   <div className="flex justify-between text-xs font-semibold text-terra">
-                    <span>· of which third-party marketing commission</span>
+                    <span>· of which commission{o.marketingRef ? ` (via ${o.marketingRef})` : " (partner channel)"}</span>
                     <span>{fmtMoney(Number(o.breakdown.thirdPartyCommissionCents))}</span>
                   </div>
                 )}

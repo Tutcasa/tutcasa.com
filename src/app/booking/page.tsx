@@ -36,7 +36,9 @@ export default async function BookingCheckoutPage({
     // stay checkout — price is ALWAYS recomputed server-side from the
     // stored rates + the admin's full pricing configuration
     const guests = Math.max(1, parseInt(q.guests ?? "2", 10) || 2);
-    const res = await resolveStayQuote(q.stay, q.ci, q.co, guests);
+    const { visitorCommission } = await import("@/modules/partners");
+    const via = await visitorCommission();
+    const res = await resolveStayQuote(q.stay, q.ci, q.co, guests, undefined, { commissionPct: via?.pct });
     if (res.ok) {
       const qt = res.quote;
       const d = (c: number) => Math.round(c / 100);

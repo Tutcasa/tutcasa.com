@@ -50,7 +50,8 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
 
   // full price model: base/seasonal rates + per-date overrides + the
   // admin's fee/discount/deposit configuration
-  const quoted = await resolveStayQuote(req.listingSlug, req.checkIn, req.checkOut, req.guests);
+  const quoted = await resolveStayQuote(req.listingSlug, req.checkIn, req.checkOut, req.guests,
+    undefined, { commissionPct: req.marketingCommissionPct });
   if (!quoted.ok) {
     return { ok: false, error: quoted.error === "LISTING_NOT_FOUND" ? "LISTING_NOT_FOUND" : quoted.error };
   }
@@ -105,11 +106,11 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
       `insert into bookings
          (listing_id, guest_name, guest_email, guest_phone, stay, guests,
           status, hold_expires_at, total_cents, currency, price_breakdown, source,
-          coupon_code, coupon_discount_cents, no_block)
+          coupon_code, coupon_discount_cents, no_block, marketing_ref)
        values ($1, $2, $3, $4, daterange($5::date, $6::date), $7,
                'pending', case when $8::text is null then null
                                else now() + ($8 || ' minutes')::interval end,
-               $9, $10, $11, 'direct', $12, $13, $14)
+               $9, $10, $11, 'direct', $12, $13, $14, $15)
        returning id`,
       [
         listing.id, name, email, req.guestPhone?.trim() || null,
@@ -140,6 +141,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
         couponCode, couponDiscountCents, listing.keepCalendarClean,
+        req.marketingRef ?? null,
       ],
     );
     // M3: request-received emails (guest + team) — never blocks the booking
