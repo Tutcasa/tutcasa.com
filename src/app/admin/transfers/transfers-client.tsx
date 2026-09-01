@@ -40,20 +40,14 @@ function TransferForm({
   return (
     <form action={action} className="grid gap-2 lg:grid-cols-3">
       {transfer ? (
-        <input type="hidden" name="bookingId" value={transfer.bookingId} />
+        <input type="hidden" name="bookingId" value={transfer.bookingId ?? ""} />
       ) : (
-        <label className="text-xs font-bold lg:col-span-3">BOOKING *
-          <select name="bookingId" required value={bookingId}
+        <label className="text-xs font-bold lg:col-span-3">BOOKING <span className="font-normal text-grey">(optional — leave empty for a standalone request)</span>
+          <select name="bookingId" value={bookingId}
             onChange={(e) => setBookingId(e.target.value)} className={inputCls}>
-            <option value="">Choose a booking…</option>
+            <option value="">— No booking (standalone request) —</option>
             {bookings.map((b) => <option key={b.id} value={b.id}>{b.label}</option>)}
           </select>
-          {bookings.length === 0 && (
-            <span className="mt-1 block font-normal text-rosa-deep">
-              No upcoming bookings to attach a transfer to — a transfer always
-              belongs to a stay booking. Create or confirm a booking first.
-            </span>
-          )}
         </label>
       )}
       <label className="text-xs font-bold">DIRECTION *
@@ -82,6 +76,14 @@ function TransferForm({
         <input type="checkbox" name="babySeat" defaultChecked={transfer?.babySeat ?? false}
           className="h-4 w-4 accent-rosa" />
         Baby seat needed
+      </label>
+      <label className="text-xs font-bold">WHATSAPP NUMBER
+        <input name="whatsapp" type="tel" placeholder="+52 984 123 4567" className={inputCls}
+          defaultValue={transfer?.whatsapp ?? ""} />
+      </label>
+      <label className="text-xs font-bold">ADDRESS &amp; UNIT <span className="font-normal text-grey">(pickup or drop-off point)</span>
+        <input name="address" placeholder="e.g. Mareazul, Torre B, unit 402" className={inputCls}
+          defaultValue={transfer?.address ?? ""} />
       </label>
       <label className="text-xs font-bold">NOTE
         <input name="note" placeholder="Anything the driver should know…" className={inputCls}
@@ -149,12 +151,13 @@ export function TransfersClient({
           <div key={t.id} className="rounded-card bg-paper p-4 shadow-soft">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <span className="font-mono text-xs font-bold">TC-{t.invoiceNo}</span>{" "}
+                <span className="font-mono text-xs font-bold">TC-{t.invoiceNo || t.id.slice(0, 8).toUpperCase()}</span>{" "}
                 <b>{t.fullName}</b>
                 <span className={`ml-2 rounded-pill px-2.5 py-1 text-xs font-bold ${BADGE[t.status]}`}>{LABEL[t.status]}</span>
                 <div className="text-xs text-grey">
                   {t.kind === "dropoff" ? "🛫 Drop-off" : "🛬 Pickup"} · ✈️ {t.flightNumber} · {t.travelDate} · {t.passengers} pax
-                  {t.babySeat && " · 👶 baby seat"} → {t.listingTitle}
+                  {t.babySeat && " · 👶 baby seat"}{t.listingTitle ? ` → ${t.listingTitle}` : " · standalone"}
+                  {t.address && ` · 📍 ${t.address}`}{t.whatsapp && ` · 💬 ${t.whatsapp}`}
                   {!t.sentAt && " · ⚠️ not delivered to Amanah yet"}
                 </div>
                 {t.status === "need_details" && t.amanahNote && (

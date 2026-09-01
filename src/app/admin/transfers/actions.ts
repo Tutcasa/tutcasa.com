@@ -21,6 +21,8 @@ export async function saveTransferAction(
     passengers: Math.max(1, Number(formData.get("passengers")) || 1),
     babySeat: formData.get("babySeat") === "on",
     note: String(formData.get("note") ?? ""),
+    whatsapp: String(formData.get("whatsapp") ?? ""),
+    address: String(formData.get("address") ?? ""),
     filledBy: "admin",
   });
   revalidatePath("/admin/transfers");

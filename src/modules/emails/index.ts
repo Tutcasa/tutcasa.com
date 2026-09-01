@@ -160,7 +160,7 @@ export async function sendTestEmail(
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      from: process.env.EMAIL_FROM ?? "TutCasa <onboarding@resend.dev>",
+      from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>",
       to: [to],
       subject: `[TEST] ${fillVars(a.subject)}`,
       html: renderEmailHtml({ subject: a.subject, body: a.body }),

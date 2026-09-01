@@ -13,7 +13,7 @@ import { getDb } from "@/lib/db";
 const AMANAH_EMAIL = process.env.AMANAH_NOTIFY_EMAIL || "booking@amanahvacations.com";
 const AMANAH_WHATSAPP = (process.env.AMANAH_WHATSAPP || "+529903516948").replace(/[^\d]/g, "");
 const TUTCASA_EMAIL = process.env.TUTCASA_NOTIFY_EMAIL || "";
-const FROM_EMAIL = process.env.NOTIFY_FROM_EMAIL || "TutCasa <onboarding@resend.dev>";
+const FROM_EMAIL = process.env.NOTIFY_FROM_EMAIL || process.env.EMAIL_FROM || "TutCasa <admin@tutcasa.com>";
 
 interface EmailJob {
   kind: string;
@@ -89,6 +89,30 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
     `\nBooking ref: ${n.ref}`;
 
   try {
+    // 0. Amanah's admin queue — server-to-server push (their site shows
+    //    the booking instantly; email + WhatsApp below stay the fallback)
+    const amanahKey = process.env.AMANAH_PARTNER_KEY;
+    if (amanahKey) {
+      await fetch(`${process.env.AMANAH_SITE_URL ?? "https://amanahvacations.com"}/api/partner/tutcasa-tours`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-partner-key": amanahKey },
+        body: JSON.stringify({
+          bookingId: n.tourBookingId,
+          ref: n.ref,
+          tourTitle: n.tourTitle,
+          tourDate: n.tourDate,
+          groupSize: n.groupSize,
+          totalLabel: n.totalLabel,
+          guestName: n.guestName,
+          guestEmail: n.guestEmail,
+          guestPhone: n.guestPhone ?? null,
+          notes: n.notes ?? null,
+          status: "new",
+        }),
+        signal: AbortSignal.timeout(15_000),
+      }).catch(() => {});
+    }
+
     // 1. partner email → Amanah Vacations
     await sendEmail({
       kind: "tour_booking_partner_email",
