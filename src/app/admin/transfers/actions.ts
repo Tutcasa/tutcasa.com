@@ -12,11 +12,23 @@ const LOGGED_OUT =
 const SAVE_FAILED =
   "The save didn't go through — refresh the page (it may be outdated after an update) and try again.";
 
+/** Fire-and-forget diagnostic row — never blocks or breaks the action. */
+function logAttempt(action: string, phase: "received" | "result", extra: { ok?: boolean; message?: string; meta?: object }) {
+  void getDb().query(
+    "insert into action_log (action, phase, ok, message, meta) values ($1,$2,$3,$4,$5)",
+    [action, phase, extra.ok ?? null, extra.message ?? null, extra.meta ? JSON.stringify(extra.meta) : null],
+  ).catch(() => {});
+}
+
 export async function saveTransferAction(
   _prev: TransferFormState,
   formData: FormData,
 ): Promise<TransferFormState> {
-  if (!(await isAdmin())) return { ok: false, message: LOGGED_OUT };
+  logAttempt("save_transfer", "received", { meta: { fullName: String(formData.get("fullName") ?? "") } });
+  if (!(await isAdmin())) {
+    logAttempt("save_transfer", "result", { ok: false, message: "not-admin" });
+    return { ok: false, message: LOGGED_OUT };
+  }
   try {
   const res = await upsertTransfer({
     bookingId: String(formData.get("bookingId") ?? ""),
@@ -32,9 +44,11 @@ export async function saveTransferAction(
     filledBy: "admin",
   });
   revalidatePath("/admin/transfers");
+  logAttempt("save_transfer", "result", { ok: res.ok, message: res.message });
   return { ok: res.ok, message: res.message };
   } catch (e) {
     console.error("saveTransferAction:", e);
+    logAttempt("save_transfer", "result", { ok: false, message: String((e as Error).message ?? e).slice(0, 200) });
     return { ok: false, message: SAVE_FAILED };
   }
 }
