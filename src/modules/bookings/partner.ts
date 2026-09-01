@@ -44,7 +44,7 @@ export async function createPartnerHold(input: {
   if (!input.checkIn || input.checkIn < today) return { ok: false, error: "INVALID_DATES" };
 
   // same validation + pricing as the public quote endpoint
-  const quoted = await resolveStayQuote(input.slug, input.checkIn, input.checkOut, Math.max(1, input.guests));
+  const quoted = await resolveStayQuote(input.slug, input.checkIn, input.checkOut, Math.max(1, input.guests), undefined, { applyCommission: true });
   if (!quoted.ok) {
     if (quoted.error === "LISTING_NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
     return { ok: false, error: quoted.error };
@@ -234,7 +234,7 @@ export async function createPartnerRequest(input: {
   const today = todayLocal();
   if (!input.checkIn || input.checkIn < today) return { ok: false, error: "INVALID_DATES" };
 
-  const quoted = await resolveStayQuote(input.slug, input.checkIn, input.checkOut, Math.max(1, input.guests));
+  const quoted = await resolveStayQuote(input.slug, input.checkIn, input.checkOut, Math.max(1, input.guests), undefined, { applyCommission: true });
   if (!quoted.ok) {
     if (quoted.error === "LISTING_NOT_FOUND") return { ok: false, error: "NOT_FOUND" };
     return { ok: false, error: quoted.error };

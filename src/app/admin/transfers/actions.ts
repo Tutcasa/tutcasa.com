@@ -26,6 +26,46 @@ export async function saveTransferAction(
   return { ok: res.ok, message: res.message };
 }
 
+/**
+ * Answer Amanah's "needs details" question: the reply is appended to the
+ * transfer's note and the whole transfer is re-sent to Amanah (status
+ * back to Requested, their question cleared).
+ */
+export async function answerAmanahAction(
+  _prev: TransferFormState,
+  formData: FormData,
+): Promise<TransferFormState> {
+  await requireAdmin();
+  const transferId = String(formData.get("transferId") ?? "");
+  const answer = String(formData.get("answer") ?? "").trim();
+  if (!transferId || !answer) return { ok: false, message: "Write the answer first." };
+
+  const { transferForBooking } = await import("@/modules/transfers");
+  const row = await getDb().query<{ booking_id: string; amanah_note: string | null }>(
+    "select booking_id, amanah_note from transfers where id=$1", [transferId]);
+  if (!row.rows[0]) return { ok: false, message: "Transfer not found." };
+  const t = await transferForBooking(row.rows[0].booking_id);
+  if (!t) return { ok: false, message: "Transfer not found." };
+
+  const question = row.rows[0].amanah_note;
+  const note = [t.note, `${question ? `Re "${question}": ` : "Answer: "}${answer}`]
+    .filter(Boolean).join(" — ").slice(0, 1000);
+  const res = await upsertTransfer({
+    bookingId: t.bookingId,
+    fullName: t.fullName,
+    travelDate: t.travelDate,
+    flightNumber: t.flightNumber,
+    passengers: t.passengers,
+    babySeat: t.babySeat,
+    note,
+    filledBy: "admin",
+  });
+  revalidatePath("/admin/transfers");
+  return res.ok
+    ? { ok: true, message: "Answer sent to Amanah — the transfer is back in their queue." }
+    : { ok: res.ok, message: res.message };
+}
+
 export async function cancelTransferAction(transferId: string): Promise<void> {
   await requireAdmin();
   await getDb().query(

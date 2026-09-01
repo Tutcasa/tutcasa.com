@@ -44,8 +44,6 @@ export interface PdData {
   cancellationPolicy: string;
   otherRules: string;
   faqs: { q: string; a: string }[];
-  /** upcoming seasonal rates — all-in nightly, whole dollars */
-  seasons: { label: string; from: string; to: string; allIn: number }[];
   allowChildren: boolean;
   allowSmoking: boolean;
   allowParty: boolean;
@@ -88,12 +86,6 @@ const REVIEW_POOL = [
 
 function localISO(d: Date): string {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
-}
-
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function fmtRange(from: string, to: string): string {
-  const f = (d: string) => `${MONTHS[Number(d.slice(5, 7)) - 1]} ${Number(d.slice(8, 10))}`;
-  return `${f(from)} \u2013 ${f(to)}`;
 }
 
 export function PdGrid({ p }: { p: PdData }) {
@@ -175,12 +167,6 @@ export function PdGrid({ p }: { p: PdData }) {
           {p.taxPct > 0 && <div className="row"><span>Taxes</span><span>{p.taxPct}%</span></div>}
           <div className="row"><span>Nightly incl. taxes</span><span>{fromUSD(p.allInNightly)}</span></div>
           {p.cleaningFee > 0 && <div className="row"><span>Cleaning fee (once per stay)</span><span>{fromUSD(p.cleaningFee)}</span></div>}
-          {p.seasons.map((sn, i) => (
-            <div className="row" key={i} style={{ color: "var(--terra, #b4654a)", fontWeight: 600 }}>
-              <span>{sn.label} &middot; {fmtRange(sn.from, sn.to)}</span>
-              <span>{fromUSD(sn.allIn)} / night</span>
-            </div>
-          ))}
           <div className="row"><span>Add your dates for your exact total</span></div>
         </>
       );

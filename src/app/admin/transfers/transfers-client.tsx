@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import type { Transfer } from "@/modules/transfers";
-import { saveTransferAction, cancelTransferAction, type TransferFormState } from "./actions";
+import { saveTransferAction, cancelTransferAction, answerAmanahAction, type TransferFormState } from "./actions";
 
 export interface BookingOption {
   id: string;
@@ -94,6 +94,25 @@ function TransferForm({
   );
 }
 
+/** Reply to Amanah's question and put the transfer back in their queue. */
+function AnswerForm({ transferId }: { transferId: string }) {
+  const [state, action, pending] = useActionState(answerAmanahAction, initial);
+  return (
+    <form action={action} className="mt-2 flex flex-wrap items-center gap-2">
+      <input type="hidden" name="transferId" value={transferId} />
+      <input name="answer" required placeholder="Type your answer to Amanah…"
+        className={`${inputCls} flex-1 min-w-[220px]`} />
+      <button disabled={pending}
+        className="rounded-pill bg-rosa px-4 py-2 text-xs font-bold text-white disabled:opacity-50">
+        {pending ? "Sending…" : "Send answer to Amanah"}
+      </button>
+      {state.message && (
+        <span className={`w-full text-xs font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</span>
+      )}
+    </form>
+  );
+}
+
 export function TransfersClient({
   transfers, bookings,
 }: { transfers: Transfer[]; bookings: BookingOption[] }) {
@@ -130,8 +149,9 @@ export function TransfersClient({
                   {!t.sentAt && " · ⚠️ not delivered to Amanah yet"}
                 </div>
                 {t.status === "need_details" && t.amanahNote && (
-                  <div className="mt-1 rounded-xl bg-rosa/10 px-3 py-1.5 text-sm font-semibold text-rosa-deep">
-                    Amanah asks: {t.amanahNote}
+                  <div className="mt-1 rounded-xl bg-rosa/10 px-3 py-2 text-sm">
+                    <div className="font-semibold text-rosa-deep">Amanah asks: {t.amanahNote}</div>
+                    <AnswerForm transferId={t.id} />
                   </div>
                 )}
               </div>

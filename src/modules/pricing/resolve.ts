@@ -40,7 +40,7 @@ export async function resolveStayQuote(
   checkOut: string,
   guests: number,
   bookedAt?: Date,
-  opts?: { skipAvailability?: boolean },
+  opts?: { skipAvailability?: boolean; applyCommission?: boolean },
 ): Promise<StayQuoteResult> {
   if (!YMD.test(checkIn) || !YMD.test(checkOut) || checkOut <= checkIn) {
     return { ok: false, error: "INVALID_DATES" };
@@ -86,10 +86,10 @@ export async function resolveStayQuote(
   const seasons = ratesRes.rows.filter((r) => !r.is_base);
   const byDay = new Map(daysRes.rows.map((d) => [d.day, d]));
 
-  // third-party marketing commission: the guest's nightly is raised by
-  // the configured pct (host keeps their rate; the uplift is recorded
-  // separately for the admin/owner breakdown, never shown to guests)
-  const commissionPct = Number(L.third_party_commission_pct ?? 0);
+  // third-party marketing commission: ONLY for bookings that come through
+  // a third party (Amanah partner API, or applied by hand on a booking) —
+  // direct guests never pay it. The partner paths opt in explicitly.
+  const commissionPct = opts?.applyCommission ? Number(L.third_party_commission_pct ?? 0) : 0;
   const withCommission = (cents: number) =>
     commissionPct > 0 ? Math.round(cents * (1 + commissionPct / 100)) : cents;
   let commissionCents = 0;
