@@ -14,6 +14,7 @@ export async function saveTransferAction(
   await requireAdmin();
   const res = await upsertTransfer({
     bookingId: String(formData.get("bookingId") ?? ""),
+    kind: formData.get("kind") === "dropoff" ? "dropoff" : "pickup",
     fullName: String(formData.get("fullName") ?? ""),
     travelDate: String(formData.get("travelDate") ?? ""),
     flightNumber: String(formData.get("flightNumber") ?? ""),
@@ -40,18 +41,16 @@ export async function answerAmanahAction(
   const answer = String(formData.get("answer") ?? "").trim();
   if (!transferId || !answer) return { ok: false, message: "Write the answer first." };
 
-  const { transferForBooking } = await import("@/modules/transfers");
-  const row = await getDb().query<{ booking_id: string; amanah_note: string | null }>(
-    "select booking_id, amanah_note from transfers where id=$1", [transferId]);
-  if (!row.rows[0]) return { ok: false, message: "Transfer not found." };
-  const t = await transferForBooking(row.rows[0].booking_id);
+  const { transferById } = await import("@/modules/transfers");
+  const t = await transferById(transferId);
   if (!t) return { ok: false, message: "Transfer not found." };
 
-  const question = row.rows[0].amanah_note;
+  const question = t.amanahNote;
   const note = [t.note, `${question ? `Re "${question}": ` : "Answer: "}${answer}`]
     .filter(Boolean).join(" — ").slice(0, 1000);
   const res = await upsertTransfer({
     bookingId: t.bookingId,
+    kind: t.kind,
     fullName: t.fullName,
     travelDate: t.travelDate,
     flightNumber: t.flightNumber,
@@ -59,6 +58,7 @@ export async function answerAmanahAction(
     babySeat: t.babySeat,
     note,
     filledBy: "admin",
+    lastAnswer: answer,
   });
   revalidatePath("/admin/transfers");
   return res.ok

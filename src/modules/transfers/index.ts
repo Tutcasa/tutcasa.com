@@ -16,6 +16,8 @@ import { getDb } from "@/lib/db";
 export interface Transfer {
   id: string;
   bookingId: string;
+  /** airport pickup on arrival, or drop-off for the departure flight */
+  kind: "pickup" | "dropoff";
   fullName: string;
   travelDate: string;
   flightNumber: string;
@@ -35,7 +37,7 @@ export interface Transfer {
 }
 
 const SELECT = `
-  t.id, t.booking_id, t.full_name, t.travel_date, t.flight_number,
+  t.id, t.booking_id, t.kind, t.full_name, t.travel_date, t.flight_number,
   t.passengers, t.baby_seat, t.note, t.status, t.amanah_note, t.sent_at,
   t.filled_by, b.invoice_no, b.guest_phone,
   to_char(lower(b.stay),'YYYY-MM-DD') as check_in,
@@ -44,7 +46,7 @@ const SELECT = `
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toTransfer(r: any): Transfer {
   return {
-    id: r.id, bookingId: r.booking_id, fullName: r.full_name,
+    id: r.id, bookingId: r.booking_id, kind: r.kind ?? "pickup", fullName: r.full_name,
     travelDate: typeof r.travel_date === "string" ? r.travel_date.slice(0, 10) : new Date(r.travel_date).toISOString().slice(0, 10),
     flightNumber: r.flight_number, passengers: r.passengers,
     babySeat: r.baby_seat, note: r.note, status: r.status,
@@ -65,20 +67,36 @@ export async function listTransfers(): Promise<Transfer[]> {
   return res.rows.map(toTransfer);
 }
 
-export async function transferForBooking(bookingId: string): Promise<Transfer | null> {
+export async function transferForBooking(
+  bookingId: string,
+  kind: "pickup" | "dropoff" = "pickup",
+): Promise<Transfer | null> {
   const res = await getDb().query(
     `select ${SELECT}
        from transfers t
        join bookings b on b.id = t.booking_id
        join listings l on l.id = b.listing_id
-      where t.booking_id = $1`,
-    [bookingId],
+      where t.booking_id = $1 and t.kind = $2`,
+    [bookingId, kind],
+  );
+  return res.rows[0] ? toTransfer(res.rows[0]) : null;
+}
+
+export async function transferById(id: string): Promise<Transfer | null> {
+  const res = await getDb().query(
+    `select ${SELECT}
+       from transfers t
+       join bookings b on b.id = t.booking_id
+       join listings l on l.id = b.listing_id
+      where t.id = $1`,
+    [id],
   );
   return res.rows[0] ? toTransfer(res.rows[0]) : null;
 }
 
 export interface TransferInput {
   bookingId: string;
+  kind: "pickup" | "dropoff";
   fullName: string;
   travelDate: string;
   flightNumber: string;
@@ -86,6 +104,8 @@ export interface TransferInput {
   babySeat: boolean;
   note?: string;
   filledBy: "admin" | "guest";
+  /** when this save answers an Amanah question, the raw answer text */
+  lastAnswer?: string;
 }
 
 /** Create or update the booking's transfer, then push it to Amanah. */
@@ -99,23 +119,24 @@ export async function upsertTransfer(
   const db = getDb();
   const res = await db.query(
     `insert into transfers
-       (booking_id, full_name, travel_date, flight_number, passengers,
+       (booking_id, kind, full_name, travel_date, flight_number, passengers,
         baby_seat, note, filled_by, status)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,'requested')
-     on conflict (booking_id) do update set
+     values ($1,$9,$2,$3,$4,$5,$6,$7,$8,'requested')
+     on conflict (booking_id, kind) do update set
        full_name=$2, travel_date=$3, flight_number=$4, passengers=$5,
        baby_seat=$6, note=$7, filled_by=$8,
        status='requested', amanah_note=null
      returning id`,
     [input.bookingId, input.fullName.trim(), input.travelDate,
      input.flightNumber.trim().toUpperCase(), input.passengers,
-     input.babySeat, input.note?.trim() || null, input.filledBy],
+     input.babySeat, input.note?.trim() || null, input.filledBy,
+     input.kind === "dropoff" ? "dropoff" : "pickup"],
   );
   const id = res.rows[0].id as string;
-  const transfer = await transferForBooking(input.bookingId);
+  const transfer = await transferById(id);
   if (!transfer) return { ok: false, message: "Could not load the saved transfer." };
 
-  const push = await pushToAmanah(transfer);
+  const push = await pushToAmanah(transfer, input.lastAnswer);
   await notifyAmanahEmail(transfer).catch(() => {});
   if (push.ok) {
     await db.query("update transfers set sent_at=now() where id=$1", [id]);
@@ -132,7 +153,7 @@ export async function upsertTransfer(
 }
 
 /** Server-to-server push into Amanah's transfer queue. */
-export async function pushToAmanah(t: Transfer): Promise<{ ok: boolean }> {
+export async function pushToAmanah(t: Transfer, lastAnswer?: string): Promise<{ ok: boolean }> {
   const base = process.env.AMANAH_SITE_URL ?? "https://amanahvacations.com";
   const key = process.env.AMANAH_PARTNER_KEY;
   if (!key) return { ok: false };
@@ -142,6 +163,8 @@ export async function pushToAmanah(t: Transfer): Promise<{ ok: boolean }> {
       headers: { "Content-Type": "application/json", "x-partner-key": key },
       body: JSON.stringify({
         transferId: t.id,
+        kind: t.kind,
+        lastAnswer: lastAnswer ?? null,
         ref: `TC-${t.invoiceNo}`,
         fullName: t.fullName,
         travelDate: t.travelDate,
@@ -173,9 +196,9 @@ export async function notifyAmanahEmail(t: Transfer): Promise<void> {
     body: JSON.stringify({
       from: process.env.EMAIL_FROM ?? "TutCasa <onboarding@resend.dev>",
       to: [to],
-      subject: `🚐 Airport transfer TC-${t.invoiceNo} — ${t.travelDate} · ${t.flightNumber}`,
+      subject: `🚐 Airport ${t.kind === "dropoff" ? "DROP-OFF" : "pickup"} TC-${t.invoiceNo} — ${t.travelDate} · ${t.flightNumber}`,
       text: [
-        `New/updated arrival transfer from TutCasa:`,
+        `New/updated ${t.kind === "dropoff" ? "DEPARTURE drop-off" : "arrival pickup"} transfer from TutCasa:`,
         ``,
         `Ref: TC-${t.invoiceNo}`,
         `Name: ${t.fullName}`,

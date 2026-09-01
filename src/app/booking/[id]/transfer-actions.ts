@@ -22,6 +22,8 @@ export async function guestTransferAction(
   }
   const res = await upsertTransfer({
     bookingId,
+    // the free included transfer is the ARRIVAL pickup
+    kind: "pickup",
     fullName: String(formData.get("fullName") ?? ""),
     travelDate: String(formData.get("travelDate") ?? ""),
     flightNumber: String(formData.get("flightNumber") ?? ""),

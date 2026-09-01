@@ -56,6 +56,12 @@ function TransferForm({
           )}
         </label>
       )}
+      <label className="text-xs font-bold">DIRECTION *
+        <select name="kind" defaultValue={transfer?.kind ?? "pickup"} className={inputCls}>
+          <option value="pickup">🛬 Airport pickup (arrival)</option>
+          <option value="dropoff">🛫 Drop-off at airport (departure)</option>
+        </select>
+      </label>
       <label className="text-xs font-bold">FULL NAME *
         <input name="fullName" required className={inputCls}
           defaultValue={transfer?.fullName ?? picked?.guestName ?? ""} key={bookingId + "n"} />
@@ -119,7 +125,10 @@ export function TransfersClient({
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, start] = useTransition();
-  const withoutTransfer = bookings.filter((b) => !transfers.some((t) => t.bookingId === b.id));
+  // a booking can have ONE pickup + ONE drop-off — only fully covered
+  // bookings leave the create dropdown
+  const withoutTransfer = bookings.filter(
+    (b) => transfers.filter((t) => t.bookingId === b.id && t.status !== "cancelled").length < 2);
 
   return (
     <div className="grid gap-4">
@@ -144,7 +153,7 @@ export function TransfersClient({
                 <b>{t.fullName}</b>
                 <span className={`ml-2 rounded-pill px-2.5 py-1 text-xs font-bold ${BADGE[t.status]}`}>{LABEL[t.status]}</span>
                 <div className="text-xs text-grey">
-                  ✈️ {t.flightNumber} · {t.travelDate} · {t.passengers} pax
+                  {t.kind === "dropoff" ? "🛫 Drop-off" : "🛬 Pickup"} · ✈️ {t.flightNumber} · {t.travelDate} · {t.passengers} pax
                   {t.babySeat && " · 👶 baby seat"} → {t.listingTitle}
                   {!t.sentAt && " · ⚠️ not delivered to Amanah yet"}
                 </div>
