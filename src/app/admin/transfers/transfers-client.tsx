@@ -51,7 +51,10 @@ function TransferForm({
   return (
     <form action={action} className="grid gap-2 lg:grid-cols-3">
       {transfer ? (
-        <input type="hidden" name="bookingId" value={transfer.bookingId ?? ""} />
+        <>
+          <input type="hidden" name="transferId" value={transfer.id} />
+          <input type="hidden" name="bookingId" value={transfer.bookingId ?? ""} />
+        </>
       ) : (
         <label className="text-xs font-bold lg:col-span-3">BOOKING <span className="font-normal text-grey">(optional — leave empty for a standalone request)</span>
           <select name="bookingId" value={bookingId}

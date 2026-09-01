@@ -31,6 +31,7 @@ export async function saveTransferAction(
   }
   try {
   const res = await upsertTransfer({
+    id: String(formData.get("transferId") ?? "") || null,
     bookingId: String(formData.get("bookingId") ?? ""),
     kind: formData.get("kind") === "dropoff" ? "dropoff" : "pickup",
     fullName: String(formData.get("fullName") ?? ""),
@@ -75,6 +76,7 @@ export async function answerAmanahAction(
   const note = [t.note, `${question ? `Re "${question}": ` : "Answer: "}${answer}`]
     .filter(Boolean).join(" — ").slice(0, 1000);
   const res = await upsertTransfer({
+    id: t.id,
     bookingId: t.bookingId,
     kind: t.kind,
     fullName: t.fullName,

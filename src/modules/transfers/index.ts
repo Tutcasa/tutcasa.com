@@ -101,6 +101,10 @@ export async function transferById(id: string): Promise<Transfer | null> {
 }
 
 export interface TransferInput {
+  /** editing an existing transfer — update THIS row (never insert).
+      Required for standalone transfers: NULL booking_id never matches
+      the (booking_id, kind) conflict key, so upsert would duplicate. */
+  id?: string | null;
   /** empty/null = standalone request without a booking */
   bookingId?: string | null;
   kind: "pickup" | "dropoff";
@@ -125,6 +129,33 @@ export async function upsertTransfer(
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.travelDate)) return { ok: false, message: "Pick the day of travel." };
 
   const db = getDb();
+  if (input.id?.trim()) {
+    const upd = await db.query(
+      `update transfers set
+         kind=$2, full_name=$3, travel_date=$4, flight_number=$5,
+         passengers=$6, baby_seat=$7, note=$8,
+         whatsapp=coalesce($9, whatsapp), address=coalesce($10, address),
+         filled_by=$11, status='requested', amanah_note=null
+       where id=$1 returning id`,
+      [input.id, input.kind === "dropoff" ? "dropoff" : "pickup",
+       input.fullName.trim(), input.travelDate,
+       input.flightNumber.trim().toUpperCase() || "TBD", input.passengers,
+       input.babySeat, input.note?.trim() || null,
+       input.whatsapp?.trim() || null, input.address?.trim() || null,
+       input.filledBy],
+    );
+    if (!upd.rows[0]) return { ok: false, message: "That transfer no longer exists." };
+    const transfer = await transferById(input.id);
+    if (!transfer) return { ok: false, message: "Could not load the saved transfer." };
+    const push = await pushToAmanah(transfer, input.lastAnswer);
+    await notifyAmanahEmail(transfer).catch(() => {});
+    await db.query("update transfers set sent_at=$2 where id=$1",
+      [input.id, push.ok ? new Date() : null]);
+    return push.ok
+      ? { ok: true, message: "Transfer sent to Amanah — status: Requested.", transfer }
+      : { ok: true, message: "Transfer saved. Heads-up: the automatic push to Amanah didn't go through — use Resend, or Amanah will get it by email.", transfer };
+  }
+
   const res = await db.query(
     `insert into transfers
        (booking_id, kind, full_name, travel_date, flight_number, passengers,
