@@ -97,6 +97,7 @@ export async function createPartnerHold(input: {
           extraGuestFeeCents: q.extraGuestFeeCents,
           cityFeeCents: q.cityFeeCents,
           securityDepositCents: q.securityDepositCents,
+          thirdPartyCommissionCents: q.thirdPartyCommissionCents ?? 0,
           // partner bookings are paid in full — no dueNow/balance schedule
           partnerFullPayment: true,
         }),
@@ -276,6 +277,7 @@ export async function createPartnerRequest(input: {
           extraGuestFeeCents: q.extraGuestFeeCents,
           cityFeeCents: q.cityFeeCents,
           securityDepositCents: q.securityDepositCents,
+          thirdPartyCommissionCents: q.thirdPartyCommissionCents ?? 0,
           partnerFullPayment: true,
           partnerRequest: true, // awaiting owner approval — Amanah pays after
         }),
