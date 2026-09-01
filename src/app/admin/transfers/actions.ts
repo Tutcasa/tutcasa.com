@@ -89,3 +89,11 @@ export async function cancelTransferAction(transferId: string): Promise<void> {
   }
   revalidatePath("/admin/transfers");
 }
+
+/** Permanently remove a transfer (e.g. after it's done). Local only —
+    Amanah's queue has its own delete button. */
+export async function deleteTransferAction(transferId: string): Promise<void> {
+  await requireAdmin();
+  await getDb().query("delete from transfers where id=$1", [transferId]);
+  revalidatePath("/admin/transfers");
+}

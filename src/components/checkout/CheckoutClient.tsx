@@ -13,7 +13,7 @@ import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
 import { submitPlanRequest } from "@/app/leads-actions";
-import { reserveTourAction } from "@/app/tours/[slug]/actions";
+import { reserveTourAction, validateTourCouponAction } from "@/app/tours/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
 
 export interface CheckoutLine {
@@ -110,12 +110,14 @@ export function CheckoutClient({
   async function applyCoupon() {
     setCouponErr(null);
     if (!promo.trim()) return;
-    if (payload.kind !== "stay") { setPromoMsg(true); return; } // demo behavior for non-stay carts
+    if (payload.kind !== "stay" && payload.kind !== "tour") { setPromoMsg(true); return; }
     setCheckingCoupon(true);
     try {
-      const res = await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests, email.trim() || undefined);
-      if (res.ok) { setCoupon({ code: res.code, discount: res.discount }); setPromoMsg(false); }
-      else { setCoupon(null); setCouponErr(res.message); }
+      const res = payload.kind === "stay"
+        ? await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests, email.trim() || undefined)
+        : await validateTourCouponAction(promo, payload.slug, payload.groupSize, payload.addons, email.trim() || undefined);
+      if (res.ok && res.code != null) { setCoupon({ code: res.code, discount: res.discount ?? 0 }); setPromoMsg(false); }
+      else { setCoupon(null); setCouponErr((res as { message?: string }).message ?? "That coupon can\u2019t be used here."); }
     } finally {
       setCheckingCoupon(false);
     }
@@ -177,6 +179,7 @@ export function CheckoutClient({
               tourSlug: payload.slug, tourDate: payload.date, groupSize: payload.groupSize,
               guestName: name, guestEmail: email.trim(), guestPhone: phone.trim() || undefined,
               addons: payload.addons, notes: payload.notes,
+              couponCode: coupon?.code,
             });
       if (res.ok) { setPaid(true); window.scrollTo(0, 0); }
       else setError(ERRORS[res.error] ?? "Something went wrong — please try again.");

@@ -56,6 +56,28 @@ export function fmtMXN(cents: number): string {
   return `${(cents / 100).toLocaleString("en-US")} MXN`;
 }
 
+/** Price a tour for a group (tier total or per-person) + optional add-ons. */
+export async function quoteTourTotal(
+  tourSlug: string,
+  groupSize: number,
+  addons?: string[],
+): Promise<{ tour: Tour; totalCents: number } | null> {
+  const tour = await tourBySlug(tourSlug);
+  if (!tour || tour.status !== "published") return null;
+  const tierTotal = tierTotalMXN(tour.groupPrices, groupSize);
+  if (tierTotal == null && tour.priceCents <= 0) return null;
+  if (groupSize < tour.minGroup || groupSize > tour.maxGroup) return null;
+  const { priceForActivity } = await import("./addons");
+  const addonCents = tour.currency !== "MXN" ? 0 : (addons ?? []).slice(0, 12).reduce((sum, nm) => {
+    const p = priceForActivity(String(nm));
+    return p != null ? sum + Math.round(p * 100) * groupSize : sum;
+  }, 0);
+  return {
+    tour,
+    totalCents: (tierTotal != null ? Math.round(tierTotal * 100) : tour.priceCents * groupSize) + addonCents,
+  };
+}
+
 /** Create the booking, then fire partner/guest notifications. */
 export async function createTourBooking(req: TourBookingRequest): Promise<TourReserveResult> {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(req.tourDate) || req.tourDate < todayLocal()) {
@@ -83,22 +105,50 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     return p != null ? sum + Math.round(p * 100) * req.groupSize : sum;
   }, 0);
   const total = (tierTotal != null ? Math.round(tierTotal * 100) : tour.priceCents * req.groupSize) + addonCents;
-  const res = await getDb().query<{ id: string }>(
-    `insert into tour_bookings
-       (tour_id, guest_name, guest_email, guest_phone, tour_date, group_size,
-        status, total_cents, currency, notes)
-     values ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9) returning id`,
-    [tour.id, name, email, req.guestPhone?.trim() || null, req.tourDate,
-     req.groupSize, total, tour.currency, req.notes?.trim() || null],
-  );
-  const id = res.rows[0].id;
+
+  // coupon: validated with the final guest email; invalid = booking rejected
+  let couponCode: string | null = null;
+  let couponDiscountCents = 0;
+  if (req.couponCode?.trim()) {
+    const { checkCoupon, tryRedeemCoupon } = await import("@/modules/coupons");
+    const cp = await checkCoupon(req.couponCode, {
+      nights: 0, // stay-only rules (min nights) make the coupon invalid here
+      totalCents: total,
+      guestEmail: email,
+    });
+    if (!cp.ok) return { ok: false, error: "COUPON_INVALID" };
+    if (!(await tryRedeemCoupon(cp.code))) return { ok: false, error: "COUPON_INVALID" };
+    couponCode = cp.code;
+    couponDiscountCents = cp.discountCents;
+  }
+  const chargeCents = total - couponDiscountCents;
+
+  let id: string;
+  try {
+    const res = await getDb().query<{ id: string }>(
+      `insert into tour_bookings
+         (tour_id, guest_name, guest_email, guest_phone, tour_date, group_size,
+          status, total_cents, currency, notes, coupon_code, coupon_discount_cents)
+       values ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9,$10,$11) returning id`,
+      [tour.id, name, email, req.guestPhone?.trim() || null, req.tourDate,
+       req.groupSize, chargeCents, tour.currency, req.notes?.trim() || null,
+       couponCode, couponDiscountCents],
+    );
+    id = res.rows[0].id;
+  } catch (e) {
+    if (couponCode) {
+      const { unredeemCoupon } = await import("@/modules/coupons");
+      await unredeemCoupon(couponCode).catch(() => {});
+    }
+    throw e;
+  }
 
   await notifyTourBooking({
     tourBookingId: id,
     tourTitle: tour.title,
     tourDate: req.tourDate,
     groupSize: req.groupSize,
-    totalLabel: tour.currency === "MXN" ? fmtMXN(total) : `$${Math.round(total / 100).toLocaleString("en-US")} ${tour.currency}`,
+    totalLabel: tour.currency === "MXN" ? fmtMXN(chargeCents) : `$${Math.round(chargeCents / 100).toLocaleString("en-US")} ${tour.currency}`,
     guestName: name,
     guestEmail: email,
     guestPhone: req.guestPhone,
@@ -115,6 +165,7 @@ interface TourBookingRow {
   total_cents: number; currency: string; guest_name: string;
   guest_email: string; guest_phone: string | null; notes: string | null;
   partner_notified_at: string | null; partner_confirmed_at: string | null;
+  amanah_note: string | null;
   created_at: string;
 }
 
@@ -125,6 +176,7 @@ function toTourBooking(r: TourBookingRow): TourBooking {
     totalCents: r.total_cents, currency: r.currency,
     guestName: r.guest_name, guestEmail: r.guest_email,
     guestPhone: r.guest_phone, notes: r.notes,
+    amanahNote: r.amanah_note,
     partnerNotifiedAt: r.partner_notified_at,
     partnerConfirmedAt: r.partner_confirmed_at, createdAt: r.created_at,
   };
@@ -133,7 +185,7 @@ function toTourBooking(r: TourBookingRow): TourBooking {
 const TB_SELECT = `tb.id, tb.tour_id, t.title,
   to_char(tb.tour_date,'YYYY-MM-DD') as tour_date, tb.group_size, tb.status,
   tb.total_cents, tb.currency, tb.guest_name, tb.guest_email, tb.guest_phone,
-  tb.notes, tb.partner_notified_at, tb.partner_confirmed_at, tb.created_at
+  tb.notes, tb.amanah_note, tb.partner_notified_at, tb.partner_confirmed_at, tb.created_at
   from tour_bookings tb join tours t on t.id = tb.tour_id`;
 
 export async function getTourBooking(id: string): Promise<TourBooking | null> {

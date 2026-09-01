@@ -48,6 +48,7 @@ export interface TourBookingRequest {
   guestEmail: string;
   guestPhone?: string;
   notes?: string;
+  couponCode?: string;
 }
 
 export interface TourBooking {
@@ -66,8 +67,10 @@ export interface TourBooking {
   partnerNotifiedAt: string | null;
   partnerConfirmedAt: string | null;
   createdAt: string;
+  /** Amanah's question/decision note from their admin queue */
+  amanahNote?: string | null;
 }
 
 export type TourReserveResult =
   | { ok: true; bookingId: string }
-  | { ok: false; error: "TOUR_NOT_FOUND" | "INVALID_DATE" | "INVALID_GROUP" | "INVALID_CONTACT" | "ON_REQUEST" };
+  | { ok: false; error: "TOUR_NOT_FOUND" | "INVALID_DATE" | "INVALID_GROUP" | "COUPON_INVALID" | "INVALID_CONTACT" | "ON_REQUEST" };

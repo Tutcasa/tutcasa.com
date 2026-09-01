@@ -8,11 +8,9 @@ import { DeleteBookingButton } from "../delete-button";
 const NEXT: Record<string, { to: TourBooking["status"]; label: string }[]> = {
   pending: [
     { to: "paid", label: "Mark paid" },
-    { to: "partner_confirmed", label: "Amanah confirmed" },
     { to: "cancelled", label: "Cancel" },
   ],
   paid: [
-    { to: "partner_confirmed", label: "Amanah confirmed" },
     { to: "cancelled", label: "Cancel" },
   ],
   partner_confirmed: [

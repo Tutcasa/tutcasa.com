@@ -42,6 +42,11 @@ export default async function AdminTourBookings() {
                   {b.guestName} · {b.guestEmail}{b.guestPhone ? ` · ${b.guestPhone}` : ""}
                 </p>
                 {b.notes && <p className="mt-1 text-sm italic text-grey">&ldquo;{b.notes}&rdquo;</p>}
+                {b.amanahNote && (
+                  <p className="mt-1 rounded-xl bg-rosa/10 px-3 py-1.5 text-sm font-semibold text-rosa-deep">
+                    Amanah: {b.amanahNote}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <a

@@ -100,7 +100,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       invoiceNo: String(b.invoice_no ?? ""), createdAt: b.created_at, status: b.status,
       guestName: b.guest_name, guestEmail: b.guest_email,
       title: b.title, meta: `${b.tour_date} · ${b.group_size} people`,
-      lines: [{ label: "Tour booking", cents: b.total_cents }],
+      lines: [{ label: "Tour booking", cents: b.total_cents + (b.coupon_discount_cents ?? 0) }],
       couponCode: b.coupon_code, couponDiscountCents: b.coupon_discount_cents ?? 0,
       totalCents: b.total_cents, currency: b.currency,
       dueNowCents: null, balanceCents: null, balanceDueDate: null,

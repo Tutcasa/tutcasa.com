@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import type { Transfer } from "@/modules/transfers";
-import { saveTransferAction, cancelTransferAction, answerAmanahAction, type TransferFormState } from "./actions";
+import { saveTransferAction, cancelTransferAction, answerAmanahAction, deleteTransferAction, type TransferFormState } from "./actions";
 
 export interface BookingOption {
   id: string;
@@ -178,6 +178,11 @@ export function TransfersClient({
                     Cancel
                   </button>
                 )}
+                <button disabled={busy}
+                  onClick={() => { if (window.confirm("Delete this transfer permanently?")) start(() => deleteTransferAction(t.id)); }}
+                  className="rounded-pill border-[1.5px] border-line px-3 py-1 text-xs font-bold text-grey hover:border-rosa-deep hover:text-rosa-deep disabled:opacity-50">
+                  Delete
+                </button>
               </div>
             </div>
             {editing === t.id && (

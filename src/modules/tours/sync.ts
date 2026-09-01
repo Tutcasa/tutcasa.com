@@ -79,8 +79,10 @@ export async function syncAmanahTours(): Promise<SyncResult> {
   let upserted = 0;
   for (const t of feed.tours) {
     if (!t.key || !t.name) continue;
-    // legacy per-person fallback in MXN cents; 0 = on request
-    const perPerson = t.onreq ? 0 : Math.round(((t.offer ?? t.price) ?? 0) * 100);
+    // ON-REQUEST tours never appear on TutCasa (agreed with the client) —
+    // skipping them here lets the archive sweep below retire them
+    if (t.onreq) continue;
+    const perPerson = Math.round(((t.offer ?? t.price) ?? 0) * 100);
     await db.query(
       `insert into tours (slug, title, subtitle, partner, city, duration_label,
                           price_cents, currency, category, status, photo_url,
@@ -105,7 +107,7 @@ export async function syncAmanahTours(): Promise<SyncResult> {
   // Amanah is the authority ONLY for its own rows (source='amanah'):
   // its tours that vanish from the feed are archived. TutCasa-added tours
   // (source='local' — e.g. Egypt) are never touched by the sync.
-  const keys = feed.tours.map((t) => t.key).filter(Boolean);
+  const keys = feed.tours.filter((t) => !t.onreq).map((t) => t.key).filter(Boolean);
   const archivedRes = await db.query(
     `update tours set status='archived', synced_at=now()
       where source='amanah' and category='tour' and status='published'

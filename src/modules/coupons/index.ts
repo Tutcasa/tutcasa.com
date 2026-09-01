@@ -63,7 +63,7 @@ export async function checkCoupon(rawCode: string, ctx: CouponContext): Promise<
   if (c.expires_at && c.expires_at < new Date().toISOString().slice(0, 10)) return no("EXPIRED");
   if (c.max_uses != null && c.used_count >= c.max_uses) return no("USED_UP");
   if (ctx.nights < c.min_nights) return no("MIN_NIGHTS", { minNights: c.min_nights });
-  if (c.listing_id && ctx.listingId && c.listing_id !== ctx.listingId) return no("LISTING_ONLY");
+  if (c.listing_id && c.listing_id !== ctx.listingId) return no("LISTING_ONLY");
   if (c.block_on_sale && (ctx.saleDiscountCents ?? 0) > 0) return no("NO_SALE_STACK");
 
   const email = ctx.guestEmail?.trim().toLowerCase() || null;
@@ -73,8 +73,10 @@ export async function checkCoupon(rawCode: string, ctx: CouponContext): Promise<
   }
   if (c.per_user_limit != null && email) {
     const used = await getDb().query<{ n: string }>(
-      `select count(*) as n from bookings
-        where coupon_code=$1 and lower(guest_email)=$2 and status <> 'cancelled'`,
+      `select (select count(*) from bookings
+                 where coupon_code=$1 and lower(guest_email)=$2 and status <> 'cancelled')
+            + (select count(*) from tour_bookings
+                 where coupon_code=$1 and lower(guest_email)=$2 and status <> 'cancelled') as n`,
       [code, email],
     );
     if (Number(used.rows[0].n) >= c.per_user_limit) return no("USER_LIMIT");
