@@ -17,3 +17,14 @@ export async function requireAdmin(): Promise<void> {
   const ok = got.length === want.length && timingSafeEqual(got, want);
   if (!ok) throw new Error("not authorized");
 }
+
+/** Non-throwing variant for form actions that want to show a friendly
+    "logged out" message instead of a crash screen. */
+export async function isAdmin(): Promise<boolean> {
+  try {
+    await requireAdmin();
+    return true;
+  } catch {
+    return false;
+  }
+}

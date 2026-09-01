@@ -3,15 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { upsertTransfer } from "@/modules/transfers";
 import { getDb } from "@/lib/db";
-import { requireAdmin } from "@/lib/admin-auth";
+import { requireAdmin, isAdmin } from "@/lib/admin-auth";
 
 export interface TransferFormState { ok: boolean; message: string }
+
+const LOGGED_OUT =
+  "Your admin login has expired — refresh this page, log in again, and resubmit.";
+const SAVE_FAILED =
+  "The save didn't go through — refresh the page (it may be outdated after an update) and try again.";
 
 export async function saveTransferAction(
   _prev: TransferFormState,
   formData: FormData,
 ): Promise<TransferFormState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return { ok: false, message: LOGGED_OUT };
+  try {
   const res = await upsertTransfer({
     bookingId: String(formData.get("bookingId") ?? ""),
     kind: formData.get("kind") === "dropoff" ? "dropoff" : "pickup",
@@ -27,6 +33,10 @@ export async function saveTransferAction(
   });
   revalidatePath("/admin/transfers");
   return { ok: res.ok, message: res.message };
+  } catch (e) {
+    console.error("saveTransferAction:", e);
+    return { ok: false, message: SAVE_FAILED };
+  }
 }
 
 /**
@@ -38,7 +48,7 @@ export async function answerAmanahAction(
   _prev: TransferFormState,
   formData: FormData,
 ): Promise<TransferFormState> {
-  await requireAdmin();
+  if (!(await isAdmin())) return { ok: false, message: LOGGED_OUT };
   const transferId = String(formData.get("transferId") ?? "");
   const answer = String(formData.get("answer") ?? "").trim();
   if (!transferId || !answer) return { ok: false, message: "Write the answer first." };

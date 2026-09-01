@@ -1,6 +1,7 @@
 import { listTourBookings } from "@/modules/tours";
 import { amanahWhatsAppLink } from "@/modules/notifications";
 import { StatusButtons } from "./status-buttons";
+import { TourAnswerForm } from "./answer-form";
 
 export const dynamic = "force-dynamic";
 
@@ -43,9 +44,10 @@ export default async function AdminTourBookings() {
                 </p>
                 {b.notes && <p className="mt-1 text-sm italic text-grey">&ldquo;{b.notes}&rdquo;</p>}
                 {b.amanahNote && (
-                  <p className="mt-1 rounded-xl bg-rosa/10 px-3 py-1.5 text-sm font-semibold text-rosa-deep">
-                    Amanah: {b.amanahNote}
-                  </p>
+                  <div className="mt-1 rounded-xl bg-rosa/10 px-3 py-2 text-sm">
+                    <div className="font-semibold text-rosa-deep">Amanah asks: {b.amanahNote}</div>
+                    <TourAnswerForm bookingId={b.id} />
+                  </div>
                 )}
               </div>
               <div className="flex flex-col gap-2">

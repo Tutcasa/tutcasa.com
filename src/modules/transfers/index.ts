@@ -123,7 +123,6 @@ export async function upsertTransfer(
 ): Promise<{ ok: boolean; message: string; transfer?: Transfer }> {
   if (!input.fullName.trim()) return { ok: false, message: "The traveler's full name is required." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.travelDate)) return { ok: false, message: "Pick the day of travel." };
-  if (!input.flightNumber.trim()) return { ok: false, message: "The flight number is required." };
 
   const db = getDb();
   const res = await db.query(
@@ -138,7 +137,7 @@ export async function upsertTransfer(
        status='requested', amanah_note=null
      returning id`,
     [input.bookingId?.trim() || null, input.fullName.trim(), input.travelDate,
-     input.flightNumber.trim().toUpperCase(), input.passengers,
+     input.flightNumber.trim().toUpperCase() || 'TBD', input.passengers,
      input.babySeat, input.note?.trim() || null, input.filledBy,
      input.kind === "dropoff" ? "dropoff" : "pickup",
      input.whatsapp?.trim() || null, input.address?.trim() || null],

@@ -64,8 +64,8 @@ function TransferForm({
         <input name="travelDate" type="date" required className={inputCls}
           defaultValue={transfer?.travelDate ?? picked?.checkIn ?? ""} key={bookingId + "d"} />
       </label>
-      <label className="text-xs font-bold">FLIGHT NUMBER *
-        <input name="flightNumber" required placeholder="e.g. AM 512" className={inputCls}
+      <label className="text-xs font-bold">FLIGHT NUMBER <span className="font-normal text-grey">(if known)</span>
+        <input name="flightNumber" placeholder="e.g. AM 512" className={inputCls}
           defaultValue={transfer?.flightNumber ?? ""} />
       </label>
       <label className="text-xs font-bold">PASSENGERS *
