@@ -269,3 +269,9 @@ body:has([class^="pg-experiences"]) .mytour-bar b{font-family:'Baloo 2';font-siz
 body:has([class^="pg-experiences"]) .mytour-bar small{opacity:.75;font-size:12px;display:block}
 body:has([class^="pg-experiences"]) .mytour-send{background:#1EBE5D;color:#fff;border:none;border-radius:999px;padding:11px 18px;font-family:'Outfit';font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap}
 body:has([class^="pg-experiences"]) .mytour-clear{background:none;border:none;color:rgba(255,255,255,.6);font-size:18px;cursor:pointer;padding:4px}
+
+/* the same Tours / Parks / See-all tab bar as the tours page */
+body:has([class^="pg-experiences"]) .tt-tabs{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin:18px auto 4px;padding:0 16px}
+body:has([class^="pg-experiences"]) .tt-tab{border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-family:'Outfit';font-weight:700;font-size:14.5px;padding:10px 20px;border-radius:999px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none;transition:all .15s}
+body:has([class^="pg-experiences"]) .tt-tab:hover{border-color:var(--rosa);color:var(--rosa)}
+body:has([class^="pg-experiences"]) .tt-tab.on{background:var(--ink);border-color:var(--ink);color:#fff;cursor:default}

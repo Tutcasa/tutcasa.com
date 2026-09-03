@@ -1,6 +1,7 @@
 import "@/styles/demo/experiences.css";
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,12 @@ export default async function ExperiencesPage() {
   return (
     <div className="pg-experiences">
       <BackBar />
+
+      <div className="tt-tabs">
+        <Link className="tt-tab" href="/tours">&#127796; Tours</Link>
+        <Link className="tt-tab" href="/tours?cat=parks">&#127906; Parks</Link>
+        <span className="tt-tab on">&#127914; See all activities</span>
+      </div>
 
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "26px 18px 60px" }}>
         {activities.length === 0 ? (
