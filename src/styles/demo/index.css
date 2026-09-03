@@ -212,8 +212,8 @@ body:has([class^="pg-index"]) .exp-b h4{font-family:'Baloo 2';font-size:15.5px}
 body:has([class^="pg-index"]) .exp-b p{font-size:12.5px;color:var(--grey);margin-top:2px}
 body:has([class^="pg-index"]) .familia{padding:56px 0}
 body:has([class^="pg-index"]) .familia .card{background:var(--paper);border-radius:26px;border:1px solid var(--line);box-shadow:var(--shadow);display:grid;grid-template-columns:.9fr 1.3fr;overflow:hidden}
-body:has([class^="pg-index"]) .familia .photo{background:linear-gradient(140deg,#F7C86B,var(--terra) 70%);min-height:280px;position:relative}
-body:has([class^="pg-index"]) .familia .photo::after{content:"Real photo of the TutCasa team";position:absolute;left:14px;bottom:12px;font-size:11px;color:rgba(255,255,255,.9);border:1px dashed rgba(255,255,255,.6);border-radius:6px;padding:3px 9px}
+body:has([class^="pg-index"]) .familia .photo{background:linear-gradient(140deg,#F7C86B,var(--terra) 70%);min-height:280px;position:relative;overflow:hidden}
+
 body:has([class^="pg-index"]) .familia .body{padding:38px 40px}
 body:has([class^="pg-index"]) .familia h2{font-size:28px;font-weight:800}
 body:has([class^="pg-index"]) .familia h2 .em{color:var(--terra)}
