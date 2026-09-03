@@ -106,3 +106,35 @@ export async function createInvoiceCheckoutSession(id: string): Promise<{ url: s
     return { error: "Couldn't start the payment — try again in a moment." };
   }
 }
+
+/** PaymentIntent for the embedded Payment Element (same amount logic as
+    the hosted session). Returns the client secret + which mode the
+    server key is in, so the client can verify the publishable key
+    matches before mounting the form. */
+export async function createInvoicePaymentIntent(
+  id: string,
+): Promise<{ clientSecret: string; mode: "test" | "live"; amountCents: number; currency: string } | { error: string }> {
+  if (!stripeConfigured()) return { error: "Payments aren't switched on yet." };
+  const inv = await payableForInvoice(id);
+  if (!inv) return { error: "Nothing is due on this invoice." };
+  try {
+    const pi = await stripePost("/payment_intents", {
+      amount: String(inv.dueCents),
+      currency: inv.currency.toLowerCase(),
+      "automatic_payment_methods[enabled]": "true",
+      receipt_email: inv.guestEmail,
+      description: inv.label,
+      "metadata[kind]": inv.kind,
+      "metadata[invoiceId]": inv.id,
+    });
+    return {
+      clientSecret: String(pi.client_secret),
+      mode: process.env.STRIPE_SECRET_KEY!.startsWith("sk_test") ? "test" : "live",
+      amountCents: inv.dueCents,
+      currency: inv.currency,
+    };
+  } catch (e) {
+    console.error("stripe payment_intent:", e);
+    return { error: "Couldn't start the payment — try again in a moment." };
+  }
+}

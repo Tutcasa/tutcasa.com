@@ -12,7 +12,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
-import { startPaymentAction } from "@/app/invoice/[id]/pay-actions";
+import { startPaymentAction, createPaymentIntentAction } from "@/app/invoice/[id]/pay-actions";
+import { StripePayForm, publishableKeyMode, type PayIntent } from "./StripePayForm";
 import { submitPlanRequest } from "@/app/leads-actions";
 import { reserveTourAction, validateTourCouponAction } from "@/app/tours/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
@@ -45,7 +46,7 @@ const ERRORS: Record<string, string> = {
   MIN_STAY_NOT_MET: "This home has a minimum stay — extend your dates.",
   TOO_MANY_GUESTS: "That's more guests than this home sleeps.",
   LISTING_NOT_FOUND: "This home is no longer available.",
-  INVALID_CONTACT: "Please add the name on card and a valid email.",
+  INVALID_CONTACT: "Please add your name and a valid email.",
   UNAVAILABLE: "Some of those nights are already booked.",
   COUPON_INVALID: "That coupon can't be used for this booking (it may be tied to another email, home, or already used) — remove it or fix it, then try again.",
   TOUR_NOT_FOUND: "This tour is no longer available.",
@@ -73,11 +74,6 @@ export function CheckoutClient({
   const [guestName, setGuestName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [ccName, setCcName] = useState("");
-  const [ccNum, setCcNum] = useState("");
-  const [ccExp, setCcExp] = useState("");
-  const [ccCvc, setCcCvc] = useState("");
-  const [country, setCountry] = useState("Mexico");
   const [promo, setPromo] = useState("");
   const [promoMsg, setPromoMsg] = useState(false);
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
@@ -86,6 +82,8 @@ export function CheckoutClient({
   const [agreed, setAgreed] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [paidNow, setPaidNow] = useState(false); // card charged on-page
+  const [intent, setIntent] = useState<PayIntent | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // a saved referral coupon (from an /invite/CODE link) fills in automatically
@@ -124,17 +122,6 @@ export function CheckoutClient({
     }
   }
 
-  function fmtCard(v: string) {
-    const d = v.replace(/[^0-9]/g, "").slice(0, 16);
-    let out = "";
-    for (let i = 0; i < d.length; i++) { if (i > 0 && i % 4 === 0) out += " "; out += d[i]; }
-    return out;
-  }
-  function fmtExp(v: string) {
-    const d = v.replace(/[^0-9]/g, "").slice(0, 4);
-    return d.length >= 3 ? d.slice(0, 2) + " / " + d.slice(2) : d;
-  }
-
   async function pay() {
     setError(null);
     if (payload.kind === "none") {
@@ -161,7 +148,7 @@ export function CheckoutClient({
       }
       return;
     }
-    const name = guestName.trim() || ccName.trim();
+    const name = guestName.trim();
     const okEmail = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
     if (!name || !okEmail) { setError(ERRORS.INVALID_CONTACT); return; }
     if (!phone.trim()) { setError("Please add your phone number with country code."); return; }
@@ -183,13 +170,26 @@ export function CheckoutClient({
               couponCode: coupon?.code,
             });
       if (res.ok) {
-        // instant stays AND tours hand straight to Stripe's secure card
-        // page; requests (and unconfigured payments) keep the
-        // confirmation screen
+        // instant stays AND tours pay ON THIS PAGE (Payment Element);
+        // if the publishable key can't drive the embedded form we fall
+        // back to Stripe's hosted page; requests keep the review flow
         const goesToStripe = payload.kind === "tour" || !requestToBook;
         if (goesToStripe && "bookingId" in res && res.bookingId) {
-          const pay = await startPaymentAction(res.bookingId);
-          if (pay.url) { window.location.href = pay.url; return; }
+          const pi = await createPaymentIntentAction(res.bookingId);
+          if (pi.clientSecret && pi.mode && publishableKeyMode() === pi.mode) {
+            setIntent({
+              clientSecret: pi.clientSecret,
+              amountCents: pi.amountCents ?? 0,
+              currency: pi.currency ?? cur,
+              invoiceId: res.bookingId,
+            });
+            window.scrollTo(0, 0);
+            return;
+          }
+          if (!pi.offline) {
+            const pay = await startPaymentAction(res.bookingId);
+            if (pay.url) { window.location.href = pay.url; return; }
+          }
         }
         setPaid(true); window.scrollTo(0, 0);
       }
@@ -267,30 +267,21 @@ export function CheckoutClient({
             ) : null}
           </div>
           <div className="co-card">
-            <h3>{requestToBook ? "Your details" : "Payment"}</h3>
+            <h3>{requestToBook ? "Your details" : intent ? "Pay securely" : "Payment"}</h3>
             <div className="co-sub">
               {requestToBook
                 ? "No payment now — the owner reviews your request first. You'll get a secure payment link once it's approved."
-                : "Card details are handled by Stripe. TutCasa never sees your card number."}
+                : intent
+                  ? "Your dates are held — complete the payment to confirm the booking."
+                  : "Card details are handled by Stripe. TutCasa never sees your card number."}
             </div>
+            {intent ? (
+              <StripePayForm intent={intent} onPaid={() => { setPaidNow(true); setPaid(true); window.scrollTo(0, 0); }} />
+            ) : (<>
             <div className="co-fld"><label>Guest full name</label><input placeholder="Maria Lopez" value={guestName} onChange={(e) => setGuestName(e.target.value)} /></div>
             <div className="co-fld"><label>Email for confirmation</label><input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="co-fld"><label>Phone / WhatsApp (with country code)</label><input type="tel" placeholder="+52 984 123 4567" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-            {!requestToBook && (
-              <>
-                <div className="co-fld"><label>Name on card</label><input placeholder="MARIA LOPEZ" value={ccName} onChange={(e) => setCcName(e.target.value)} /></div>
-                <div className="co-fld"><label>Card number</label><input inputMode="numeric" placeholder="1234 1234 1234 1234" value={ccNum} onChange={(e) => setCcNum(fmtCard(e.target.value))} /></div>
-                <div className="co-two">
-                  <div className="co-fld"><label>Expiry</label><input inputMode="numeric" placeholder="MM / YY" value={ccExp} onChange={(e) => setCcExp(fmtExp(e.target.value))} /></div>
-                  <div className="co-fld"><label>CVC</label><input inputMode="numeric" placeholder="123" value={ccCvc} onChange={(e) => setCcCvc(e.target.value.replace(/[^0-9]/g, "").slice(0, 4))} /></div>
-                </div>
-                <div className="co-fld"><label>Country</label>
-                  <select value={country} onChange={(e) => setCountry(e.target.value)}>
-                    <option>Mexico</option><option>United States</option><option>Canada</option><option>Egypt</option><option>United Kingdom</option><option>France</option>
-                  </select>
-                </div>
-              </>
-            )}
+
             <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "13px", margin: "4px 0 10px", cursor: "pointer" }}>
               <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} style={{ marginTop: 2 }} />
               <span>
@@ -309,21 +300,25 @@ export function CheckoutClient({
                   ? (requestToBook ? "Sending your request…" : "Holding your dates…")
                   : requestToBook
                     ? "Send booking request — no charge now"
-                    : `Reserve — ${show(schedule && schedule.balance > 0 ? total - Math.max(0, schedule.balance - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
+                    : `Continue to payment — ${show(schedule && schedule.balance > 0 ? total - Math.max(0, schedule.balance - discount) : total)} due${schedule && schedule.balance > 0 ? " now" : ""}`}
               </span>
             </button>
             {!requestToBook && (
-              <>
-                <div className="co-stripe">&#128274; <span>Secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
-                <div className="co-note">Preview mode: this shows the full checkout flow. The live Stripe charge is switched on at the backend step &mdash; no real payment is taken here.</div>
-              </>
+              <div className="co-stripe">&#128274; <span>Payments secured by</span> <b style={{ color: "#635BFF" }}>Stripe</b></div>
             )}
+            </>)}
           </div>
         </div>
         <div className="paid" style={{ display: paid ? "block" : "none" }}>
           <div className="c">&#10003;</div>
-          <h2>{payload.kind === "plan" ? "Plan request received!" : requestToBook ? "Booking request sent!" : "Booking request received!"}</h2>
-          {payload.kind === "plan" ? (
+          <h2>{paidNow ? "Paid & confirmed! 🎉" : payload.kind === "plan" ? "Plan request received!" : requestToBook ? "Booking request sent!" : "Booking request received!"}</h2>
+          {paidNow ? (
+            <p>
+              Your payment went through and the booking is <b>confirmed</b> —
+              the receipt and confirmation email are on their way to your inbox.
+              ¡Nos vemos pronto! 🌴
+            </p>
+          ) : payload.kind === "plan" ? (
             <p>
               Thank you &mdash; we got your custom plan and we&rsquo;ll come back
               within 24 hours with your exact quote. <b>Nothing is charged</b> until

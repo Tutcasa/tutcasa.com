@@ -36,15 +36,20 @@ export async function POST(req: NextRequest) {
     data: { object: { id: string; amount_total?: number; payment_intent?: string;
       metadata?: { kind?: string; invoiceId?: string } } };
   };
-  if (event.type !== "checkout.session.completed") {
+  const isSession = event.type === "checkout.session.completed";
+  const isIntent = event.type === "payment_intent.succeeded";
+  if (!isSession && !isIntent) {
     return NextResponse.json({ received: true });
   }
 
-  const s = event.data.object;
+  const s = event.data.object as { id: string; amount_total?: number; amount_received?: number;
+    payment_intent?: string; metadata?: { kind?: string; invoiceId?: string } };
   const kind = s.metadata?.kind;
   const id = s.metadata?.invoiceId ?? "";
-  const paidCents = Number(s.amount_total ?? 0);
-  const ref = String(s.payment_intent ?? s.id);
+  const paidCents = Number(isSession ? (s.amount_total ?? 0) : (s.amount_received ?? 0));
+  // both event shapes resolve to the SAME payment-intent id, so the
+  // per-ref idempotency below also dedupes session+intent double-fires
+  const ref = String(isSession ? (s.payment_intent ?? s.id) : s.id);
   if (!/^[0-9a-f-]{36}$/i.test(id) || paidCents <= 0) {
     return NextResponse.json({ received: true });
   }
