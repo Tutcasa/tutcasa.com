@@ -235,6 +235,16 @@ function TourCard({
   );
 }
 
+
+/** After picking a start date, suggest the next day so the end-date
+    calendar opens on the right month (guest adjusts freely). */
+function suggestEnd(start: string, end: string): string {
+  if (!start || (end && end > start)) return end;
+  const d = new Date(`${start}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export function ToursClient({
   tours, addons, byoActs, whatsapp, email, initialView,
 }: {
@@ -440,8 +450,8 @@ export function ToursClient({
             <div className="byo-trip">
               <T as="div" className="byo-trip-t" k="byo_trip" />
               <div className="byo-row2">
-                <div className="byo-f"><T as="label" k="byo_ci" /><input type="date" value={byoCi} onChange={(e) => setByoCi(e.target.value)} /></div>
-                <div className="byo-f"><T as="label" k="byo_co" /><input type="date" value={byoCo} onChange={(e) => setByoCo(e.target.value)} /></div>
+                <div className="byo-f"><T as="label" k="byo_ci" /><input type="date" min={minDate} value={byoCi} onChange={(e) => { setByoCi(e.target.value); setByoCo(suggestEnd(e.target.value, byoCo)); }} /></div>
+                <div className="byo-f"><T as="label" k="byo_co" /><input type="date" min={byoCi || minDate} value={byoCo} onChange={(e) => setByoCo(e.target.value)} /></div>
               </div>
               <div className="byo-row3">
                 <div className="byo-f"><T as="label" k="byo_adults" /><div className="byo-step"><button type="button" onClick={() => setByoA((v) => Math.max(1, v - 1))}>&minus;</button><span>{byoA}</span><button type="button" onClick={() => setByoA((v) => v + 1)}>+</button></div></div>
