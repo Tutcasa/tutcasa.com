@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions";
+import { startPaymentAction } from "@/app/invoice/[id]/pay-actions";
 import { submitPlanRequest } from "@/app/leads-actions";
 import { reserveTourAction, validateTourCouponAction } from "@/app/tours/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
@@ -181,7 +182,17 @@ export function CheckoutClient({
               addons: payload.addons, notes: payload.notes,
               couponCode: coupon?.code,
             });
-      if (res.ok) { setPaid(true); window.scrollTo(0, 0); }
+      if (res.ok) {
+        // instant stays AND tours hand straight to Stripe's secure card
+        // page; requests (and unconfigured payments) keep the
+        // confirmation screen
+        const goesToStripe = payload.kind === "tour" || !requestToBook;
+        if (goesToStripe && "bookingId" in res && res.bookingId) {
+          const pay = await startPaymentAction(res.bookingId);
+          if (pay.url) { window.location.href = pay.url; return; }
+        }
+        setPaid(true); window.scrollTo(0, 0);
+      }
       else setError(ERRORS[res.error] ?? "Something went wrong — please try again.");
     } finally {
       setPaying(false);

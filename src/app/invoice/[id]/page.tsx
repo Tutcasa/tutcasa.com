@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { fmtMoney } from "@/modules/pricing";
 import { InvoiceActions } from "./invoice-actions";
+import { PayNow } from "./pay-now";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +90,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     `select tb.invoice_no, tb.created_at, tb.status, tb.guest_name, tb.guest_email,
             tb.group_size, tb.total_cents, tb.currency,
             to_char(tb.tour_date,'YYYY-MM-DD') as tour_date,
-            tb.coupon_code, tb.coupon_discount_cents, t.title
+            tb.coupon_code, tb.coupon_discount_cents, tb.amount_paid_cents, t.title
        from tour_bookings tb join tours t on t.id = tb.tour_id
       where tb.id = $1`,
     [id],
@@ -105,7 +106,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       totalCents: b.total_cents, currency: b.currency,
       dueNowCents: null, balanceCents: null, balanceDueDate: null,
       securityDepositCents: 0,
-      amountPaidCents: 0,
+      amountPaidCents: b.amount_paid_cents ?? 0,
     };
   }
   return null;
@@ -204,10 +205,7 @@ export default async function InvoicePage({
             <div className="flex justify-between font-extrabold text-rosa">
               <span>Amount due</span><span>{money(inv.totalCents - inv.amountPaidCents)} {inv.currency}</span>
             </div>
-            <p className="mt-2 text-xs text-grey">
-              To pay, reply to your confirmation email or message us on WhatsApp
-              and we&rsquo;ll send your secure card payment link.
-            </p>
+            <PayNow invoiceId={id} />
           </div>
         )}
         {inv.status !== "cancelled" && inv.amountPaidCents >= inv.totalCents && inv.totalCents > 0 && (
