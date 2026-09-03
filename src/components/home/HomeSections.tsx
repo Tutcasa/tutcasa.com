@@ -263,9 +263,9 @@ export function FamiliaBand() {
     <section className="familia wrap">
       <div className="card">
         <div className="photo">
-          {/* the real TutCasa family — replaces the placeholder gradient */}
+          {/* the TutCasa hero film (landscape, like the old site's hero) */}
           <video
-            src="https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia.mp4"
+            src="https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia-hero.mp4"
             autoPlay muted loop playsInline
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
           />
