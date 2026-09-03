@@ -193,6 +193,16 @@ function StayCasa({ p, dates }: { p: StayCard; dates: { ci: string; co: string }
   );
 }
 
+
+/** After picking a start date, suggest the next night so the check-out
+    calendar opens on the right month (guest adjusts freely). */
+function suggestCheckout(ci: string, co: string): string {
+  if (!ci || (co && co > ci)) return co;
+  const d = new Date(`${ci}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export function StaysClient({
   props,
   initial,
@@ -347,8 +357,8 @@ export function StaysClient({
               </div>
             </div>
           </div>
-          <div className="sb-cell"><label><T k="st_checkin" /></label><input type="date" value={ci} onChange={(e) => setCi(e.target.value)} /></div>
-          <div className="sb-cell"><label><T k="st_checkout" /></label><input type="date" value={co} onChange={(e) => setCo(e.target.value)} /></div>
+          <div className="sb-cell"><label><T k="st_checkin" /></label><input type="date" value={ci} onChange={(e) => { setCi(e.target.value); setCo(suggestCheckout(e.target.value, co)); }} /></div>
+          <div className="sb-cell"><label><T k="st_checkout" /></label><input type="date" min={ci || undefined} value={co} onChange={(e) => setCo(e.target.value)} /></div>
           <div className="sb-cell" data-pop-cell onClick={(e) => { e.stopPropagation(); setPop("who"); }}>
             <label><T k="st_who" /></label>
             <div className={`val${whoText ? " filled" : ""}`}>{whoText || <T k="st_addguests" />}</div>

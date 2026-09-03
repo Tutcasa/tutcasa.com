@@ -79,6 +79,16 @@ function ResultCard({ r }: { r: (typeof RESULTS)[number] }) {
   );
 }
 
+
+/** After picking a start date, suggest the next night so the check-out
+    calendar opens on the right month (guest adjusts freely). */
+function suggestCheckout(ci: string, co: string): string {
+  if (!ci || (co && co > ci)) return co;
+  const d = new Date(`${ci}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 export function HomeHero() {
   const router = useRouter();
   const { t } = useLang();
@@ -260,11 +270,11 @@ export function HomeHero() {
               </div>
               <div className="sb-cell">
                 <label>Check in</label>
-                <input type="date" value={ci} onChange={(e) => setCi(e.target.value)} />
+                <input type="date" value={ci} onChange={(e) => { setCi(e.target.value); setCo(suggestCheckout(e.target.value, co)); }} />
               </div>
               <div className="sb-cell">
                 <label>Check out</label>
-                <input type="date" value={co} onChange={(e) => setCo(e.target.value)} />
+                <input type="date" min={ci || undefined} value={co} onChange={(e) => setCo(e.target.value)} />
               </div>
               <div className="sb-cell" data-pop-cell onClick={(e) => { e.stopPropagation(); setPop("who"); }}>
                 <label>How many</label>
@@ -336,11 +346,11 @@ export function HomeHero() {
                     <div className="dates-row">
                       <div className="date-field">
                         <label>Check in</label>
-                        <input type="date" value={wCi} onChange={(e) => setWCi(e.target.value)} />
+                        <input type="date" value={wCi} onChange={(e) => { setWCi(e.target.value); setWCo(suggestCheckout(e.target.value, wCo)); }} />
                       </div>
                       <div className="date-field">
                         <label>Check out</label>
-                        <input type="date" value={wCo} onChange={(e) => setWCo(e.target.value)} />
+                        <input type="date" min={wCi || undefined} value={wCo} onChange={(e) => setWCo(e.target.value)} />
                       </div>
                     </div>
                     <div className="who-box">

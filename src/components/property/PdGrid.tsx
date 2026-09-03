@@ -88,12 +88,20 @@ function localISO(d: Date): string {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
 }
 
+function addDaysISO(iso: string, n: number): string {
+  const d = new Date(`${iso}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 export function PdGrid({ p }: { p: PdData }) {
   const router = useRouter();
   const { fromUSD } = useCurrency();
   const { t } = useLang();
   const [ci, setCi] = useState(p.initialCi ?? "");
   const [co, setCo] = useState(p.initialCo && p.initialCi && p.initialCo > p.initialCi ? p.initialCo : "");
+  // true while check-out is only our min-stay suggestion, not the guest's pick
+  const [coAuto, setCoAuto] = useState(false);
   const [guests, setGuests] = useState(Math.min(2, p.guests));
   const [gMinDisabled, setGMinDisabled] = useState(false);
   // quote is keyed by its date range so stale results never show —
@@ -134,11 +142,18 @@ export function PdGrid({ p }: { p: PdData }) {
 
   function setDates(nci: string | null, nco: string | null) {
     setCi(nci ?? "");
-    setCo(nco && nci && nco <= nci ? "" : nco ?? "");
+    let next = nco && nci && nco <= nci ? "" : nco ?? "";
+    // picking a check-in with no (valid) check-out pre-fills the minimum
+    // stay, so the check-out calendar opens on the right month instead of
+    // today's — the guest just adjusts the end date
+    const auto = !!nci && !next;
+    if (auto) next = addDaysISO(nci!, Math.max(1, p.minStay));
+    setCoAuto(auto);
+    setCo(next);
   }
 
   function pickDay(iso: string) {
-    if (!ci || (ci && co)) setDates(iso, null);
+    if (!ci || (ci && co && !coAuto)) setDates(iso, null);
     else if (iso > ci) setDates(ci, iso);
     else setDates(iso, null);
   }
@@ -249,7 +264,7 @@ export function PdGrid({ p }: { p: PdData }) {
       const off = blocked(iso);
       // a booked night's FIRST day is still a legal checkout morning —
       // the guest leaves before the next stay begins
-      const checkoutOk = !past && off && !!ci && !co && iso > ci && !overlaps(ci, iso);
+      const checkoutOk = !past && off && !!ci && (!co || coAuto) && iso > ci && !overlaps(ci, iso);
       let cls = "pd-day avail";
       if (past || off) cls = "pd-day off";
       else if (iso === ci || iso === co) cls = "pd-day sel";
@@ -424,7 +439,7 @@ export function PdGrid({ p }: { p: PdData }) {
         </div>
         <div className="pd-dates">
           <label><T k="pd_ci" /><input ref={ciRef} type="date" min={today} value={ci} onChange={(e) => setDates(e.target.value || null, co || null)} /></label>
-          <label><T k="pd_co" /><input type="date" min={today} value={co} onChange={(e) => setDates(ci || null, e.target.value || null)} /></label>
+          <label><T k="pd_co" /><input type="date" min={ci ? addDaysISO(ci, 1) : today} value={co} onChange={(e) => setDates(ci || null, e.target.value || null)} /></label>
         </div>
         <div className="pd-guests">
           <T k="pd_guests" />
