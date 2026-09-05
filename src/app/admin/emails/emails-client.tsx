@@ -8,6 +8,8 @@ import {
   addAutomationAction,
   deleteAutomationAction,
   sendTestAction,
+  broadcastTestAction,
+  broadcastSendAction,
   type EmailFormState,
 } from "./actions";
 
@@ -20,6 +22,7 @@ const TRIGGERS: [string, string][] = [
   ["booking_confirmed", "Booking confirmed"],
   ["deposit_unpaid", "N days after booking, if the deposit is still unpaid"],
   ["second_payment_due", "N days before the balance due date"],
+  ["double_booking", "Double booking detected (daily check)"],
   ["payment_receipt", "Payment completed"],
   ["before_checkin", "N days before check-in"],
   ["before_checkout", "N days before check-out"],
@@ -147,7 +150,79 @@ function AutomationCard({ a }: { a: EmailAutomation }) {
   );
 }
 
-export function EmailsClient({ automations }: { automations: EmailAutomation[] }) {
+const BROADCAST_VARS = "{{guest_name}} {{guest_email}} {{listing}} {{check_in}} {{check_out}} {{guests}}";
+
+function BroadcastCard({ listings }: { listings: { id: string; title: string }[] }) {
+  const [audience, setAudience] = useState("upcoming");
+  const [state, action, pending] = useActionState(broadcastSendAction, initial);
+  const [testState, testAction, testPending] = useActionState(broadcastTestAction, initial);
+
+  return (
+    <div className="rounded-card bg-paper p-4 shadow-soft">
+      <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wider text-grey">Send to guests (one-off blast)</div>
+      <p className="mb-3 max-w-2xl text-xs text-grey">
+        For offers, discounts and announcements: compose a message, pick who gets it, and send —
+        each guest receives it personalised with their own booking details.
+        Guests booked through Amanah are never included.
+      </p>
+      <form action={action} className="grid gap-2">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="text-xs font-bold">AUDIENCE
+            <select name="audience" value={audience} onChange={(e) => setAudience(e.target.value)} className={inputCls}>
+              <option value="upcoming">Guests with upcoming stays</option>
+              <option value="past">Past guests</option>
+              <option value="listing">Guests of one home</option>
+              <option value="all">All guests</option>
+            </select>
+          </label>
+          {audience === "listing" && (
+            <label className="text-xs font-bold">WHICH HOME
+              <select name="listingId" className={inputCls} defaultValue="">
+                <option value="" disabled>Pick a home…</option>
+                {listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+              </select>
+            </label>
+          )}
+        </div>
+        <label className="text-xs font-bold">SUBJECT
+          <input name="subject" required placeholder="e.g. 20% off your next stay this winter ❄️" className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">MESSAGE <span className="font-normal text-grey">(blank line = new paragraph, “- ” = highlighted list)</span>
+          <textarea name="body" rows={7} required placeholder={"Hola {{guest_name}}!\n\nWe have something special for you…"} className={`${inputCls} font-mono text-xs`} />
+        </label>
+        <div className="text-[11px] leading-5 text-grey">
+          Variables: <span className="font-mono">{BROADCAST_VARS}</span> — filled from each guest&#39;s most recent booking.
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs font-bold">TRY IT ON YOURSELF FIRST
+            <input name="to" type="email" placeholder="you@email.com" className={inputCls} />
+          </label>
+          <button
+            formAction={testAction}
+            disabled={testPending}
+            className="rounded-pill border-[1.5px] border-rosa px-4 py-2 text-sm font-bold text-rosa hover:bg-rosa hover:text-white disabled:opacity-50"
+          >
+            {testPending ? "Sending…" : "Send test"}
+          </button>
+          <button disabled={pending}
+            onClick={(e) => {
+              if (!confirm("Send this email to every guest in the selected audience?")) e.preventDefault();
+            }}
+            className="rounded-pill bg-rosa px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
+            {pending ? "Sending to guests…" : "Send to guests"}
+          </button>
+        </div>
+        {(testState.message || state.message) && (
+          <p className={`text-sm font-semibold ${(state.message ? state.ok : testState.ok) ? "text-cactus" : "text-rosa-deep"}`}>
+            {state.message || testState.message}
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}
+
+export function EmailsClient({ automations, listings }: { automations: EmailAutomation[]; listings: { id: string; title: string }[] }) {
   const [addState, addAction, addPending] = useActionState(addAutomationAction, initial);
   const guest = automations.filter((a) => a.audience === "guest");
   const admin = automations.filter((a) => a.audience === "admin");
@@ -162,6 +237,8 @@ export function EmailsClient({ automations }: { automations: EmailAutomation[] }
         <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-grey">Team emails</div>
         <div className="grid gap-3">{admin.map((a) => <AutomationCard key={a.id} a={a} />)}</div>
       </div>
+
+      <BroadcastCard listings={listings} />
 
       <div className="rounded-card bg-paper p-4 shadow-soft">
         <div className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey">Add an automation</div>

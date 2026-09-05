@@ -69,6 +69,45 @@ export async function deleteAutomationAction(id: string): Promise<void> {
   revalidatePath("/admin/emails");
 }
 
+export async function broadcastTestAction(
+  _prev: EmailFormState,
+  formData: FormData,
+): Promise<EmailFormState> {
+  await requireAdmin();
+  const subject = s(formData.get("subject"));
+  const body = String(formData.get("body") ?? "").trim();
+  const to = s(formData.get("to"));
+  if (!subject || !body) return { ok: false, message: "Write a subject and message first." };
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return { ok: false, message: "Enter a valid email address." };
+  const { sendBroadcastTest } = await import("@/modules/emails/broadcast");
+  return sendBroadcastTest(subject, body, to);
+}
+
+export async function broadcastSendAction(
+  _prev: EmailFormState,
+  formData: FormData,
+): Promise<EmailFormState> {
+  await requireAdmin();
+  const subject = s(formData.get("subject"));
+  const body = String(formData.get("body") ?? "").trim();
+  const audience = s(formData.get("audience"));
+  const listingId = s(formData.get("listingId"));
+  if (!subject || !body) return { ok: false, message: "Write a subject and message first." };
+  if (!["upcoming", "past", "listing", "all"].includes(audience)) {
+    return { ok: false, message: "Pick an audience." };
+  }
+  if (audience === "listing" && !listingId) {
+    return { ok: false, message: "Pick which home's guests should get it." };
+  }
+  const { sendBroadcast } = await import("@/modules/emails/broadcast");
+  return sendBroadcast({
+    audience: audience as "upcoming" | "past" | "listing" | "all",
+    listingId: listingId || undefined,
+    subject,
+    body,
+  });
+}
+
 export async function sendTestAction(
   _prev: EmailFormState,
   formData: FormData,

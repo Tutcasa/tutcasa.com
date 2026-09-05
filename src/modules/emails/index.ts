@@ -30,6 +30,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   before_checkin: "N days before check-in",
   before_checkout: "N days before check-out",
   deposit_unpaid: "N days after booking, if the deposit is still unpaid",
+  double_booking: "When a double booking is detected (daily check)",
   custom: "Manual — only sent when you send it yourself",
 };
 
@@ -80,6 +81,7 @@ const SAMPLE: Record<string, string> = {
   checkout_until: "11:00",
   booking_kind: "booking request",
   source: "direct",
+  conflict: "booking INV-1042 (Jane D., 2026-10-05 → 2026-10-10)",
 };
 
 export function fillVars(text: string, vars: Record<string, string> = {}): string {

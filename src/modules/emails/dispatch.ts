@@ -146,6 +146,7 @@ async function deliver(
 export async function sendAutomationForBooking(
   key: string,
   bookingId: string,
+  extraVars?: Record<string, string>,
 ): Promise<void> {
   const a = await getAutomation(key);
   if (!a || !a.enabled) return;
@@ -156,9 +157,10 @@ export async function sendAutomationForBooking(
   // dedupe happens PER RECIPIENT inside deliver() (unique-index claim) —
   // so a partially-delivered team email still reaches the missing inboxes
 
-  const subject = fillVars(a.subject, ctx.vars);
-  const html = renderEmailHtml({ subject: a.subject, body: a.body, vars: ctx.vars });
-  const text = fillVars(a.body, ctx.vars);
+  const vars = { ...ctx.vars, ...extraVars };
+  const subject = fillVars(a.subject, vars);
+  const html = renderEmailHtml({ subject: a.subject, body: a.body, vars });
+  const text = fillVars(a.body, vars);
 
   const recipients =
     a.audience === "guest"
@@ -201,7 +203,7 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
   let sent = 0, checked = 0;
 
   for (const a of autos.rows) {
-    let bookings: { id: string }[] = [];
+    let bookings: { id: string; conflict?: string }[] = [];
     // WINDOWS, not exact dates: a booking confirmed late (or a day the
     // cron missed) still gets its reminder on the next sweep, as long as
     // the moment hasn't passed. The per-recipient claim dedupes repeats.
@@ -216,6 +218,33 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
         `select id from bookings where status in ('confirmed')
           and upper(stay) between current_date and current_date + ($1 || ' days')::interval`,
         [String(a.offset_days)],
+      )).rows;
+    } else if (a.trigger_event === "double_booking") {
+      // a confirmed future booking overlapping another active booking or a
+      // blocked/imported (iCal) range on the same home
+      bookings = (await db.query(
+        `select b.id, string_agg(c.txt, '; ') as conflict
+           from bookings b
+           join lateral (
+             select 'booking ' || coalesce(o.invoice_no::text, left(o.id::text, 8))
+                    || ' (' || coalesce(o.guest_name, '?') || ', '
+                    || to_char(lower(o.stay), 'YYYY-MM-DD') || ' → '
+                    || to_char(upper(o.stay), 'YYYY-MM-DD') || ')' as txt
+               from bookings o
+              where o.listing_id = b.listing_id and o.id <> b.id
+                and o.stay && b.stay
+                and o.status in ('pending', 'confirmed') and not o.no_block
+             union all
+             select 'blocked dates ('
+                    || coalesce(nullif(ab.source, ''), 'manual') || ', '
+                    || to_char(lower(ab.span), 'YYYY-MM-DD') || ' → '
+                    || to_char(upper(ab.span), 'YYYY-MM-DD') || ')'
+               from availability_blocks ab
+              where ab.listing_id = b.listing_id and ab.span && b.stay
+           ) c on true
+          where b.status = 'confirmed' and not b.no_block
+            and upper(b.stay) >= current_date
+          group by b.id`,
       )).rows;
     } else if (a.trigger_event === "deposit_unpaid") {
       // booked N+ days ago, nothing paid yet, stay hasn't started
@@ -244,7 +273,7 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
     for (const b of bookings) {
       checked++;
       const before = await alreadySent(a.key, b.id);
-      await sendAutomationForBooking(a.key, b.id);
+      await sendAutomationForBooking(a.key, b.id, b.conflict ? { conflict: b.conflict } : undefined);
       if (!before && (await alreadySent(a.key, b.id))) sent++;
     }
   }

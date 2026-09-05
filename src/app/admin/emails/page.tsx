@@ -1,10 +1,17 @@
+import { getDb } from "@/lib/db";
 import { listAutomations } from "@/modules/emails";
 import { EmailsClient } from "./emails-client";
 
 export const dynamic = "force-dynamic";
+// a broadcast sends one email per guest with rate-limit pacing — give the
+// server action room to finish for larger audiences
+export const maxDuration = 300;
 
 export default async function AdminEmails() {
   const automations = await listAutomations();
+  const listings = (
+    await getDb().query("select id, title from listings order by title")
+  ).rows as { id: string; title: string }[];
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Email automations</h1>
@@ -14,7 +21,7 @@ export default async function AdminEmails() {
         guests receive. Automatic sending goes live with the email milestone;
         test-sends work today.
       </p>
-      <EmailsClient automations={automations} />
+      <EmailsClient automations={automations} listings={listings} />
     </div>
   );
 }
