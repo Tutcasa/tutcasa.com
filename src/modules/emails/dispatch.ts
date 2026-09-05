@@ -71,6 +71,7 @@ async function bookingCtx(bookingId: string): Promise<BookingCtx | null> {
       checkout_until: b.checkout_until,
       booking_kind: b.source === "amanah" ? "Amanah partner booking" : "booking request",
       source: b.source,
+      tours_link: `${SITE}/tours`,
     },
   };
 }

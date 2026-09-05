@@ -39,7 +39,7 @@ export const TEMPLATE_VARS = [
   "guest_name", "guest_email", "listing", "check_in", "check_out", "guests",
   "total", "balance", "balance_due_date", "amount_paid", "invoice_link",
   "checkin_message", "checkout_message", "checkin_from", "checkout_until",
-  "booking_kind", "source",
+  "booking_kind", "source", "tours_link",
 ] as const;
 
 export async function listAutomations(): Promise<EmailAutomation[]> {
@@ -82,6 +82,7 @@ const SAMPLE: Record<string, string> = {
   booking_kind: "booking request",
   source: "direct",
   conflict: "booking INV-1042 (Jane D., 2026-10-05 → 2026-10-10)",
+  tours_link: `${process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app"}/tours`,
 };
 
 export function fillVars(text: string, vars: Record<string, string> = {}): string {
@@ -91,9 +92,15 @@ export function fillVars(text: string, vars: Record<string, string> = {}): strin
 const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+/** make pasted URLs clickable in the rendered email */
+const linkify = (s: string) =>
+  s.replace(/(https?:\/\/[^\s<]+)/g,
+    `<a href="$1" style="color:#E4326B;font-weight:700;">$1</a>`);
+
 /** body text → email paragraphs; "- " lines become a light list card */
 function bodyToHtml(body: string): string {
-  const lines = body.split("\n");
+  // tolerate literal backslash-n from hand-typed or SQL-seeded bodies
+  const lines = body.replace(/\\n/g, "\n").split("\n");
   const out: string[] = [];
   let list: string[] = [];
   const flush = () => {
@@ -108,8 +115,8 @@ function bodyToHtml(body: string): string {
   for (const raw of lines) {
     const line = raw.trim();
     if (!line) { flush(); continue; }
-    if (line.startsWith("- ")) list.push(esc(line.slice(2)));
-    else { flush(); out.push(`<p style="margin:12px 0;color:#3A2C28;font-size:15px;line-height:1.6;">${esc(line)}</p>`); }
+    if (line.startsWith("- ")) list.push(linkify(esc(line.slice(2))));
+    else { flush(); out.push(`<p style="margin:12px 0;color:#3A2C28;font-size:15px;line-height:1.6;">${linkify(esc(line))}</p>`); }
   }
   flush();
   return out.join("");
