@@ -217,6 +217,16 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
           and upper(stay) between current_date and current_date + ($1 || ' days')::interval`,
         [String(a.offset_days)],
       )).rows;
+    } else if (a.trigger_event === "deposit_unpaid") {
+      // booked N+ days ago, nothing paid yet, stay hasn't started
+      bookings = (await db.query(
+        `select id from bookings
+          where status = 'pending'
+            and coalesce(amount_paid_cents, 0) = 0
+            and created_at <= now() - ($1 || ' days')::interval
+            and lower(stay) >= current_date`,
+        [String(a.offset_days)],
+      )).rows;
     } else if (a.trigger_event === "second_payment_due") {
       bookings = (await db.query(
         `select id from bookings

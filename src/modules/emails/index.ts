@@ -25,11 +25,12 @@ export interface EmailAutomation {
 export const TRIGGER_LABELS: Record<string, string> = {
   booking_request: "When a booking request / instant booking arrives",
   booking_confirmed: "When a booking is confirmed",
-  second_payment_due: "When the second payment comes due",
+  second_payment_due: "N days before the balance due date",
   payment_receipt: "After each completed payment",
   before_checkin: "N days before check-in",
   before_checkout: "N days before check-out",
-  custom: "Manual / custom",
+  deposit_unpaid: "N days after booking, if the deposit is still unpaid",
+  custom: "Manual — only sent when you send it yourself",
 };
 
 /** variables available in subjects & bodies, shown in the admin editor */

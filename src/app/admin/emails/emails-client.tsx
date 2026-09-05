@@ -18,12 +18,21 @@ const inputCls =
 const TRIGGERS: [string, string][] = [
   ["booking_request", "Booking request / instant booking arrives"],
   ["booking_confirmed", "Booking confirmed"],
-  ["second_payment_due", "Second payment due"],
+  ["deposit_unpaid", "N days after booking, if the deposit is still unpaid"],
+  ["second_payment_due", "N days before the balance due date"],
   ["payment_receipt", "Payment completed"],
   ["before_checkin", "N days before check-in"],
   ["before_checkout", "N days before check-out"],
-  ["custom", "Manual / custom"],
+  ["custom", "Manual — only sent when you send it yourself"],
 ];
+
+/** timed triggers and what their "days" number means */
+const DAYS_LABEL: Record<string, string> = {
+  before_checkin: "days before check-in",
+  before_checkout: "days before check-out",
+  second_payment_due: "days before the balance due date",
+  deposit_unpaid: "days after booking (still unpaid)",
+};
 
 const VARS = "{{guest_name}} {{guest_email}} {{listing}} {{check_in}} {{check_out}} {{guests}} {{total}} {{balance}} {{balance_due_date}} {{amount_paid}} {{invoice_link}} {{checkin_message}} {{checkout_message}} {{checkin_from}} {{checkout_until}} {{booking_kind}} {{source}}";
 
@@ -33,7 +42,8 @@ function AutomationCard({ a }: { a: EmailAutomation }) {
   const [state, action, pending] = useActionState(saveAutomationAction, initial);
   const [testState, testAction, testPending] = useActionState(sendTestAction, initial);
   const [busy, start] = useTransition();
-  const timed = a.triggerEvent === "before_checkin" || a.triggerEvent === "before_checkout";
+  const daysLabel = DAYS_LABEL[a.triggerEvent];
+  const timed = !!daysLabel;
 
   return (
     <div className={`rounded-card bg-paper p-4 shadow-soft ${a.enabled ? "" : "opacity-60"}`}>
@@ -47,8 +57,9 @@ function AutomationCard({ a }: { a: EmailAutomation }) {
             <span className="ml-1 rounded-pill bg-grey/15 px-2 py-0.5 text-[10px] font-bold uppercase text-grey">custom</span>
           )}
           <div className="text-xs text-grey">
-            {TRIGGERS.find(([k]) => k === a.triggerEvent)?.[1] ?? a.triggerEvent}
-            {timed && ` — ${a.offsetDays} day${a.offsetDays === 1 ? "" : "s"} before`}
+            {timed
+              ? `${a.offsetDays} ${daysLabel}`
+              : TRIGGERS.find(([k]) => k === a.triggerEvent)?.[1] ?? a.triggerEvent}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -78,9 +89,14 @@ function AutomationCard({ a }: { a: EmailAutomation }) {
                 <input name="subject" defaultValue={a.subject} required className={inputCls} />
               </label>
               {timed && (
-                <label className="text-xs font-bold">DAYS BEFORE
+                <label className="text-xs font-bold">DAYS <span className="font-normal text-grey">({daysLabel})</span>
                   <input name="offsetDays" type="number" min="0" defaultValue={a.offsetDays} className={`${inputCls} w-28`} />
                 </label>
+              )}
+              {a.triggerEvent === "custom" && (
+                <p className="text-xs text-grey">
+                  This template never sends on its own — use the box below to send it whenever you want.
+                </p>
               )}
               {!timed && <input type="hidden" name="offsetDays" value={a.offsetDays} />}
               <label className="text-xs font-bold">MESSAGE <span className="font-normal text-grey">(blank line = new paragraph, “- ” = highlighted list)</span>
