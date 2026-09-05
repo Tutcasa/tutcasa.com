@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { saveListingAction, type ListingFormState } from "./actions";
 import { BedTypesEditor } from "./bed-types-editor";
 
@@ -71,10 +71,32 @@ function Check({
 
 export function ListingForm({ listing }: { listing: AdminListing }) {
   const [state, action, pending] = useActionState(saveListingAction, initial);
+  const dirty = useRef(false);
+
+  // typed-but-unsaved edits are lost on any navigation (tabs are links!) —
+  // warn before letting the page go
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirty.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
+  useEffect(() => {
+    if (state.ok && state.message) dirty.current = false; // saved
+  }, [state]);
 
   return (
-    <form action={action} className="grid gap-3">
+    <form action={action} onChange={() => { dirty.current = true; }} className="grid gap-3">
       <input type="hidden" name="id" value={listing.id} />
+
+      {listing.status === "draft" && (
+        <div className="rounded-xl border-[1.5px] border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+          This home is a <b>draft</b> — guests can&#39;t see it yet. To publish:
+          scroll down to <b>Booking &amp; visibility</b>, set STATUS to{" "}
+          <b>Published</b>, then hit <b>Save changes</b> at the bottom.
+        </div>
+      )}
 
       {/* ------------------------------------------------ basics */}
       <div className="grid gap-3 sm:grid-cols-2">

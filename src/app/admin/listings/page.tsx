@@ -297,8 +297,9 @@ export default async function AdminListings({
           ))}
         </div>
         <p className="mt-3 text-xs text-grey">
-          New homes start as <b>drafts</b> (hidden from guests) — publish them
-          from the edit form when ready.
+          New homes start as <b>drafts</b> (hidden from guests). To publish:
+          open the home → <b>Home details</b> tab → <b>Booking &amp; visibility</b>{" "}
+          → set STATUS to <b>Published</b> → Save changes.
         </p>
       </div>
 
