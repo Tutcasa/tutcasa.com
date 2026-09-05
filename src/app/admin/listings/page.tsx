@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 const CALENDAR_MONTHS = 12;
 
-async function allListings(): Promise<AdminListing[]> {
+async function allListings(includeArchived: boolean): Promise<AdminListing[]> {
   const res = await getDb().query(
     `select l.id, l.slug, l.title, coalesce(l.headline,'') as headline, l.city,
             l.country, coalesce(l.region,'') as region, l.property_type,
@@ -43,7 +43,7 @@ async function allListings(): Promise<AdminListing[]> {
             coalesce(r.nightly_cents,0) as nightly_cents
        from listings l
        left join listing_rates r on r.listing_id = l.id and r.season is null
-      where l.status <> 'archived'
+      ${includeArchived ? "" : "where l.status <> 'archived'"}
       order by l.title`,
   );
   return res.rows.map((r) => ({
@@ -234,9 +234,15 @@ type Tab = (typeof TABS)[number][0];
 
 export default async function AdminListings({
   searchParams,
-}: { searchParams: Promise<{ edit?: string; tab?: string; q?: string }> }) {
-  const { edit, tab: rawTab, q = "" } = await searchParams;
-  const listings = await allListings();
+}: { searchParams: Promise<{ edit?: string; tab?: string; q?: string; archived?: string }> }) {
+  const { edit, tab: rawTab, q = "", archived } = await searchParams;
+  const showArchived = archived === "1";
+  const listings = await allListings(showArchived);
+  const archivedCount = showArchived
+    ? listings.filter((l) => l.status === "archived").length
+    : Number(
+        (await getDb().query("select count(*) as n from listings where status='archived'")).rows[0].n,
+      );
   const editing = edit ? listings.find((l) => l.id === edit) : listings[0];
   const tab: Tab = TABS.some(([t]) => t === rawTab) ? (rawTab as Tab) : "details";
   const needle = q.trim().toLowerCase();
@@ -272,13 +278,14 @@ export default async function AdminListings({
           </button>
         </form>
 
-        <AdminSearch placeholder="Search homes by name or city…" q={q} extra={{ edit, tab }} />
+        <AdminSearch placeholder="Search homes by name or city…" q={q}
+          extra={{ edit, tab, ...(showArchived ? { archived: "1" } : {}) }} />
 
         <div className="grid gap-2">
           {shownListings.map((l) => (
             <a
               key={l.id}
-              href={`/admin/listings?edit=${l.id}&tab=${tab}`}
+              href={`/admin/listings?edit=${l.id}&tab=${tab}${showArchived ? "&archived=1" : ""}`}
               className={`flex items-center justify-between gap-3 rounded-xl border-[1.5px] bg-paper p-3.5 ${editing?.id === l.id ? "border-rosa" : "border-line hover:border-rosa/50"}`}
             >
               <div>
@@ -296,6 +303,16 @@ export default async function AdminListings({
             </a>
           ))}
         </div>
+        {(archivedCount > 0 || showArchived) && (
+          <a
+            href={showArchived ? "/admin/listings" : "/admin/listings?archived=1"}
+            className="mt-3 inline-block rounded-pill border-[1.5px] border-line px-4 py-1.5 text-xs font-bold text-grey hover:border-ink hover:text-ink"
+          >
+            {showArchived
+              ? "Hide archived homes"
+              : `Show ${archivedCount} archived home${archivedCount === 1 ? "" : "s"}`}
+          </a>
+        )}
         <p className="mt-3 text-xs text-grey">
           New homes start as <b>drafts</b> (hidden from guests). To publish:
           open the home → <b>Home details</b> tab → <b>Booking &amp; visibility</b>{" "}
@@ -313,7 +330,7 @@ export default async function AdminListings({
               {TABS.map(([t, label]) => (
                 <a
                   key={t}
-                  href={`/admin/listings?edit=${editing.id}&tab=${t}`}
+                  href={`/admin/listings?edit=${editing.id}&tab=${t}${showArchived ? "&archived=1" : ""}`}
                   className={`rounded-pill border-[1.5px] px-4 py-1.5 text-sm font-bold ${
                     tab === t
                       ? "border-ink bg-ink text-white"

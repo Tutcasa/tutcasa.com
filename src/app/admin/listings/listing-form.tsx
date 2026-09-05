@@ -90,6 +90,14 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
     <form action={action} onChange={() => { dirty.current = true; }} className="grid gap-3">
       <input type="hidden" name="id" value={listing.id} />
 
+      {listing.status === "archived" && (
+        <div className="rounded-xl border-[1.5px] border-line bg-grey/10 px-4 py-3 text-sm font-semibold text-ink">
+          This home is <b>archived</b> — hidden everywhere. To restore it:
+          scroll down to <b>Booking &amp; visibility</b>, set STATUS to{" "}
+          <b>Published</b> (or Draft to keep working on it), then hit{" "}
+          <b>Save changes</b>.
+        </div>
+      )}
       {listing.status === "draft" && (
         <div className="rounded-xl border-[1.5px] border-amber-300 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
           This home is a <b>draft</b> — guests can&#39;t see it yet. To publish:
