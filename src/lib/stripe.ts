@@ -39,6 +39,12 @@ export interface PayableInvoice {
   guestEmail: string;
 }
 
+/** Round a cents amount to a whole currency unit. Every guest-facing total
+    is shown with `money()` (0 decimal places, i.e. Math.round), so charging
+    the same rounded figure keeps "the price you see is the price you pay"
+    literally true — no $851.80-vs-$852 mismatch between the page and the card. */
+const roundToUnit = (cents: number) => Math.round(cents / 100) * 100;
+
 /** What is currently payable on an invoice (stay or tour booking). */
 export async function payableForInvoice(id: string): Promise<PayableInvoice | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
@@ -56,7 +62,7 @@ export async function payableForInvoice(id: string): Promise<PayableInvoice | nu
     // whatever remains of the total
     const remaining = Math.max(0, b.total_cents - b.paid);
     const firstDue = p.dueNowCents != null ? Math.min(Number(p.dueNowCents), remaining) : remaining;
-    const dueCents = b.paid === 0 ? firstDue : remaining;
+    const dueCents = roundToUnit(b.paid === 0 ? firstDue : remaining);
     if (dueCents <= 0) return null;
     return {
       kind: "stay", id: b.id, label: `TutCasa stay — ${b.title}`,
@@ -71,7 +77,7 @@ export async function payableForInvoice(id: string): Promise<PayableInvoice | nu
   if (tour.rows[0]) {
     const b = tour.rows[0];
     if (b.status === "cancelled") return null;
-    const dueCents = Math.max(0, b.total_cents - b.paid);
+    const dueCents = roundToUnit(Math.max(0, b.total_cents - b.paid));
     if (dueCents <= 0) return null;
     return {
       kind: "tour", id: b.id, label: `TutCasa tour — ${b.title}`,

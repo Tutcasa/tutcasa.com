@@ -114,6 +114,11 @@ export function PdGrid({ p }: { p: PdData }) {
   // (lazy state: computed once per mount, keeps the render pure)
   const [cancunNow] = useState(() => new Date(Date.now() - 5 * 3600 * 1000));
   const today = cancunNow.toISOString().slice(0, 10);
+  // which pair of months the availability calendar shows (0 = current +
+  // next). Guests can page forward to see availability further out; can't
+  // page before the current month. Capped so it can't run away.
+  const [monthOffset, setMonthOffset] = useState(0);
+  const MAX_MONTH_OFFSET = 22;
 
   const nights = ci && co ? Math.max(0, Math.round((+new Date(co) - +new Date(ci)) / 86400000)) : 0;
   const quoteKey = `${ci}|${co}|${guests}`;
@@ -252,7 +257,7 @@ export function PdGrid({ p }: { p: PdData }) {
 
   /* availability calendar — demo buildCal with real blocked days */
   const months = [0, 1].map((m) => {
-    const first = new Date(cancunNow.getUTCFullYear(), cancunNow.getUTCMonth() + m, 1);
+    const first = new Date(cancunNow.getUTCFullYear(), cancunNow.getUTCMonth() + monthOffset + m, 1);
     const startDow = first.getDay();
     const total = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
     const cells = [];
@@ -331,6 +336,27 @@ export function PdGrid({ p }: { p: PdData }) {
         </div>
         <div className="pd-sec">
           <T as="h2" k="pd_avail" />
+          <div className="pd-calnav" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 8 }}>
+            <button
+              type="button"
+              className="pd-calnav-btn"
+              onClick={() => setMonthOffset((o) => Math.max(0, o - 1))}
+              disabled={monthOffset === 0}
+              aria-label="Earlier months"
+              style={{ border: "1.5px solid var(--line, #E9DED6)", background: "#fff", borderRadius: 999, width: 36, height: 36, cursor: monthOffset === 0 ? "default" : "pointer", opacity: monthOffset === 0 ? 0.4 : 1, fontSize: 18, lineHeight: 1 }}
+            >&#8249;</button>
+            <span style={{ fontSize: 13, color: "var(--grey, #8A7A72)", fontWeight: 600 }}>
+              {monthOffset === 0 ? "Next available months" : "Browsing ahead"}
+            </span>
+            <button
+              type="button"
+              className="pd-calnav-btn"
+              onClick={() => setMonthOffset((o) => Math.min(MAX_MONTH_OFFSET, o + 1))}
+              disabled={monthOffset >= MAX_MONTH_OFFSET}
+              aria-label="Later months"
+              style={{ border: "1.5px solid var(--line, #E9DED6)", background: "#fff", borderRadius: 999, width: 36, height: 36, cursor: monthOffset >= MAX_MONTH_OFFSET ? "default" : "pointer", opacity: monthOffset >= MAX_MONTH_OFFSET ? 0.4 : 1, fontSize: 18, lineHeight: 1 }}
+            >&#8250;</button>
+          </div>
           <div className="pd-cal">{months}</div>
           <T as="div" className="pd-caltip" k="pd_caltip" />
         </div>

@@ -14,13 +14,7 @@ export function WishlistClient() {
         <div className="wrap">
           <h1>Your <span className="rosa">wishlist.</span></h1>
           <p className="sub">
-            The casas you&rsquo;ve hearted, saved on this device.{" "}
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent("tc-auth-open", { detail: "login" })); }}
-              style={{ color: "var(--rosa)", fontWeight: 600 }}
-            >Log in</a>{" "}
-            to keep them across devices.
+            The casas you&rsquo;ve hearted, saved on this device.
           </p>
         </div>
       </section>

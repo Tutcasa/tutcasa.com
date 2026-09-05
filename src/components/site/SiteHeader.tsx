@@ -15,6 +15,15 @@ import { useWishlist } from "@/lib/wishlist";
 import { AuthModal, type AuthMode } from "./AuthModal";
 import { TutCasaMark, LogoWord } from "./TutCasaLogo";
 
+/**
+ * Guest accounts aren't built yet — the login/sign-up flow is a front-end
+ * mock that fakes success without creating a session, which would mislead
+ * real guests. Everything (booking, wishlist, tours, loyalty) works without
+ * an account, so the entry points stay hidden until real auth ships. Flip
+ * this to true then to bring Log in / Sign up back.
+ */
+const GUEST_AUTH_ENABLED = false;
+
 export function SiteHeader({ whatsapp }: { whatsapp: string }) {
   const pathname = usePathname();
   const { setLang, lang } = useLang();
@@ -142,9 +151,13 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
                 TC
               </button>
               <div className={`acct-menu${acctOpen ? " open" : ""}`} onClick={(e) => e.stopPropagation()}>
-                <a className="strong" href="#" onClick={(e) => { e.preventDefault(); auOpen("login"); }}>Log in</a>
-                <a href="#" onClick={(e) => { e.preventDefault(); auOpen("signup"); }}>Sign up</a>
-                <hr />
+                {GUEST_AUTH_ENABLED && (
+                  <>
+                    <a className="strong" href="#" onClick={(e) => { e.preventDefault(); auOpen("login"); }}>Log in</a>
+                    <a href="#" onClick={(e) => { e.preventDefault(); auOpen("signup"); }}>Sign up</a>
+                    <hr />
+                  </>
+                )}
                 <Link href="/stays" onClick={() => setAcctOpen(false)}>Stays</Link>
                 <Link href="/tours" onClick={() => setAcctOpen(false)}>Tours &amp; Transfers</Link>
                 <a href={waHref} target="_blank" rel="noopener">Concierge on WhatsApp</a>
@@ -181,10 +194,12 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
           <Link href="/policies" onClick={closeDrawer}>Help &amp; policies</Link>
           <a href={waHref} target="_blank" rel="noopener">Concierge on WhatsApp</a>
         </nav>
-        <div className="tcnav-auth">
-          <button onClick={() => { closeDrawer(); auOpen("login"); }}>Log in</button>
-          <button className="alt" onClick={() => { closeDrawer(); auOpen("signup"); }}>Sign up</button>
-        </div>
+        {GUEST_AUTH_ENABLED && (
+          <div className="tcnav-auth">
+            <button onClick={() => { closeDrawer(); auOpen("login"); }}>Log in</button>
+            <button className="alt" onClick={() => { closeDrawer(); auOpen("signup"); }}>Sign up</button>
+          </div>
+        )}
         <div className="tcnav-lang">
           <a onClick={() => setLang("en")}>&#127468;&#127463; EN</a>
           <a onClick={() => setLang("fr")}>&#127467;&#127479; FR</a>

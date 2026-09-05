@@ -1,6 +1,7 @@
 import "@/styles/demo/checkout.css";
 import type { Metadata } from "next";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
+import { todayLocal } from "@/lib/local-date";
 import { CheckoutClient, type CheckoutLine, type CheckoutPayload, type CheckoutSchedule } from "@/components/checkout/CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,15 @@ export default async function BookingCheckoutPage({
     const { visitorCommission } = await import("@/modules/partners");
     const via = await visitorCommission();
     const res = await resolveStayQuote(q.stay, q.ci, q.co, guests, undefined, { commissionPct: via?.pct });
-    if (res.ok) {
+    // guard the same rules createBookingHold enforces, so a tampered URL
+    // (past dates, over-capacity) can't render a payable summary that would
+    // only fail at submit. Blocked/invalid dates already fail resolveStayQuote.
+    const validStay =
+      res.ok &&
+      q.ci >= todayLocal() &&
+      q.co > q.ci &&
+      guests <= res.listing.maxGuests;
+    if (validStay && res.ok) {
       const qt = res.quote;
       const d = (c: number) => Math.round(c / 100);
       lines = [{
