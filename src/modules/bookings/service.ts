@@ -144,8 +144,18 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
         req.marketingRef ?? null,
       ],
     );
-    // M3: request-received emails (guest + team) — never blocks the booking
-    fireAutomations(["guest_booking_request", "admin_new_booking"], res.rows[0].id);
+    // M3: new-booking emails (never block the booking). Only request-to-book
+    // homes get the "owner is reviewing your request, no payment taken yet"
+    // guest email — an instant-book guest goes straight to Stripe and would be
+    // confused by it, so they only get the payment receipt / confirmation once
+    // they pay (the deposit-reminder automation nudges an abandoned hold). The
+    // team is notified either way.
+    fireAutomations(
+      isRequest
+        ? ["guest_booking_request", "admin_new_booking"]
+        : ["admin_new_booking"],
+      res.rows[0].id,
+    );
     return { ok: true, bookingId: res.rows[0].id };
   } catch (e) {
     if (couponCode) await unredeemCoupon(couponCode).catch(() => {});
@@ -170,6 +180,32 @@ export async function getUnavailableRanges(listingId: string): Promise<Unavailab
     [listingId],
   );
   return res.rows.map((r) => ({ from: r.from_date, to: r.to_date }));
+}
+
+/** IDs of published listings that are NOT bookable for [checkIn, checkOut)
+    — any overlap with a booking/hold or blocked/imported range. Used to hide
+    unavailable homes from a dated search (previously search ignored dates, so
+    fully-blocked homes still showed as bookable). */
+export async function blockedListingIdsForRange(
+  checkIn: string,
+  checkOut: string,
+): Promise<Set<string>> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(checkIn) || !/^\d{4}-\d{2}-\d{2}$/.test(checkOut) || checkOut <= checkIn) {
+    return new Set();
+  }
+  const db = getDb();
+  await db.query("select release_expired_holds()");
+  const res = await db.query<{ id: string }>(
+    `select l.id
+       from listings l
+      where l.status = 'published'
+        and exists (
+          select 1 from listing_unavailable_ranges(l.id) r
+           where daterange(r.from_date, r.to_date) && daterange($1::date, $2::date)
+        )`,
+    [checkIn, checkOut],
+  );
+  return new Set(res.rows.map((r) => r.id));
 }
 
 interface BookingRow {

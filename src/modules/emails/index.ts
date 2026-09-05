@@ -86,7 +86,13 @@ const SAMPLE: Record<string, string> = {
 };
 
 export function fillVars(text: string, vars: Record<string, string> = {}): string {
-  return text.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_, k) => vars[k] ?? SAMPLE[k] ?? `{{${k}}}`);
+  // Seed migrations stored line breaks as literal backslash-n (standard SQL
+  // string quoting), so normalise those to real newlines before anything
+  // splits on them — otherwise guests see "\n" as visible characters and the
+  // paragraph/bullet formatting never triggers.
+  return text
+    .replace(/\\r\\n|\\n/g, "\n")
+    .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_, k) => vars[k] ?? SAMPLE[k] ?? `{{${k}}}`);
 }
 
 const esc = (s: string) =>

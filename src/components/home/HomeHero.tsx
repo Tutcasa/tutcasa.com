@@ -11,17 +11,19 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { T, useLang } from "@/lib/i18n";
 
-/* wizard result cards — same 8 homes the demo hardcodes */
-const RESULTS = [
-  { slug: "spiritum-marea", name: "Spiritum Marea", meta: "2 beds · pool · ★ 4.94", price: 160, base: 0 },
-  { slug: "vista-playa", name: "Vista Playa", meta: "3 beds · ocean view · ★ 4.87", price: 200, base: 1 },
-  { slug: "casa-selva", name: "Casa Selva", meta: "4 beds · cenote · ★ 4.91", price: 320, base: 2 },
-  { slug: "nile-breeze", name: "Nile Breeze", meta: "3 beds · terrace · ★ 4.96", price: 110, base: 3 },
-  { slug: "palma-azul", name: "Palma Azul", meta: "2 beds · rooftop · ★ 4.90", price: 145, base: 1 },
-  { slug: "coral-suite", name: "Coral Suite", meta: "1 bed · beach access · ★ 4.85", price: 120, base: 0 },
-  { slug: "villa-maya", name: "Villa Maya", meta: "5 beds · pool · ★ 4.98", price: 410, base: 3 },
-  { slug: "jardin-verde", name: "Jardin Verde", meta: "3 beds · garden · ★ 4.83", price: 175, base: 2 },
-];
+/* wizard result cards — REAL published homes, passed from the server
+   (was hardcoded to 8 demo names whose "View details" links 404'd). */
+export type WizardMatch = {
+  slug: string;
+  name: string;
+  meta: string;
+  price: number;
+  city: string;
+  country: string;
+  region: string;
+  photos: string[];
+  g: string;
+};
 
 const WIZ_DESTS = [
   { v: "Playa del Carmen", ic: "\u{1F3DD}\uFE0F", label: "Playa del Carmen", small: "beachfront", kw: "mexico riviera maya playa" },
@@ -48,20 +50,33 @@ function Typing() {
   );
 }
 
-/* result-card photo strip: gradient cycling, count + dots (demo photoNav) */
-function ResultCard({ r }: { r: (typeof RESULTS)[number] }) {
+/* result-card photo strip: real photos when the home has them, otherwise
+   the demo gradient placeholders. Count + dots (demo photoNav). */
+function ResultCard({ r }: { r: WizardMatch }) {
   const [idx, setIdx] = useState(0);
-  const n = 5;
-  const g = "g" + (((r.base + idx) % 6) + 1);
+  const hasPhotos = r.photos.length > 0;
+  const n = hasPhotos ? r.photos.length : 5;
+  const g = r.g && /^g[1-6]$/.test(r.g) ? r.g : "g1";
   function nav(e: React.MouseEvent, dir: number) {
     e.stopPropagation();
     setIdx((i) => (i + dir + n) % n);
   }
   return (
     <div className="rc">
-      <div className={`ph ${g}`}>
-        <button className="ph-arrow l" onClick={(e) => nav(e, -1)}>&#8249;</button>
-        <button className="ph-arrow r" onClick={(e) => nav(e, 1)}>&#8250;</button>
+      <div
+        className={`ph ${hasPhotos ? "" : g}`}
+        style={hasPhotos ? {
+          backgroundImage: `url(${r.photos[idx]})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        } : undefined}
+      >
+        {n > 1 && (
+          <>
+            <button className="ph-arrow l" onClick={(e) => nav(e, -1)}>&#8249;</button>
+            <button className="ph-arrow r" onClick={(e) => nav(e, 1)}>&#8250;</button>
+          </>
+        )}
         <span className="ph-count">{idx + 1} / {n}</span>
         <span className="ph-dots">
           {Array.from({ length: n }, (_, i) => (
@@ -89,7 +104,7 @@ function suggestCheckout(ci: string, co: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function HomeHero() {
+export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
   const router = useRouter();
   const { t } = useLang();
 
@@ -173,8 +188,28 @@ export function HomeHero() {
     const params = new URLSearchParams({ match: "1" });
     if (dest) params.set("dest", dest);
     if (vibe) params.set("vibe", vibe);
+    // carry the wizard's dates + party size into the full search (previously
+    // dropped, so the guest had to re-enter them on /stays)
+    if (wCi) params.set("ci", wCi);
+    if (wCo) params.set("co", wCo);
+    params.set("guests", String(guests.a + guests.c));
     router.push("/stays?" + params.toString());
   }
+
+  /* wizard results = real published homes, softly filtered by the chosen
+     destination. If nothing matches the destination we still show the whole
+     collection rather than an empty box. */
+  const destMatches = (() => {
+    if (!dest || dest === "Surprise me") return matches;
+    const key = dest.toLowerCase();
+    const hit = matches.filter((m) => {
+      const hay = `${m.city} ${m.region} ${m.country}`.toLowerCase();
+      if (key.includes("nuba") || key.includes("egypt")) return m.country === "EG";
+      if (key.includes("orlando") || key.includes("florida") || key.includes("miami")) return m.country === "US";
+      return hay.includes(key.split(",")[0].trim());
+    });
+    return hit.length ? hit : matches;
+  })();
 
   const wzDatesOk = !!(wCi && wCo && wCo > wCi);
   const CITY_COUNTRY: Record<string, string> = {
@@ -371,12 +406,22 @@ export function HomeHero() {
                     <div className="wz-q">
                       Perfecto &#127881; Casas made for <span className="em">{(vibe || "your trip").toLowerCase()}</span> in {dest}:
                     </div>
-                    <div className="result-count">12 casas match &mdash; scroll to see them all</div>
-                    <div className="result-cards scroll">
-                      {RESULTS.map((r) => (
-                        <ResultCard key={r.slug + r.name} r={r} />
-                      ))}
-                    </div>
+                    {destMatches.length > 0 ? (
+                      <>
+                        <div className="result-count">
+                          {destMatches.length} {destMatches.length === 1 ? "casa matches" : "casas match"} &mdash; scroll to see {destMatches.length === 1 ? "it" : "them all"}
+                        </div>
+                        <div className="result-cards scroll">
+                          {destMatches.map((r) => (
+                            <ResultCard key={r.slug} r={r} />
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="result-count" style={{ padding: "10px 0 4px" }}>
+                        We&rsquo;re adding homes to our collection &mdash; message us and we&rsquo;ll match you personally. &#128172;
+                      </div>
+                    )}
                     <div className="wz-cta">
                       <button className="btn btn-rosa" style={{ width: "100%" }} onClick={goMatches}>See all my matches</button>
                     </div>

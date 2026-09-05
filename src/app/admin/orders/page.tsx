@@ -67,8 +67,8 @@ export default async function AdminOrders({
       <h1 className="mb-2 text-2xl font-extrabold">Payments &amp; orders</h1>
       <p className="mb-5 text-sm text-grey">
         The full financial breakdown behind every booking — what the old site
-        kept under WooCommerce → Orders. Real card payments switch on with
-        Stripe at the payments milestone.
+        kept under WooCommerce → Orders. Card payments are processed live
+        through Stripe.
       </p>
       <AdminSearch placeholder="Search by invoice #, guest or home…" q={q} />
       <div className="grid gap-3">

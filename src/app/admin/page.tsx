@@ -1,6 +1,7 @@
 import { listBookings } from "@/modules/bookings";
 import { listTourBookings } from "@/modules/tours";
 import { fmtMoney } from "@/modules/pricing";
+import { getSetting } from "@/modules/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -14,22 +15,29 @@ const BADGE: Record<string, string> = {
 };
 
 export default async function AdminOverview() {
-  const [stays, tours] = await Promise.all([listBookings(), listTourBookings()]);
+  const [stays, tours, fx] = await Promise.all([
+    listBookings(), listTourBookings(), getSetting("fx"),
+  ]);
   const active = stays.filter((b) => b.status === "pending" || b.status === "confirmed");
   const pendingTours = tours.filter((t) => t.status === "pending");
 
-  // money actually secured: confirmed/completed stays + paid-and-beyond tours
+  // money actually secured: confirmed/completed stays + paid-and-beyond tours.
+  // Stays are USD; tours are mostly MXN — convert them to USD with the site's
+  // display rate so the figure isn't a nonsense mix of two currencies.
+  const mxnPerUsd = fx.mxnPerUsd > 0 ? fx.mxnPerUsd : 17;
+  const toUsdCents = (cents: number, currency: string) =>
+    currency === "MXN" ? Math.round(cents / mxnPerUsd) : cents;
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const revenueCents =
     stays
       .filter((b) => (b.status === "confirmed" || b.status === "completed") &&
                      new Date(b.createdAt) >= monthStart)
-      .reduce((s, b) => s + b.totalCents, 0) +
+      .reduce((s, b) => s + toUsdCents(b.totalCents, b.currency), 0) +
     tours
       .filter((t) => t.status !== "pending" && t.status !== "cancelled" &&
                      new Date(t.createdAt) >= monthStart)
-      .reduce((s, t) => s + t.totalCents, 0);
+      .reduce((s, t) => s + toUsdCents(t.totalCents, t.currency), 0);
 
   const cards = [
     ["Stay bookings (active)", String(active.length), "/admin/bookings"],

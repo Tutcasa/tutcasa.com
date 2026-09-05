@@ -408,7 +408,7 @@ export function StaysClient({
 
       <section className="results wrap" ref={resultsRef}>
         <div className="res-head">
-          <h2><span>{list.length}</span> <T k="st_results" /></h2>
+          <h2><span>{list.length}</span> <T k={list.length === 1 ? "st_results_one" : "st_results"} /></h2>
           <span className="muted"><T k="st_allin" /></span>
         </div>
         <div className="casa-grid">

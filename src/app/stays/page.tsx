@@ -1,6 +1,7 @@
 import "@/styles/demo/stays.css";
 import type { Metadata } from "next";
 import { getListingsRepo, type Listing } from "@/modules/listings";
+import { blockedListingIdsForRange } from "@/modules/bookings";
 import { StaysClient, type StayCard } from "@/components/stays/StaysClient";
 import { demoGradient, displayCity, stayTokens } from "@/lib/demo-parity";
 
@@ -47,11 +48,18 @@ export default async function StaysPage({
   searchParams: Promise<{ match?: string; dest?: string; vibe?: string; ci?: string; co?: string }>;
 }) {
   const q = await searchParams;
+  const ci = (q.ci ?? "").trim();
+  const co = (q.co ?? "").trim();
   const listings = await getListingsRepo().listPublished();
+  // when the guest searches specific dates, hide homes with no availability
+  // for that range (previously search ignored dates entirely)
+  const datedSearch = /^\d{4}-\d{2}-\d{2}$/.test(ci) && /^\d{4}-\d{2}-\d{2}$/.test(co) && co > ci;
+  const blocked = datedSearch ? await blockedListingIdsForRange(ci, co) : new Set<string>();
+  const available = datedSearch ? listings.filter((l) => !blocked.has(l.id)) : listings;
   return (
     <div className="pg-stays">
       <StaysClient
-        props={listings.map(toCard)}
+        props={available.map(toCard)}
         initial={{
           match: q.match === "1",
           dest: (q.dest ?? "").trim(),

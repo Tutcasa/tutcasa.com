@@ -18,8 +18,8 @@ export default async function AdminEmails() {
       <p className="mb-5 max-w-2xl text-sm text-grey">
         Every automatic email the platform sends — edit the wording, switch
         automations on/off, add your own, and preview the branded design
-        guests receive. Automatic sending goes live with the email milestone;
-        test-sends work today.
+        guests receive. These emails send automatically on live bookings; you
+        can also fire a test-send to yourself any time.
       </p>
       <EmailsClient automations={automations} listings={listings} />
     </div>
