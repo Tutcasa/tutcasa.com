@@ -262,6 +262,16 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
             </button>
           </div>
 
+          {/* video | wizard/search | free-transfer banner (client-directed layout) */}
+          <div className="hero-flank">
+            <aside className="flank flank-video" aria-hidden="true">
+              <video
+                src="https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia.mp4"
+                autoPlay muted loop playsInline
+              />
+            </aside>
+
+            <div className="flank-center">
           {/* CLASSIC SEARCH BAR */}
           <div className={`panel${mode === "search" ? "" : " hidden"}`}>
             <div className="searchbar">
@@ -431,6 +441,15 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
               </div>
             </div>
             <button className="see-all" onClick={() => router.push("/stays")}>See all our properties &rarr;</button>
+          </div>
+            </div>
+
+            <aside className="flank flank-banner">
+              <span className="fb-ic">&#128656;</span>
+              <b>FREE airport pickup</b>
+              <p>Hassle-free transportation &mdash; we pick you up from Canc&uacute;n airport, on us, with your stay.</p>
+              <span className="fb-tag">&#10003; Included with your booking</span>
+            </aside>
           </div>
         </div>
 

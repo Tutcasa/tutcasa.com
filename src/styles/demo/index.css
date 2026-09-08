@@ -472,3 +472,21 @@ body:has([class^="pg-index"]) .pop-sec{padding:40px 0 0}
 body:has([class^="pg-index"]) .familia{padding:38px 0}
 body:has([class^="pg-index"]) footer{margin-top:40px;padding:40px 0 32px}
 }
+
+/* ---- hero flank: family video | guide box | free-transfer banner ---- */
+body:has([class^="pg-index"]) .hero-flank{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,720px) minmax(180px,1fr);gap:18px;align-items:stretch;margin-top:16px}
+body:has([class^="pg-index"]) .hero-flank .panel{max-width:none;margin:0}
+body:has([class^="pg-index"]) .flank{border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
+body:has([class^="pg-index"]) .flank-video{position:relative;background:var(--ink);min-height:320px}
+body:has([class^="pg-index"]) .flank-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+body:has([class^="pg-index"]) .flank-banner{background:var(--paper);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:24px 18px;text-align:center}
+body:has([class^="pg-index"]) .flank-banner .fb-ic{font-size:40px;line-height:1}
+body:has([class^="pg-index"]) .flank-banner b{font-family:'Baloo 2',cursive;font-size:20px;line-height:1.25;color:var(--rosa-deep)}
+body:has([class^="pg-index"]) .flank-banner p{font-size:13.5px;color:var(--grey);margin:0}
+body:has([class^="pg-index"]) .flank-banner .fb-tag{background:rgba(58,125,68,.12);color:var(--cactus);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
+@media(max-width:1023px){
+body:has([class^="pg-index"]) .hero-flank{grid-template-columns:1fr}
+body:has([class^="pg-index"]) .flank-video{display:none}
+body:has([class^="pg-index"]) .hero-flank .panel{max-width:720px;margin:0 auto}
+body:has([class^="pg-index"]) .flank-banner{flex-direction:row;flex-wrap:wrap;max-width:720px;margin:0 auto;width:100%}
+}

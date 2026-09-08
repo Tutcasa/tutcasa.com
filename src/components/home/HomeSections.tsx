@@ -262,14 +262,7 @@ export function FamiliaBand() {
   return (
     <section className="familia wrap">
       <div className="card">
-        <div className="photo">
-          {/* the TutCasa hero film (landscape, like the old site's hero) */}
-          <video
-            src="https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia-hero.mp4"
-            autoPlay muted loop playsInline
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </div>
+        <div className="photo"></div>
         <div className="body">
           <T as="h2" k="home_familia_h" />
           <p>
