@@ -444,11 +444,10 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
           </div>
             </div>
 
+            {/* the trust-band "Free" card, moved here + flashing (client request) */}
             <aside className="flank flank-banner">
-              <span className="fb-ic">&#128656;</span>
-              <b>FREE airport pickup</b>
-              <p>Hassle-free transportation &mdash; we pick you up from Canc&uacute;n airport, on us, with your stay.</p>
-              <span className="fb-tag">&#10003; Included with your booking</span>
+              <div className="big"><span className="s">Free</span></div>
+              <p>airport pickup + WhatsApp concierge on every booking</p>
             </aside>
           </div>
         </div>

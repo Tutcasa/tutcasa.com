@@ -102,7 +102,6 @@ export default async function HomePage() {
           <div className="t-card"><div className="big"><span className="r">&#9733; 4.9</span></div><p>average rating from 100+ verified five-star reviews</p></div>
           <div className="t-card"><div className="big"><span className="c">500+</span></div><p>guests hosted</p></div>
           <div className="t-card"><div className="big"><span className="t">$0</span></div><p>hidden fees &mdash; the price you see is the price you pay</p></div>
-          <div className="t-card"><div className="big"><span className="s">Free</span></div><p>airport pickup + WhatsApp concierge on every booking</p></div>
         </div>
       </section>
 

@@ -141,7 +141,7 @@ body:has([class^="pg-index"]) .hidden{display:none}
 body:has([class^="pg-index"]) .see-all{display:block;text-align:center;margin:16px auto 0;color:var(--grey);font-size:13.5px;font-weight:700;background:none;border:none}
 body:has([class^="pg-index"]) .see-all:hover{color:var(--rosa)}
 body:has([class^="pg-index"]) .trust{padding:52px 0 6px}
-body:has([class^="pg-index"]) .trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+body:has([class^="pg-index"]) .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 body:has([class^="pg-index"]) .t-card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
 body:has([class^="pg-index"]) .t-card .big{font-family:'Baloo 2';font-weight:800;font-size:26px}
 body:has([class^="pg-index"]) .t-card .big .r{color:var(--rosa)}
@@ -479,11 +479,16 @@ body:has([class^="pg-index"]) .hero-flank .panel{max-width:none;margin:0}
 body:has([class^="pg-index"]) .flank{border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
 body:has([class^="pg-index"]) .flank-video{position:relative;background:var(--ink);min-height:320px}
 body:has([class^="pg-index"]) .flank-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-body:has([class^="pg-index"]) .flank-banner{background:var(--paper);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;padding:24px 18px;text-align:center}
-body:has([class^="pg-index"]) .flank-banner .fb-ic{font-size:40px;line-height:1}
-body:has([class^="pg-index"]) .flank-banner b{font-family:'Baloo 2',cursive;font-size:20px;line-height:1.25;color:var(--rosa-deep)}
+/* the trust-band "Free" card relocated here, with a flashing pulse */
+body:has([class^="pg-index"]) .flank-banner{background:var(--paper);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:24px 18px;text-align:center;animation:banner-flash 1.8s ease-in-out infinite}
+body:has([class^="pg-index"]) .flank-banner .big{font-family:'Baloo 2';font-weight:800;font-size:30px}
+body:has([class^="pg-index"]) .flank-banner .big .s{color:var(--cielo)}
 body:has([class^="pg-index"]) .flank-banner p{font-size:13.5px;color:var(--grey);margin:0}
-body:has([class^="pg-index"]) .flank-banner .fb-tag{background:rgba(58,125,68,.12);color:var(--cactus);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
+@keyframes banner-flash{
+0%,100%{border-color:var(--line);box-shadow:var(--shadow)}
+50%{border-color:var(--cielo);box-shadow:0 0 0 5px rgba(87,184,223,.25),var(--shadow)}
+}
+@media(prefers-reduced-motion:reduce){body:has([class^="pg-index"]) .flank-banner{animation:none}}
 @media(max-width:1023px){
 body:has([class^="pg-index"]) .hero-flank{grid-template-columns:1fr}
 body:has([class^="pg-index"]) .flank-video{display:none}
