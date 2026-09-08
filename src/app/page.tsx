@@ -97,14 +97,6 @@ export default async function HomePage() {
     <div className="pg-index">
       <HomeHero matches={wizardMatches} />
 
-      <section className="trust wrap">
-        <div className="trust-grid">
-          <div className="t-card"><div className="big"><span className="r">&#9733; 4.9</span></div><p>average rating from 100+ verified five-star reviews</p></div>
-          <div className="t-card"><div className="big"><span className="c">500+</span></div><p>guests hosted</p></div>
-          <div className="t-card"><div className="big"><span className="t">$0</span></div><p>hidden fees &mdash; the price you see is the price you pay</p></div>
-        </div>
-      </section>
-
       <PopularCasas casas={featured} />
       <PopularExperiences items={expItems} />
       <FamiliaBand />
