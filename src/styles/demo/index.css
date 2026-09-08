@@ -474,10 +474,12 @@ body:has([class^="pg-index"]) footer{margin-top:40px;padding:40px 0 32px}
 }
 
 /* ---- hero flank: family video | guide box | free-transfer banner ---- */
-body:has([class^="pg-index"]) .hero-flank{display:grid;grid-template-columns:minmax(180px,1fr) minmax(0,720px) minmax(180px,1fr);gap:18px;align-items:stretch;margin-top:16px}
+body:has([class^="pg-index"]) .hero-flank{display:grid;grid-template-columns:auto minmax(0,700px) minmax(180px,1fr);gap:18px;align-items:stretch;margin-top:16px}
 body:has([class^="pg-index"]) .hero-flank .panel{max-width:none;margin:0}
 body:has([class^="pg-index"]) .flank{border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden}
-body:has([class^="pg-index"]) .flank-video{position:relative;background:var(--ink);min-height:320px}
+/* the family film is 9:16 — the column keeps that exact ratio so the
+   whole frame is always visible, never cropped */
+body:has([class^="pg-index"]) .flank-video{position:relative;background:var(--ink);width:clamp(220px,21vw,300px);aspect-ratio:9/16;align-self:center}
 body:has([class^="pg-index"]) .flank-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 /* the trust-band "Free" card relocated here, with a flashing pulse */
 body:has([class^="pg-index"]) .flank-banner{background:var(--paper);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:24px 18px;text-align:center;animation:banner-flash 1.8s ease-in-out infinite}
