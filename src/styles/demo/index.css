@@ -485,7 +485,12 @@ body:has([class^="pg-index"]) .flank-video video{position:absolute;inset:0;width
    "How many" cell never gets clipped */
 body:has([class^="pg-index"]) .hero-flank .searchbar{flex-wrap:wrap;border-radius:22px}
 body:has([class^="pg-index"]) .hero-flank .sb-cell{flex:1 1 40%;min-width:0;border-right:none;border-bottom:1px solid var(--line)}
-body:has([class^="pg-index"]) .hero-flank .sb-cell:nth-child(odd){border-right:1px solid var(--line)}
+/* visual order: Where + How many on top, Check in + Check out below */
+body:has([class^="pg-index"]) .hero-flank .sb-cell:nth-child(1){order:1;border-right:1px solid var(--line)}
+body:has([class^="pg-index"]) .hero-flank .sb-cell:nth-child(4){order:2}
+body:has([class^="pg-index"]) .hero-flank .sb-cell:nth-child(2){order:3;border-right:1px solid var(--line)}
+body:has([class^="pg-index"]) .hero-flank .sb-cell:nth-child(3){order:4}
+body:has([class^="pg-index"]) .hero-flank .sb-cell.go{order:5}
 body:has([class^="pg-index"]) .hero-flank .sb-cell.go{flex:1 1 100%;justify-content:center;border-right:none;border-bottom:none}
 body:has([class^="pg-index"]) .hero-flank .go-btn{width:100%;border-radius:14px;height:46px}
 
