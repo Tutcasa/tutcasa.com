@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!listing) return {};
   return {
     title: { absolute: `${listing.title} · TutCasa` },
-    description: `${listing.headline} ${listing.propertyType} in ${listing.city} for up to ${listing.maxGuests} guests. All-in pricing, WhatsApp concierge included.`,
+    description: `${listing.headline} ${listing.propertyType} in ${listing.city} for up to ${listing.maxGuests} guests. All-in pricing, our team on WhatsApp.`,
   };
 }
 
@@ -102,6 +102,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
     slug: listing.slug,
     name: listing.title,
     city,
+    region: listing.region ?? "",
     typeLabel: propertyTypeLabel(listing),
     beds: listing.bedrooms,
     baths: listing.bathrooms,

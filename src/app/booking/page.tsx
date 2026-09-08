@@ -53,12 +53,11 @@ export default async function BookingCheckoutPage({
       const d = (c: number) => Math.round(c / 100);
       lines = [{
         n: `${res.listing.title} — ${res.listing.city}`,
-        m: `${qt.nights} nights · ${guests} guests · ${q.ci} → ${q.co}`,
-        a: d(qt.accommodationCents - qt.weekendUpliftCents),
+        m: `${qt.nights} nights · ${guests} guests · ${q.ci} → ${q.co}${qt.weekendUpliftCents > 0 || qt.nightlyCents * qt.nights !== qt.accommodationCents ? " · custom nightly rates" : ""}`,
+        // weekend/seasonal uplifts fold into the nightly total — the guest
+        // sees custom nightly rates, not the % mechanics
+        a: d(qt.accommodationCents),
       }];
-      if (qt.weekendUpliftCents > 0) {
-        lines.push({ n: "Weekend rates", m: "Sat & Sun nights", a: d(qt.weekendUpliftCents) });
-      }
       if (qt.lengthDiscountCents > 0) lines.push({
         n: qt.lengthDiscountKind === "monthly" ? "Monthly stay discount" : "Weekly stay discount",
         m: "", a: -d(qt.lengthDiscountCents),
@@ -78,11 +77,13 @@ export default async function BookingCheckoutPage({
       payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests };
       // request-to-book homes take a request — no payment step at checkout
       requestToBook = !res.listing.instantBook;
+      // the deposit splits 50/50 between the first payment and the balance
+      // (checkout derives "due today" = total - balance) — must mirror the
+      // dueNowCents math in bookings/service.ts
+      const depLater = qt.schedule.balanceCents > 0 ? Math.round(qt.securityDepositCents / 2) : 0;
       schedule = {
-        // the deposit rides with the first payment (checkout derives
-        // "due today" = total - balance, so it lands there automatically)
         dueNow: d(qt.schedule.dueNowCents),
-        balance: d(qt.schedule.balanceCents),
+        balance: d(qt.schedule.balanceCents + depLater),
         balanceBy: qt.schedule.balanceDueDate?.toISOString().slice(0, 10),
       };
     }

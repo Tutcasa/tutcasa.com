@@ -19,6 +19,7 @@ export interface PdData {
   slug: string;
   name: string;
   city: string; // "Playa del Carmen, Mexico"
+  region: string; // neighborhood, e.g. "Mareazul" ("" = none)
   typeLabel: string; // "Entire condo"
   beds: number;
   baths: number;
@@ -77,7 +78,7 @@ const AMEN_ICONS: [string, string][] = [
 ];
 
 const REVIEW_POOL = [
-  { n: "Sarah", c: "#E4326B", d: "March 2026", t: "Exactly like the photos and spotless. The concierge answered on WhatsApp within minutes and booked our cenote tour. We’ll be back." },
+  { n: "Sarah", c: "#E4326B", d: "March 2026", t: "Exactly like the photos and spotless. The team answered on WhatsApp within minutes and booked our cenote tour. We’ll be back." },
   { n: "Michael", c: "#2E9E6B", d: "February 2026", t: "Unbeatable location and the all-in pricing meant zero surprises at checkout. Beds were super comfortable." },
   { n: "Lucia", c: "#57B8DF", d: "February 2026", t: "The family that runs TutCasa clearly cares. Little welcome touches, fast replies, and a spotless home." },
   { n: "David", c: "#E8703A", d: "January 2026", t: "Great for our group of six. Kitchen had everything and the pool was perfect after a day exploring." },
@@ -209,10 +210,13 @@ export function PdGrid({ p }: { p: PdData }) {
       const total = q.totalCents;
       const d = (c: number) => fromUSD(Math.round(c / 100));
       const netAccom = q.accommodationCents - q.lengthDiscountCents - q.earlyBirdDiscountCents;
+      // weekend uplifts and seasonal rates are folded into one nightly
+      // line — guests see custom nightly rates, never the % mechanics
+      const avgNight = Math.round(q.accommodationCents / q.nights);
+      const customRates = q.weekendUpliftCents > 0 || avgNight * q.nights !== q.accommodationCents || q.nightlyCents * q.nights !== q.accommodationCents;
       return (
         <>
-          <div className="row"><span>{d(Math.round((q.accommodationCents - q.weekendUpliftCents) / q.nights))} &times; {q.nights} nights</span><span>{d(q.accommodationCents - q.weekendUpliftCents)}</span></div>
-          {q.weekendUpliftCents > 0 && <div className="row"><span>Weekend rates (Sat &amp; Sun nights)</span><span>{d(q.weekendUpliftCents)}</span></div>}
+          <div className="row"><span>{customRates ? "avg " : ""}{d(avgNight)} &times; {q.nights} nights{customRates ? " (custom nightly rates)" : ""}</span><span>{d(q.accommodationCents)}</span></div>
           {q.lengthDiscountCents > 0 && <div className="row" style={{ color: "var(--cactus)" }}><span>Stay discount</span><span>&minus;{d(q.lengthDiscountCents)}</span></div>}
           {q.earlyBirdDiscountCents > 0 && <div className="row" style={{ color: "var(--cactus)" }}><span>Early-bird discount</span><span>&minus;{d(q.earlyBirdDiscountCents)}</span></div>}
           {q.extraGuestFeeCents > 0 && <div className="row"><span>Extra guests</span><span>{d(q.extraGuestFeeCents)}</span></div>}
@@ -226,8 +230,9 @@ export function PdGrid({ p }: { p: PdData }) {
           <div className="tot"><span>Total (all-in)</span><span>{fromUSD(Math.round((total + q.securityDepositCents) / 100))}</span></div>
           {quote.quote.schedule.balanceCents > 0 && (
             <div className="row" style={{ color: "var(--cactus)" }}>
+              {/* the deposit splits 50/50 with the balance, like the stay */}
               <span>Due today</span>
-              <span>{fromUSD(Math.round((quote.quote.schedule.dueNowCents + q.securityDepositCents) / 100))}</span>
+              <span>{fromUSD(Math.round((quote.quote.schedule.dueNowCents + Math.round(q.securityDepositCents / 2)) / 100))}</span>
             </div>
           )}
         </>
@@ -297,7 +302,7 @@ export function PdGrid({ p }: { p: PdData }) {
       <div className="pd-col">
         <div className="pd-sec">
           <div className="pd-summary">
-            <span>{p.typeLabel} &middot; {p.city.split(",")[0]}</span>
+            <span>{p.typeLabel} &middot; {p.city.split(",")[0]}{p.region ? <> &middot; {p.region}</> : null}</span>
             <span className="who">{p.guests} guests &middot; {p.beds} bedrooms &middot; {p.baths} baths</span>
           </div>
           <div className="pd-facts">
@@ -410,21 +415,15 @@ export function PdGrid({ p }: { p: PdData }) {
           <T as="h2" k="pd_things" />
           {/* real admin-entered rules & policies (custom text lines are
               appended after the standard lines) */}
+          {/* check-in/out, guests max, min-stay and all-in pricing live in
+              "Good to know" above — never repeated down here */}
           <div className="pd-rules">
-            <div><h4>House rules</h4>
-              <li>Check-in after {ampm(p.checkinFrom)}</li>
-              <li>Checkout before {ampm(p.checkoutUntil)}</li>
-              <li>{p.guests} guests maximum</li>
-              <li>{p.allowParty ? "Events on request" : "No parties or events"}</li>
-              <li>{p.allowSmoking ? "Smoking allowed" : "No smoking indoors"}</li>
-              {!p.allowChildren && <li>Adults only</li>}
-              {textLines(p.houseRules).map((l, i) => <li key={`hr${i}`}>{l}</li>)}
-            </div>
-            <div><h4>Safety &amp; property</h4>
-              <li>Smoke &amp; CO alarms</li>
-              <li>Security deposit may apply</li>
-              <li>{p.allowPets ? "Pets allowed" : "Pets on request only"}</li>
-              {textLines(p.otherRules).map((l, i) => <li key={`or${i}`}>{l}</li>)}
+            <div><h4>Reservation policy</h4>
+              {textLines(p.houseRules).length > 0 ? (
+                textLines(p.houseRules).map((l, i) => <li key={`hr${i}`}>{l}</li>)
+              ) : (
+                <li>Every booking is confirmed personally by our team</li>
+              )}
             </div>
             <div><h4>Cancellation &amp; terms</h4>
               {p.cancellationPolicy.trim() ? (
@@ -435,8 +434,14 @@ export function PdGrid({ p }: { p: PdData }) {
                   <li>50% refund up to 14 days before</li>
                 </>
               )}
-              <li>Minimum stay: {p.minStay} nights</li>
-              <li>Rates are all-in (tax &amp; cleaning included)</li>
+            </div>
+            <div><h4>Safety &amp; house rules</h4>
+              <li>Smoke &amp; CO alarms</li>
+              <li>{p.allowParty ? "Events on request" : "No parties or events"}</li>
+              <li>{p.allowSmoking ? "Smoking allowed" : "No smoking indoors"}</li>
+              {!p.allowChildren && <li>Adults only</li>}
+              {p.allowPets && <li>Pets allowed</li>}
+              {textLines(p.otherRules).map((l, i) => <li key={`or${i}`}>{l}</li>)}
             </div>
           </div>
         </div>

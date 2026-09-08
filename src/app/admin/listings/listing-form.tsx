@@ -242,14 +242,14 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
           <Check name="allowParty" label="Parties allowed" defaultChecked={listing.allowParty} />
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <label className="text-xs font-bold">CANCELLATION POLICY
+          <label className="text-xs font-bold">CANCELLATION &amp; TERMS <span className="font-normal text-grey">(one line per point)</span>
             <textarea name="cancellationPolicy" rows={3} defaultValue={listing.cancellationPolicy} className={inputCls} />
           </label>
-          <label className="text-xs font-bold">OTHER RULES
+          <label className="text-xs font-bold">SAFETY &amp; HOUSE RULES <span className="font-normal text-grey">(extra lines under the standard ones)</span>
             <textarea name="otherRules" rows={3} defaultValue={listing.otherRules} className={inputCls} />
           </label>
         </div>
-        <label className="mt-3 block text-xs font-bold">HOUSE RULES <span className="font-normal text-grey">(shown on the property page)</span>
+        <label className="mt-3 block text-xs font-bold">RESERVATION POLICY <span className="font-normal text-grey">(one line per point — first section on the property page)</span>
           <textarea name="houseRules" rows={2} defaultValue={listing.houseRules} className={inputCls} />
         </label>
         <label className="mt-3 block text-xs font-bold">FAQs <span className="font-normal text-grey">(one per line: “Question? :: Answer”)</span>

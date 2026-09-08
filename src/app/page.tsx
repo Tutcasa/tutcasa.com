@@ -29,15 +29,21 @@ function displayCity(l: Listing): string {
   return l.country === "EG" ? `${l.city}, Egypt` : l.city;
 }
 
+/** real bed count = the beds the admin listed; bedrooms is the fallback */
+function bedsOf(l: Listing): number {
+  const n = l.bedTypes.reduce((s, b) => s + (b.count || 0), 0);
+  return n > 0 ? n : l.bedrooms;
+}
+
 function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
-  const city = displayCity(l);
+  const city = l.region ? `${displayCity(l)} · ${l.region}` : displayCity(l);
   // the demo home only styles g1–g4; anything else falls back to g1
   const fromListing = l.gradient.replace(/^ph-/, "");
   const grad = g ?? (/^g[1-4]$/.test(fromListing) ? fromListing : "g1");
   return {
     slug: l.slug,
     name: l.title,
-    meta: `${city} · ${l.bedrooms} beds · ${feature ?? `sleeps ${l.maxGuests}`}`,
+    meta: `${city} · ${bedsOf(l)} beds · ${feature ?? `sleeps ${l.maxGuests}`}`,
     wishMeta: city,
     price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100), // all-in, like the label says
     rate: l.rating.toFixed(2),

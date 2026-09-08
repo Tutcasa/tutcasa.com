@@ -77,7 +77,6 @@ function CasaCard({ c }: { c: CasaCardData }) {
         {c.photo && (
           <Image src={c.photo} alt="" fill sizes="(max-width: 700px) 90vw, 360px" style={{ objectFit: "cover" }} />
         )}
-        <span className="tag">{c.tag}</span>
         <span
           className={`fav${on ? " on" : ""}`}
           role="button"
@@ -120,7 +119,7 @@ const EXPERIENCES = [
 ];
 
 const REVIEWS = [
-  { face: "f1", init: "S", text: "“The airport pickup and WhatsApp concierge made this the easiest trip we’ve ever taken.”", who: <><b>Sarah M.</b> &middot; Toronto</>, src: "Airbnb" },
+  { face: "f1", init: "S", text: "“The airport pickup and the team on WhatsApp made this the easiest trip we’ve ever taken.”", who: <><b>Sarah M.</b> &middot; Toronto</>, src: "Airbnb" },
   { face: "f2", init: "J", text: "“They stocked the fridge before we landed and booked our cenote tour cheaper than any site.”", who: <><b>James &amp; Leila</b> &middot; Chicago</>, src: "Vrbo" },
   { face: "f3", init: "C", text: "“Paid by card, instant confirmation, zero surprises at checkout. Better than the photos.”", who: <><b>Camille D.</b> &middot; Montr&eacute;al</>, src: "Google" },
   { face: "f2", init: "A", text: "“TutCasa answered every question on WhatsApp within minutes. Felt like we had a local friend.”", who: <><b>Ahmed R.</b> &middot; London</>, src: "Airbnb" },

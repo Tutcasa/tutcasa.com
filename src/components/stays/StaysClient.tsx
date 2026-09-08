@@ -144,7 +144,6 @@ function StayCasa({ p, dates }: { p: StayCard; dates: { ci: string; co: string }
             </div>
           </>
         )}
-        <span className="tag">{p.tag}</span>
         <span
           className={`fav${on ? " on" : ""}`}
           role="button"

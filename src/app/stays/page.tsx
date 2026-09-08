@@ -17,7 +17,7 @@ function toCard(l: Listing): StayCard {
   return {
     slug: l.slug,
     name: l.title,
-    city: displayCity(l),
+    city: l.region ? `${displayCity(l)} · ${l.region}` : displayCity(l),
     tokens: stayTokens(l),
     type: l.propertyType,
     guests: l.maxGuests,
@@ -26,7 +26,7 @@ function toCard(l: Listing): StayCard {
     instant: l.instantBook,
     selfCi: l.selfCheckIn,
     pets: l.allowPets,
-    beds: l.bedrooms,
+    beds: l.bedTypes.reduce((s, b) => s + (b.count || 0), 0) || l.bedrooms,
     rate: l.rating.toFixed(2),
     reviews: l.reviewCount,
     price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100), // all-in, like the label says

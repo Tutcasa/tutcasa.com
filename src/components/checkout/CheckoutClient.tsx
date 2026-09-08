@@ -260,11 +260,6 @@ export function CheckoutClient({
                 </div>
               </>
             )}
-            {schedule?.securityDeposit ? (
-              <div style={{ fontSize: "12.5px", color: "var(--grey, #8a7a72)", marginTop: 6 }}>
-                + {show(schedule.securityDeposit)} security deposit.
-              </div>
-            ) : null}
           </div>
           <div className="co-card">
             <h3>{requestToBook ? "Your details" : intent ? "Pay securely" : "Payment"}</h3>
