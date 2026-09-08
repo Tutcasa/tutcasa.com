@@ -461,6 +461,36 @@ export async function addSeasonAction(
   return { ok: true, message: "Season added." };
 }
 
+export async function updateSeasonAction(
+  _prev: ListingFormState,
+  formData: FormData,
+): Promise<ListingFormState> {
+  await requireAdmin();
+  const seasonId = String(formData.get("seasonId") ?? "");
+  const label = String(formData.get("label") ?? "").trim();
+  const from = String(formData.get("from") ?? "");
+  const to = String(formData.get("to") ?? "");
+  const nightlyUSD = Number(formData.get("nightlyUSD") ?? 0);
+  if (!seasonId || !from || !to || nightlyUSD <= 0) {
+    return { ok: false, message: "Dates and a nightly price are required." };
+  }
+  if (to < from) return { ok: false, message: "End date must be after start date." };
+  try {
+    await getDb().query(
+      `update listing_rates
+          set nightly_cents=$2, label=$3,
+              season = daterange($4::date, ($5::date + 1), '[)')
+        where id=$1 and season is not null`,
+      [seasonId, usd(formData.get("nightlyUSD")), label || null, from, to],
+    );
+  } catch (e) {
+    if (isOverlap(e)) return { ok: false, message: "Those dates overlap another season." };
+    throw e;
+  }
+  revalidatePublic();
+  return { ok: true, message: "Season updated." };
+}
+
 export async function deleteSeasonAction(rateId: string): Promise<void> {
   await requireAdmin();
   await getDb().query(
@@ -676,6 +706,19 @@ export async function movePhotoAction(photoId: string, dir: "up" | "down"): Prom
   if (!other) return; // already at the edge
   await db.query("update listing_photos set sort=$2 where id=$1", [photo.id, other.sort]);
   await db.query("update listing_photos set sort=$2 where id=$1", [other.id, photo.sort]);
+  revalidatePublic();
+}
+
+/** Drag & drop: persist the full photo order in one go. */
+export async function reorderPhotosAction(listingId: string, ids: string[]): Promise<void> {
+  await requireAdmin();
+  const db = getDb();
+  for (let i = 0; i < ids.length; i++) {
+    await db.query(
+      "update listing_photos set sort=$1 where id=$2 and listing_id=$3",
+      [i, ids[i], listingId],
+    );
+  }
   revalidatePublic();
 }
 

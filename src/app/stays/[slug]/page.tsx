@@ -70,11 +70,15 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const [unavailable, all, contact, adv] = await Promise.all([
+  const [unavailable, all, contact, adv, addonRows] = await Promise.all([
     getUnavailableRanges(listing.id),
     repo.listPublished(),
     getSetting("contact"),
     advertisedNightly(listing.id).catch(() => null),
+    (await import("@/lib/db")).getDb().query(
+      "select id, name, price_cents, mode from listing_addons where listing_id=$1 and active order by sort",
+      [listing.id],
+    ),
   ]);
 
   // channel feeds older than a few hours re-pull in the background, so
@@ -138,6 +142,10 @@ export default async function ListingPage({ params, searchParams }: Props) {
     allowParty: listing.allowParty,
     allowPets: listing.allowPets,
     unavailable,
+    addons: addonRows.rows.map((a) => ({
+      id: a.id as string, name: a.name as string,
+      priceCents: a.price_cents as number, mode: a.mode as string,
+    })),
     whatsapp: contact.whatsapp,
     initialCi,
     initialCo,

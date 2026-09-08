@@ -16,6 +16,7 @@ interface Params {
   ci?: string;
   co?: string;
   guests?: string;
+  addons?: string; // comma-separated listing_addons ids (re-priced server-side)
   items?: string; // demo cart contract (gift cards)
 }
 
@@ -39,7 +40,8 @@ export default async function BookingCheckoutPage({
     const guests = Math.max(1, parseInt(q.guests ?? "2", 10) || 2);
     const { visitorCommission } = await import("@/modules/partners");
     const via = await visitorCommission();
-    const res = await resolveStayQuote(q.stay, q.ci, q.co, guests, undefined, { commissionPct: via?.pct });
+    const addonIds = q.addons ? q.addons.split(",").filter(Boolean) : undefined;
+    const res = await resolveStayQuote(q.stay, q.ci, q.co, guests, undefined, { commissionPct: via?.pct, addonIds });
     // guard the same rules createBookingHold enforces, so a tampered URL
     // (past dates, over-capacity) can't render a payable summary that would
     // only fail at submit. Blocked/invalid dates already fail resolveStayQuote.
@@ -66,6 +68,9 @@ export default async function BookingCheckoutPage({
       if (qt.extraGuestFeeCents > 0) lines.push({ n: "Extra guests", m: "", a: d(qt.extraGuestFeeCents) });
       if (qt.cleaningCents > 0) lines.push({ n: "Cleaning fee", m: "", a: d(qt.cleaningCents) });
       if (qt.cityFeeCents > 0) lines.push({ n: "City fee", m: "", a: d(qt.cityFeeCents) });
+      for (const a of qt.addonLines) {
+        lines.push({ n: a.name, m: "extra option", a: d(a.totalCents) });
+      }
       // tax as the closing line, sized so the lines sum exactly to the total
       const soFar = lines.reduce((a, l) => a + l.a, 0);
       lines.push({ n: "Taxes", m: "", a: d(qt.totalCents) - soFar });
@@ -74,7 +79,7 @@ export default async function BookingCheckoutPage({
       }
       currency = "USD";
       dates = `${q.ci} → ${q.co}`;
-      payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests };
+      payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests, addonIds };
       // request-to-book homes take a request — no payment step at checkout
       requestToBook = !res.listing.instantBook;
       // the deposit splits 50/50 between the first payment and the balance

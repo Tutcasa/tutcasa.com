@@ -51,7 +51,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
   // full price model: base/seasonal rates + per-date overrides + the
   // admin's fee/discount/deposit configuration
   const quoted = await resolveStayQuote(req.listingSlug, req.checkIn, req.checkOut, req.guests,
-    undefined, { commissionPct: req.marketingCommissionPct });
+    undefined, { commissionPct: req.marketingCommissionPct, addonIds: req.addonIds });
   if (!quoted.ok) {
     return { ok: false, error: quoted.error === "LISTING_NOT_FOUND" ? "LISTING_NOT_FOUND" : quoted.error };
   }
@@ -128,6 +128,8 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           earlyBirdDiscountCents: q.earlyBirdDiscountCents,
           extraGuestFeeCents: q.extraGuestFeeCents,
           cityFeeCents: q.cityFeeCents,
+          addonsCents: q.addonsCents,
+          addonLines: q.addonLines,
           securityDepositCents: q.securityDepositCents,
           thirdPartyCommissionCents: q.thirdPartyCommissionCents ?? 0,
           couponCode,

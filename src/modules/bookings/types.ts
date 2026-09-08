@@ -9,6 +9,8 @@ export interface BookingRequest {
   guestEmail: string;
   guestPhone?: string;
   couponCode?: string;
+  /** guest-picked extra options — listing_addons ids, re-priced server-side */
+  addonIds?: string[];
   /** ?via=CODE tracked-link attribution (server-verified, never trusted raw) */
   marketingRef?: string;
   marketingCommissionPct?: number;

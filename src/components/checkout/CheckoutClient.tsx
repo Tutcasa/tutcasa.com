@@ -25,7 +25,7 @@ export interface CheckoutLine {
 }
 
 export type CheckoutPayload =
-  | { kind: "stay"; slug: string; ci: string; co: string; guests: number }
+  | { kind: "stay"; slug: string; ci: string; co: string; guests: number; addonIds?: string[] }
   | { kind: "tour"; slug: string; date: string; groupSize: number; addons?: string[]; notes?: string }
   | { kind: "plan"; acts: string[]; people: number; dates?: string } // build-your-own request
   | { kind: "none" }; // demo-style preview confirm
@@ -162,6 +162,7 @@ export function CheckoutClient({
               guests: payload.guests, guestName: name, guestEmail: email.trim(),
               guestPhone: phone.trim() || undefined,
               couponCode: coupon?.code,
+              addonIds: payload.addonIds,
             })
           : await reserveTourAction({
               tourSlug: payload.slug, tourDate: payload.date, groupSize: payload.groupSize,

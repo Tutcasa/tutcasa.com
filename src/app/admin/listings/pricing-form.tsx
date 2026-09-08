@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import {
   savePricingAction,
   addSeasonAction,
+  updateSeasonAction,
   deleteSeasonAction,
   type ListingFormState,
 } from "./actions";
@@ -67,6 +68,63 @@ function ModalPrice({
         </select>
       </div>
     </label>
+  );
+}
+
+/** one seasonal rate — view row with an inline edit form behind "Edit" */
+function SeasonRow({
+  s, deleting, startDelete,
+}: { s: AdminSeason; deleting: boolean; startDelete: (fn: () => Promise<void>) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [state, action, pending] = useActionState(updateSeasonAction, initial);
+  // close after a successful save — adjust-during-render (never onClick,
+  // which would unmount the form on the click that submits it)
+  const [seenState, setSeenState] = useState(state);
+  if (state !== seenState) {
+    setSeenState(state);
+    if (state.ok && state.message) setEditing(false);
+  }
+
+  if (editing) {
+    return (
+      <form action={action} className="grid gap-2 rounded-xl border-[1.5px] border-rosa/50 bg-white px-3 py-2 sm:grid-cols-[1fr_1fr_1fr_90px_auto_auto]">
+        <input type="hidden" name="seasonId" value={s.id} />
+        <input name="label" defaultValue={s.label} placeholder="Label" className={inputCls} />
+        <input name="from" type="date" required defaultValue={s.from} className={inputCls} title="First night" />
+        <input name="to" type="date" required defaultValue={s.to} className={inputCls} title="Last night (inclusive)" />
+        <input name="nightlyUSD" type="number" min="1" required defaultValue={Math.round(s.nightlyCents / 100)} className={inputCls} />
+        <button disabled={pending} className="rounded-pill bg-rosa px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+          {pending ? "Saving…" : "Save"}
+        </button>
+        <button type="button" onClick={() => setEditing(false)}
+          className="rounded-pill border-[1.5px] border-line px-3 py-2 text-sm font-bold text-grey">
+          Cancel
+        </button>
+        {state.message && (
+          <p className={`sm:col-span-6 text-xs font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</p>
+        )}
+      </form>
+    );
+  }
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border-[1.5px] border-line bg-white px-3 py-2 text-sm">
+      <div>
+        <b>{s.label || "Season"}</b>{" "}
+        <span className="text-grey">{s.from} → {s.to}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <b className="text-rosa">${Math.round(s.nightlyCents / 100)}/n</b>
+        <button type="button" onClick={() => setEditing(true)}
+          className="text-xs font-bold text-grey hover:text-ink">
+          Edit
+        </button>
+        <button type="button" disabled={deleting}
+          onClick={() => startDelete(() => deleteSeasonAction(s.id))}
+          className="text-xs font-bold text-grey hover:text-rosa-deep disabled:opacity-50">
+          Remove
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -204,21 +262,7 @@ export function PricingForm({
         {seasons.length > 0 && (
           <div className="mb-3 grid gap-2">
             {seasons.map((s) => (
-              <div key={s.id}
-                className="flex items-center justify-between gap-3 rounded-xl border-[1.5px] border-line bg-white px-3 py-2 text-sm">
-                <div>
-                  <b>{s.label || "Season"}</b>{" "}
-                  <span className="text-grey">{s.from} → {s.to}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <b className="text-rosa">${Math.round(s.nightlyCents / 100)}/n</b>
-                  <button type="button" disabled={deleting}
-                    onClick={() => startDelete(() => deleteSeasonAction(s.id))}
-                    className="text-xs font-bold text-grey hover:text-rosa-deep disabled:opacity-50">
-                    Remove
-                  </button>
-                </div>
-              </div>
+              <SeasonRow key={s.id} s={s} deleting={deleting} startDelete={startDelete} />
             ))}
           </div>
         )}

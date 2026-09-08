@@ -40,7 +40,7 @@ export async function resolveStayQuote(
   checkOut: string,
   guests: number,
   bookedAt?: Date,
-  opts?: { skipAvailability?: boolean; applyCommission?: boolean; commissionPct?: number },
+  opts?: { skipAvailability?: boolean; applyCommission?: boolean; commissionPct?: number; addonIds?: string[] },
 ): Promise<StayQuoteResult> {
   if (!YMD.test(checkIn) || !YMD.test(checkOut) || checkOut <= checkIn) {
     return { ok: false, error: "INVALID_DATES" };
@@ -128,9 +128,26 @@ export async function resolveStayQuote(
     if (clash.rows[0]) return { ok: false, error: "DATES_TAKEN" };
   }
 
+  // guest-selected extra options — priced server-side from the listing's
+  // own add-on rows (ids from the client are never trusted for prices)
+  let addons;
+  if (opts?.addonIds?.length) {
+    const ar = await db.query(
+      `select name, price_cents, mode from listing_addons
+        where listing_id=$1 and active and id = any($2::uuid[]) order by sort`,
+      [L.id, opts.addonIds.filter((x) => /^[0-9a-f-]{36}$/i.test(x))],
+    );
+    addons = ar.rows.map((r) => ({
+      name: r.name as string,
+      priceCents: r.price_cents as number,
+      mode: r.mode as "flat" | "per_night" | "per_guest" | "per_guest_night",
+    }));
+  }
+
   const quote = computeQuote({
     nights,
     guests,
+    addons,
     checkIn: new Date(`${checkIn}T00:00:00Z`),
     bookedAt,
     config: defaultPricingConfig({

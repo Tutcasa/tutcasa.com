@@ -50,6 +50,8 @@ export interface PdData {
   allowParty: boolean;
   allowPets: boolean;
   unavailable: { from: string; to: string }[];
+  /** active extra options guests can add to the booking */
+  addons: { id: string; name: string; priceCents: number; mode: string }[];
   whatsapp: string;
   /** dates carried over from the stays search — prefill the booking box */
   initialCi?: string;
@@ -109,7 +111,6 @@ export function PdGrid({ p }: { p: PdData }) {
   // no synchronous reset needed when dates change
   const [quoteFor, setQuoteFor] = useState<{ key: string; res: QuoteResult } | null>(null);
   const [, startQuote] = useTransition();
-  const ciRef = useRef<HTMLInputElement>(null);
   // property-local (UTC-5) "now", identical on server and client — using
   // the viewer's clock caused React hydration mismatches across timezones
   // (lazy state: computed once per mount, keeps the render pure)
@@ -120,25 +121,31 @@ export function PdGrid({ p }: { p: PdData }) {
   // page before the current month. Capped so it can't run away.
   const [monthOffset, setMonthOffset] = useState(0);
   const MAX_MONTH_OFFSET = 22;
+  /* booking-box datepicker popover (shows blocked dates, unlike native
+     inputs) + selected extra options */
+  const [calOpen, setCalOpen] = useState<"" | "ci" | "co">("");
+  const [popOffset, setPopOffset] = useState(0);
+  const [selAddons, setSelAddons] = useState<string[]>([]);
 
   const nights = ci && co ? Math.max(0, Math.round((+new Date(co) - +new Date(ci)) / 86400000)) : 0;
-  const quoteKey = `${ci}|${co}|${guests}`;
+  const quoteKey = `${ci}|${co}|${guests}|${selAddons.join(",")}`;
   const quote = quoteFor?.key === quoteKey ? quoteFor.res : null;
 
   const blocked = (iso: string) => p.unavailable.some((r) => iso >= r.from && iso < r.to);
   const overlaps = (from: string, to: string) => p.unavailable.some((r) => from < r.to && to > r.from);
 
   const latestKeyRef = useRef("");
+  const addonsKey = selAddons.join(",");
   useEffect(() => {
     if (!ci || !co || co <= ci || nights < p.minStay) return;
-    const key = `${ci}|${co}|${guests}`;
+    const key = `${ci}|${co}|${guests}|${addonsKey}`;
     latestKeyRef.current = key;
     startQuote(async () => {
-      const res = await getQuoteAction(p.slug, ci, co, guests);
+      const res = await getQuoteAction(p.slug, ci, co, guests, addonsKey ? addonsKey.split(",") : undefined);
       // a slower, older request must never overwrite a newer result
       if (latestKeyRef.current === key) setQuoteFor({ key, res });
     });
-  }, [ci, co, nights, p.minStay, p.slug, guests]);
+  }, [ci, co, nights, p.minStay, p.slug, guests, addonsKey]);
 
   function pdG(d: number) {
     const next = Math.max(1, Math.min(p.guests, guests + d));
@@ -165,10 +172,11 @@ export function PdGrid({ p }: { p: PdData }) {
   }
 
   function pdBook() {
-    if (!nights) { ciRef.current?.focus(); return; }
+    if (!nights) { setCalOpen("ci"); return; }
     if (nights < p.minStay) { alert("This home has a minimum stay of " + p.minStay + " nights."); return; }
     if (overlaps(ci, co)) { alert("Some of those nights are already booked — pick different dates."); return; }
-    router.push(`/booking?stay=${p.slug}&ci=${ci}&co=${co}&guests=${guests}`);
+    const extra = selAddons.length ? `&addons=${selAddons.join(",")}` : "";
+    router.push(`/booking?stay=${p.slug}&ci=${ci}&co=${co}&guests=${guests}${extra}`);
   }
 
   function pdWa() {
@@ -222,7 +230,10 @@ export function PdGrid({ p }: { p: PdData }) {
           {q.extraGuestFeeCents > 0 && <div className="row"><span>Extra guests</span><span>{d(q.extraGuestFeeCents)}</span></div>}
           {q.cleaningCents > 0 && <div className="row"><span>Cleaning fee</span><span>{d(q.cleaningCents)}</span></div>}
           {q.cityFeeCents > 0 && <div className="row"><span>City fee</span><span>{d(q.cityFeeCents)}</span></div>}
-          <div className="row"><span>Taxes</span><span>{d(total - netAccom - q.extraGuestFeeCents - q.cleaningCents - q.cityFeeCents)}</span></div>
+          {q.addonLines.map((a) => (
+            <div className="row" key={a.name}><span>{a.name}</span><span>{a.totalCents > 0 ? d(a.totalCents) : "Free"}</span></div>
+          ))}
+          <div className="row"><span>Taxes</span><span>{d(total - netAccom - q.extraGuestFeeCents - q.cleaningCents - q.cityFeeCents - q.addonsCents)}</span></div>
           {q.securityDepositCents > 0 && (
             <div className="row"><span>Security deposit</span><span>{d(q.securityDepositCents)}</span></div>
           )}
@@ -260,9 +271,11 @@ export function PdGrid({ p }: { p: PdData }) {
     );
   }
 
-  /* availability calendar — demo buildCal with real blocked days */
-  const months = [0, 1].map((m) => {
-    const first = new Date(cancunNow.getUTCFullYear(), cancunNow.getUTCMonth() + monthOffset + m, 1);
+  /* availability calendar — demo buildCal with real blocked days. Shared
+     by the main "Availability" section AND the booking-box popover, so
+     blocked dates are visibly grayed and unclickable in both. */
+  function renderMonth(offset: number, key: number, onPick: (iso: string) => void) {
+    const first = new Date(cancunNow.getUTCFullYear(), cancunNow.getUTCMonth() + offset, 1);
     const startDow = first.getDay();
     const total = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
     const cells = [];
@@ -282,20 +295,32 @@ export function PdGrid({ p }: { p: PdData }) {
       if (iso === co && off) cls = "pd-day sel";
       cells.push(
         <div key={iso} className={cls}
-          onClick={past || (off && !checkoutOk) ? undefined : () => pickDay(iso)}
+          onClick={past || (off && !checkoutOk) ? undefined : () => onPick(iso)}
           style={checkoutOk ? { cursor: "pointer" } : undefined}>
           {dd}
         </div>
       );
     }
     return (
-      <div className="pd-month" key={m}>
+      <div className="pd-month" key={key}>
         <h4>{first.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</h4>
         <div className="pd-dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
         <div className="pd-days">{cells}</div>
       </div>
     );
-  });
+  }
+  const months = [0, 1].map((m) => renderMonth(monthOffset + m, m, pickDay));
+
+  /* popover pick: same range logic; picking an end date closes the popover */
+  function pickDayPop(iso: string) {
+    const finishing = !!ci && (!co || coAuto) && iso > ci && calOpen !== "ci";
+    pickDay(iso);
+    if (finishing) setCalOpen("");
+    else setCalOpen("co");
+  }
+
+  const fmtDay = (iso: string) =>
+    iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "Add date";
 
   return (
     <div className="pd-grid">
@@ -468,9 +493,39 @@ export function PdGrid({ p }: { p: PdData }) {
           All-in price &mdash; taxes &amp; cleaning included.
           {p.priceVaries ? " Rates vary by date — pick your dates for the exact total." : " Pick your dates below for the full breakdown."}
         </div>
-        <div className="pd-dates">
-          <label><T k="pd_ci" /><input ref={ciRef} type="date" min={today} value={ci} onChange={(e) => setDates(e.target.value || null, co || null)} /></label>
-          <label><T k="pd_co" /><input type="date" min={ci ? addDaysISO(ci, 1) : today} value={co} onChange={(e) => setDates(ci || null, e.target.value || null)} /></label>
+        <div style={{ position: "relative" }}>
+          <div className="pd-dates">
+            <label onClick={() => { setCalOpen(calOpen === "ci" ? "" : "ci"); setPopOffset(0); }} style={{ cursor: "pointer" }}>
+              <T k="pd_ci" />
+              <div style={{ fontSize: 14, fontWeight: ci ? 700 : 400, color: ci ? "var(--ink)" : "var(--grey)", padding: "3px 0" }}>{fmtDay(ci)}</div>
+            </label>
+            <label onClick={() => { setCalOpen(calOpen === "co" ? "" : "co"); setPopOffset(0); }} style={{ cursor: "pointer" }}>
+              <T k="pd_co" />
+              <div style={{ fontSize: 14, fontWeight: co && !coAuto ? 700 : 400, color: co ? "var(--ink)" : "var(--grey)", padding: "3px 0" }}>{fmtDay(co)}</div>
+            </label>
+          </div>
+          {calOpen && (
+            <div style={{ position: "absolute", zIndex: 40, top: "100%", left: 0, right: 0, marginTop: 6, background: "var(--paper, #FFFDF9)", border: "1.5px solid var(--line, #F0E2D2)", borderRadius: 16, boxShadow: "0 18px 44px rgba(58,44,40,.16)", padding: "12px 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                <button type="button" aria-label="Earlier month" disabled={popOffset === 0}
+                  onClick={() => setPopOffset((o) => Math.max(0, o - 1))}
+                  style={{ border: "1.5px solid var(--line)", background: "#fff", borderRadius: 999, width: 30, height: 30, cursor: popOffset === 0 ? "default" : "pointer", opacity: popOffset === 0 ? 0.4 : 1 }}>&#8249;</button>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "var(--grey)" }}>
+                  {calOpen === "ci" ? "Pick your check-in" : "Pick your check-out"} &middot; crossed-out days are booked
+                </span>
+                <button type="button" aria-label="Later month"
+                  onClick={() => setPopOffset((o) => Math.min(MAX_MONTH_OFFSET, o + 1))}
+                  style={{ border: "1.5px solid var(--line)", background: "#fff", borderRadius: 999, width: 30, height: 30, cursor: "pointer" }}>&#8250;</button>
+              </div>
+              <div className="pd-cal" style={{ gridTemplateColumns: "1fr" }}>
+                {renderMonth(popOffset, 0, pickDayPop)}
+              </div>
+              <button type="button" onClick={() => setCalOpen("")}
+                style={{ width: "100%", marginTop: 6, border: "none", background: "none", fontSize: 12.5, fontWeight: 700, color: "var(--grey)", cursor: "pointer", padding: 6 }}>
+                Close
+              </button>
+            </div>
+          )}
         </div>
         <div className="pd-guests">
           <T k="pd_guests" />
@@ -480,6 +535,27 @@ export function PdGrid({ p }: { p: PdData }) {
             <button type="button" onClick={() => pdG(1)}>+</button>
           </div>
         </div>
+        {p.addons.length > 0 && (
+          <div style={{ margin: "10px 0 4px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--grey)", marginBottom: 4 }}>Extra options</div>
+            {p.addons.map((a) => (
+              <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, padding: "4px 0", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={selAddons.includes(a.id)}
+                  onChange={() => setSelAddons((s) => s.includes(a.id) ? s.filter((x) => x !== a.id) : [...s, a.id])}
+                  style={{ width: 16, height: 16, accentColor: "var(--rosa, #E4326B)" }}
+                />
+                <span style={{ flex: 1 }}>{a.name}</span>
+                <b style={{ color: a.priceCents > 0 ? "var(--ink)" : "var(--cactus)" }}>
+                  {a.priceCents > 0
+                    ? `${fromUSD(Math.round(a.priceCents / 100))}${a.mode === "per_night" ? "/night" : a.mode === "per_guest" ? "/guest" : a.mode === "per_guest_night" ? "/guest/night" : ""}`
+                    : "Free"}
+                </b>
+              </label>
+            ))}
+          </div>
+        )}
         <div className="pd-calc">{calcRows()}</div>
         <button className="pd-cta" onClick={pdBook}><T k="pd_booknow" /></button>
         <button className="pd-cta2" onClick={pdWa}><T k="pd_ask" /></button>

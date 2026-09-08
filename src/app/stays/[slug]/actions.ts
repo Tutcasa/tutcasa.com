@@ -21,9 +21,10 @@ export async function getQuoteAction(
   checkIn: string,
   checkOut: string,
   guests = 2,
+  addonIds?: string[],
 ): Promise<QuoteResult> {
   const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined,
-    { commissionPct: (await (await import("@/modules/partners")).visitorCommission())?.pct });
+    { commissionPct: (await (await import("@/modules/partners")).visitorCommission())?.pct, addonIds });
   if (!res.ok) return res;
   return { ok: true, quote: res.quote };
 }
@@ -37,6 +38,7 @@ export async function reserveAction(input: {
   guestEmail: string;
   guestPhone?: string;
   couponCode?: string;
+  addonIds?: string[];
 }): Promise<ReserveResult> {
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (overLimit(`reserve:${ip}`, 8, 10 * 60 * 1000)) return { ok: false, error: "DATES_TAKEN" };

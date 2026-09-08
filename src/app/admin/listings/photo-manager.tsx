@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { uploadPhotoAction, deletePhotoAction, movePhotoAction, makeCoverPhotoAction } from "./actions";
+import { uploadPhotoAction, deletePhotoAction, movePhotoAction, makeCoverPhotoAction, reorderPhotosAction } from "./actions";
 
 export interface AdminPhoto { id: string; url: string; alt: string }
 
@@ -43,6 +43,30 @@ export function PhotoManager({
   const formRef = useRef<HTMLFormElement>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, start] = useTransition();
+
+  /* drag & drop ordering — optimistic local order, persisted in one call.
+     Re-derive when the server's photo set changes (adjust-during-render). */
+  const [order, setOrder] = useState(() => photos.map((p) => p.id));
+  const dragId = useRef<string | null>(null);
+  const idsKey = photos.map((p) => p.id).join(",");
+  const [prevIds, setPrevIds] = useState(idsKey);
+  if (prevIds !== idsKey) {
+    setPrevIds(idsKey);
+    setOrder(idsKey ? idsKey.split(",") : []);
+  }
+  const ordered = order
+    .map((id) => photos.find((p) => p.id === id))
+    .filter((p): p is AdminPhoto => !!p);
+
+  function dropOn(targetId: string) {
+    const from = dragId.current;
+    dragId.current = null;
+    if (!from || from === targetId) return;
+    const next = order.filter((id) => id !== from);
+    next.splice(next.indexOf(targetId), 0, from);
+    setOrder(next);
+    start(async () => { await reorderPhotosAction(listingId, next); });
+  }
 
   // one request per photo (compressed first) — a single big multi-file
   // request gets rejected by the host and shows "This page couldn't load"
@@ -90,12 +114,19 @@ export function PhotoManager({
       {photos.length > 0 ? (
         <>
         <p className="mb-2 text-xs text-grey">
-          The FIRST photo is the cover (cards, homepage, search). Use the
-          arrows to arrange, ★ to make a photo the cover.
+          The FIRST photo is the cover (cards, homepage, search). Drag photos
+          to rearrange them (or use the arrows); ★ makes a photo the cover.
         </p>
         <div className="mb-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {photos.map((p, i) => (
-            <div key={p.id} className="relative overflow-hidden rounded-xl border border-line">
+          {ordered.map((p, i) => (
+            <div
+              key={p.id}
+              draggable
+              onDragStart={(e) => { dragId.current = p.id; e.dataTransfer.effectAllowed = "move"; }}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); dropOn(p.id); }}
+              className="relative cursor-grab overflow-hidden rounded-xl border border-line active:cursor-grabbing"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={p.url} alt={p.alt} className="h-24 w-full object-cover" />
               {i === 0 && (
@@ -123,7 +154,7 @@ export function PhotoManager({
                     onClick={() => start(async () => { await makeCoverPhotoAction(p.id); })}
                     className="flex h-6 items-center justify-center rounded-full bg-ink/70 px-2 text-xs text-white hover:bg-rosa disabled:opacity-30">★ cover</button>
                 )}
-                <button type="button" aria-label="Move photo later" title="Move later" disabled={busy || i === photos.length - 1}
+                <button type="button" aria-label="Move photo later" title="Move later" disabled={busy || i === ordered.length - 1}
                   onClick={() => start(async () => { await movePhotoAction(p.id, "down"); })}
                   className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/70 text-xs text-white hover:bg-rosa disabled:opacity-30">→</button>
               </div>
