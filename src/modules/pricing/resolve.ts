@@ -140,7 +140,7 @@ export async function resolveStayQuote(
     addons = ar.rows.map((r) => ({
       name: r.name as string,
       priceCents: r.price_cents as number,
-      mode: r.mode as "flat" | "per_night" | "per_guest" | "per_guest_night",
+      mode: r.mode as import("./engine").AddonMode,
     }));
   }
 

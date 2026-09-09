@@ -126,7 +126,12 @@ export default async function ListingPage({ params, searchParams }: Props) {
     // admin's address itself never appears in the embed URL
     // no pin yet → search the map for the home's NAME in its city (finds
     // the complex, e.g. "Mareazul") instead of dropping on the city centre
-    mapQ: hasPin(listing) ? roundedPin(listing) : `${listing.title}, ${listing.city}`,
+    // neighborhood + city beats stored coords: geocoding gated communities
+    // (e.g. Mareazul) often lands downtown, while Google resolves the
+    // area name itself correctly — and it stays approximate, never house-level
+    mapQ: listing.region
+      ? `${listing.region}, ${listing.city}`
+      : hasPin(listing) ? roundedPin(listing) : `${listing.title}, ${listing.city}`,
     minStay: listing.minStay,
     desc: listing.description,
     amen: listing.amenities,

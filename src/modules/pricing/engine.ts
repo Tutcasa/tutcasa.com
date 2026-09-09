@@ -20,7 +20,7 @@
  */
 
 export type FeeMode = "single" | "per_night";
-export type AddonMode = "flat" | "per_night" | "per_guest" | "per_guest_night";
+export type AddonMode = "flat" | "per_night" | "per_guest" | "per_guest_night" | "for_4" | "over_4";
 
 /** One night of the stay with its already-resolved base rate. */
 export interface NightRate {
@@ -168,6 +168,12 @@ function addonTotal(a: AddonSelection, nights: number, guests: number): number {
       return a.priceCents * guests;
     case "per_guest_night":
       return a.priceCents * guests * nights;
+    // group-size-conditional options (charged once per stay) — the system
+    // knows the party size from the booking, so a mismatched pick costs 0
+    case "for_4":
+      return guests <= 4 ? a.priceCents : 0;
+    case "over_4":
+      return guests > 4 ? a.priceCents : 0;
   }
 }
 
@@ -274,16 +280,23 @@ export function computeQuote(input: QuoteInput): Quote {
   const taxCents = Math.round(taxableCents * (config.taxPct / 100));
   const totalCents = taxableCents + taxCents;
 
-  // 8. payment schedule
-  const dueNowCents =
+  // 8. payment schedule — no split for last-minute bookings: when the
+  // balance-due date (N days before check-in) has already passed at
+  // booking time, the guest simply pays everything now
+  let dueNowCents =
     config.depositPct >= 100
       ? totalCents
       : Math.round(totalCents * (config.depositPct / 100));
-  const balanceCents = totalCents - dueNowCents;
-  const balanceDueDate =
+  let balanceCents = totalCents - dueNowCents;
+  let balanceDueDate =
     balanceCents > 0
       ? new Date(checkIn.getTime() - config.secondPaymentDays * DAY_MS)
       : null;
+  if (balanceDueDate && balanceDueDate.getTime() <= bookedAt.getTime()) {
+    dueNowCents = totalCents;
+    balanceCents = 0;
+    balanceDueDate = null;
+  }
 
   return {
     nights: n,

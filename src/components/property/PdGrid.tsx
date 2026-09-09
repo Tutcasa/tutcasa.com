@@ -147,10 +147,21 @@ export function PdGrid({ p }: { p: PdData }) {
     });
   }, [ci, co, nights, p.minStay, p.slug, guests, addonsKey]);
 
+  /* group-size-conditional options only show when they apply — the
+     booking's own guest count decides */
+  const addonApplies = (mode: string, g: number) =>
+    mode === "for_4" ? g <= 4 : mode === "over_4" ? g > 4 : true;
+  const visibleAddons = p.addons.filter((a) => addonApplies(a.mode, guests));
+
   function pdG(d: number) {
     const next = Math.max(1, Math.min(p.guests, guests + d));
     setGuests(next);
     setGMinDisabled(next <= 1);
+    // drop selected options that no longer apply to the new group size
+    setSelAddons((s) => s.filter((id) => {
+      const a = p.addons.find((x) => x.id === id);
+      return a ? addonApplies(a.mode, next) : false;
+    }));
   }
 
   function setDates(nci: string | null, nco: string | null) {
@@ -535,10 +546,10 @@ export function PdGrid({ p }: { p: PdData }) {
             <button type="button" onClick={() => pdG(1)}>+</button>
           </div>
         </div>
-        {p.addons.length > 0 && (
+        {visibleAddons.length > 0 && (
           <div style={{ margin: "10px 0 4px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--grey)", marginBottom: 4 }}>Extra options</div>
-            {p.addons.map((a) => (
+            {visibleAddons.map((a) => (
               <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, padding: "4px 0", cursor: "pointer" }}>
                 <input
                   type="checkbox"
