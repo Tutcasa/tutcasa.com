@@ -26,6 +26,7 @@ export interface StayCard {
   selfCi: boolean;
   pets: boolean;
   beds: number;
+  baths: number;
   rate: string;
   reviews: number;
   price: number;
@@ -42,14 +43,11 @@ export interface StayCard {
 const FILTERS: { k: string; f: string; ic: string; raw?: string }[] = [
   { k: "st_f_all", f: "all", ic: "\u{1F3E0}" },
   { k: "st_f_beach", f: "beachfront", ic: "\u{1F3D6}️" },
+  { k: "st_f_bview", f: "beachview", ic: "\u{1F30A}" },
   { k: "st_f_pool", f: "private pool", ic: "\u{1F3CA}" },
-  { k: "st_f_playa", f: "playa del carmen", ic: "\u{1F3DD}️", raw: "Playa del Carmen" },
-  { k: "st_f_tulum", f: "tulum", ic: "\u{1F6DB}", raw: "Tulum" },
-  { k: "st_f_nuba", f: "nuba", ic: "\u{1F3DC}️", raw: "Nuba, Egypt" },
-  { k: "st_f_florida", f: "florida", ic: "\u{1F334}", raw: "Florida" },
-  { k: "st_f_villas", f: "villas", ic: "\u{1F3DA}" },
-  { k: "st_f_pent", f: "penthouses", ic: "\u{1F3D9}" },
-  { k: "st_f_family", f: "family", ic: "\u{1F46A}" },
+  { k: "st_f_fav", f: "guest favorite", ic: "⭐" },
+  { k: "st_f_park", f: "free parking", ic: "\u{1F697}" },
+  { k: "st_f_wash", f: "washer & dryer", ic: "\u{1F9FA}" },
 ];
 
 const DEST_TOK: Record<string, string> = {
@@ -79,12 +77,12 @@ const HOME_TYPES = ["condo", "villa", "house", "apartment", "penthouse"];
 const GUEST_STEPS = [0, 2, 4, 6, 8, 12];
 
 interface Filters {
-  price: number; beds: number; toks: string[];
+  price: number; beds: number; baths: number; toks: string[];
   type: string; guests: number; city: string;
   amens: string[]; opts: string[];
 }
 const NO_FILTERS: Filters = {
-  price: 600, beds: 0, toks: [],
+  price: 600, beds: 0, baths: 0, toks: [],
   type: "any", guests: 0, city: "any",
   amens: [], opts: [],
 };
@@ -94,6 +92,7 @@ function matchProp(p: StayCard, activeFilter: string, f: Filters): boolean {
   if (activeFilter !== "all" && !p.tokens.includes(activeFilter)) return false;
   if (f.price < 600 && p.price > f.price) return false; // 600 = "$600+" (uncapped)
   if (f.beds && p.beds < f.beds) return false;
+  if (f.baths && p.baths < f.baths) return false;
   for (const t of f.toks) if (!p.tokens.includes(t)) return false;
   if (f.type !== "any" && p.type !== f.type) return false;
   if (f.guests && p.guests < f.guests) return false;
@@ -251,7 +250,7 @@ export function StaysClient({
   const list = props.filter((p) => matchProp(p, activeFilter, moreFilters));
   const draftCount = props.filter((p) => matchProp(p, activeFilter, draft)).length;
   const fcount =
-    (moreFilters.price < 600 ? 1 : 0) + (moreFilters.beds ? 1 : 0) + moreFilters.toks.length +
+    (moreFilters.price < 600 ? 1 : 0) + (moreFilters.beds ? 1 : 0) + (moreFilters.baths ? 1 : 0) + moreFilters.toks.length +
     (moreFilters.type !== "any" ? 1 : 0) + (moreFilters.guests ? 1 : 0) +
     (moreFilters.city !== "any" ? 1 : 0) + moreFilters.amens.length + moreFilters.opts.length;
   const cities = [...new Set(props.map((p) => p.city))].sort();
@@ -440,6 +439,16 @@ export function StaysClient({
               <div className="pillrow">
                 {[0, 1, 2, 3, 4].map((b) => (
                   <button key={b} className={`pill${draft.beds === b ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, beds: b }))}>
+                    {b === 0 ? <T k="st_fil_any" /> : `${b}+`}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="fgroup">
+              <h4><T k="st_fil_baths" /></h4>
+              <div className="pillrow">
+                {[0, 1, 2, 3, 4].map((b) => (
+                  <button key={b} className={`pill${draft.baths === b ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, baths: b }))}>
                     {b === 0 ? <T k="st_fil_any" /> : `${b}+`}
                   </button>
                 ))}

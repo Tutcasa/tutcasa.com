@@ -51,9 +51,13 @@ export function deriveTokens(l: Listing): string[] {
   if (l.country === "US") toks.push("florida");
   if (l.propertyType === "villa") toks.push("villas");
   if (l.propertyType === "penthouse") toks.push("penthouses");
-  const blob = (l.headline + " " + l.amenities.join(" ")).toLowerCase();
+  const blob = (l.headline + " " + l.amenities.join(" ") + " " + l.description).toLowerCase();
   if (blob.includes("beach")) toks.push("beachfront");
   if (blob.includes("pool")) toks.push("private pool");
+  if (/beach\s?view|ocean\s?view|sea\s?view/.test(blob)) toks.push("beachview");
+  if (blob.includes("parking")) toks.push("free parking");
+  if (blob.includes("washer") || blob.includes("dryer") || blob.includes("laundry")) toks.push("washer & dryer");
+  if (l.rating >= 4.8 && l.reviewCount > 0) toks.push("guest favorite");
   if (l.maxGuests >= 6) toks.push("family");
   return toks;
 }

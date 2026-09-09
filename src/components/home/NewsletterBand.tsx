@@ -36,7 +36,7 @@ export function NewsletterBand() {
         </h2>
         <p style={{ color: "var(--grey)", maxWidth: 520, margin: "0 auto 18px", fontSize: 15 }}>
           Enter your email and we&rsquo;ll send you a 10% discount coupon for your
-          first booking &mdash; plus the occasional deal. No spam, ever.
+          first booking &mdash; plus the occasional deal.
         </p>
         {state.ok && state.message ? (
           <div style={{ fontWeight: 800, color: "var(--cactus)", fontSize: 16 }}>

@@ -457,12 +457,12 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
 
         {/* OWNER VIEW */}
         <div className={audience === "own" ? undefined : "hidden"}>
-          <h2 className="hero-title">Your casa, <span className="rosa">fully managed.</span></h2>
-          <p className="sub">Higher occupancy, honest reporting, zero headaches. We treat your home like our own. &#128273;</p>
+          <h2 className="hero-title">Start your hosting journey <span className="rosa">with us today</span></h2>
+          <p className="sub">Higher occupancy. Transparent reporting. Hassle-free ROI. &#128273;</p>
           <div className="owner-hero">
             <span className="deco">&#128273;</span>
-            <h2>Earn more, worry less.</h2>
-            <p>Full-service management for the Riviera Maya and beyond &mdash; marketing, guests, cleaning, maintenance and payments, all handled.</p>
+            <h2>Trusted by Hosts for 3+ Years</h2>
+            <p>TUT CASA helps homeowners like you earn more from their properties while welcoming wonderful guests, without the hassle of managing bookings and guests yourself.</p>
             <div className="stats">
               <div><b>70%+</b><span>average occupancy</span></div>
               <div><b>40+</b><span>homes managed</span></div>

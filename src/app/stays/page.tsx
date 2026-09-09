@@ -27,6 +27,7 @@ function toCard(l: Listing): StayCard {
     selfCi: l.selfCheckIn,
     pets: l.allowPets,
     beds: l.bedTypes.reduce((s, b) => s + (b.count || 0), 0) || l.bedrooms,
+    baths: l.bathrooms,
     rate: l.rating.toFixed(2),
     reviews: l.reviewCount,
     price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100), // all-in, like the label says
