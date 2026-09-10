@@ -261,7 +261,15 @@ export function FamiliaBand() {
   return (
     <section className="familia wrap">
       <div className="card">
-        <div className="photo"></div>
+        <div className="photo">
+          {/* Mareazul aerial — client-provided */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia-band.jpg"
+            alt="Aerial view of the Mareazul beachfront community, Playa del Carmen"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }}
+          />
+        </div>
         <div className="body">
           <T as="h2" k="home_familia_h" />
           <p>
