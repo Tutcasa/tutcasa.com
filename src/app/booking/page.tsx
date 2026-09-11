@@ -75,7 +75,7 @@ export default async function BookingCheckoutPage({
       const soFar = lines.reduce((a, l) => a + l.a, 0);
       lines.push({ n: "Taxes", m: "", a: d(qt.totalCents) - soFar });
       if (qt.securityDepositCents > 0) {
-        lines.push({ n: "Security deposit", m: "returned after checkout per policy", a: d(qt.securityDepositCents) });
+        lines.push({ n: "Security deposit", m: "", a: d(qt.securityDepositCents) });
       }
       currency = "USD";
       dates = `${q.ci} → ${q.co}`;

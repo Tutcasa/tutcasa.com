@@ -447,7 +447,11 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
             {/* the trust cards, stacked to match the box height — flashing
                 free-pickup offer on top (client-picked layout B) */}
             <aside className="flank-stack">
-              <div className="t-card flash-card"><div className="big"><span className="s">Free</span></div><p>airport pickup + our team on WhatsApp, on every booking</p></div>
+              <div className="t-card flash-card">
+                <div className="big"><span className="s">Free Airport Pickup</span></div>
+                <div className="fc-sub">Up to 4 People</div>
+                <p>Help from Booking to Departure</p>
+              </div>
               <div className="t-card"><div className="big"><span className="r">&#9733; 4.9</span></div><p>average rating, 100+ five-star reviews</p></div>
               <div className="t-card"><div className="big"><span className="t">$0</span></div><p>hidden fees &mdash; the price you see is what you pay</p></div>
               <div className="t-card"><div className="big"><span className="c">500+</span></div><p>guests hosted</p></div>
