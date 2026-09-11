@@ -52,6 +52,8 @@ export interface ListPropertyContent {
 
 export interface FamilyContent {
   eyebrow: string; title: string; intro: string;
+  /** story photo/video URL — .mp4/.webm renders as a silent looping video */
+  mediaUrl: string;
   tag: string; storyTitle: string;
   p1: string; p2: string; p3: string; sign: string;
   stats: { big: string; label: string }[];
@@ -170,6 +172,7 @@ const DEFAULTS: {
   },
   page_family: {
     eyebrow: "", title: "", intro: "",
+    mediaUrl: "https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia-band.jpg",
     tag: "", storyTitle: "", p1: "", p2: "", p3: "", sign: "",
     stats: [
       { big: "40+", label: "homes personally inspected" },

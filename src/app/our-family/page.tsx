@@ -33,7 +33,16 @@ export default async function OurFamilyPage() {
 
       <section className="story wrap">
         <div className="story-card">
-          <div className="story-photo"></div>
+          <div className="story-photo" style={{ position: "relative", overflow: "hidden" }}>
+            {c.mediaUrl && (/\.(mp4|webm)(\?|$)/i.test(c.mediaUrl) ? (
+              <video src={c.mediaUrl} autoPlay muted loop playsInline
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={c.mediaUrl} alt=""
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+            ))}
+          </div>
           <div className="story-body">
             <span className="tag">{or(c.tag, "fam_tag")}</span>
             <h2>{or(c.storyTitle, "fam_story_h")}</h2>

@@ -53,7 +53,7 @@ export function SiteFooter({ whatsapp }: { whatsapp: string }) {
           </div>
         </div>
         <div className="foot-bottom">
-          <span>&copy; 2026 TutCasa &middot; Hecho con &#10084;&#65039; en la Riviera Maya</span>
+          <span>&copy; 2026 TutCasa</span>
           <span className="foot-legal">
             <Link href="/policies"><T k="foot_terms" /></Link>
             <Link href="/policies"><T k="foot_privacy" /></Link>

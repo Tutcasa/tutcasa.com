@@ -219,6 +219,9 @@ export function FamilyForm({ content }: { content: FamilyContent }) {
           <input name="title" defaultValue={content.title} className={inputCls} />
         </label>
       </div>
+      <label className="text-xs font-bold">STORY PHOTO / VIDEO URL <span className="font-normal text-grey">(paste an image URL, or a .mp4 link for a silent looping video)</span>
+        <input name="mediaUrl" defaultValue={content.mediaUrl} className={inputCls} />
+      </label>
       <label className="text-xs font-bold">INTRO
         <textarea name="intro" rows={2} defaultValue={content.intro} className={inputCls} />
       </label>

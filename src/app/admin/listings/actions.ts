@@ -14,6 +14,14 @@ function revalidatePublic() {
   revalidatePath("/");
 }
 
+/** Amenities: one per line ("KITCHEN: Oven, Toaster" keeps its group on
+    one line); a single comma-separated line (the old format) still works. */
+function amenList(v: FormDataEntryValue | null): string[] {
+  const ls = String(v ?? "").split("\n").map((x) => x.trim()).filter(Boolean);
+  if (ls.length === 1 && !ls[0].includes(":")) return csvList(ls[0]);
+  return ls;
+}
+
 /** "a, b, c" → ['a','b','c'] */
 function csvList(v: FormDataEntryValue | null): string[] {
   return String(v ?? "")
@@ -308,7 +316,7 @@ export async function saveListingAction(
       String(formData.get("checkinFrom") || "15:00"),
       String(formData.get("checkoutUntil") || "11:00"),
       lat, lng,
-      csvList(formData.get("amenities")),
+      amenList(formData.get("amenities")),
       orNull(formData.get("houseRules")),
       on(formData.get("instantBook")),
       on(formData.get("keepCalendarClean")),

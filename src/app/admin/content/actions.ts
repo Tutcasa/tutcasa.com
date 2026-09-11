@@ -288,6 +288,7 @@ export async function saveFamilyAction(
   const g = (k: string) => String(formData.get(k) ?? "").trim();
   await setSetting("page_family", {
     eyebrow: g("eyebrow"), title: g("title"), intro: g("intro"),
+    mediaUrl: g("mediaUrl"),
     tag: g("tag"), storyTitle: g("storyTitle"),
     p1: g("p1"), p2: g("p2"), p3: g("p3"), sign: g("sign"),
     stats: [0, 1, 2].map((i) => statPair(formData, i)),

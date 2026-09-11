@@ -513,3 +513,11 @@ body:has([class^="pg-index"]) .flank-video{display:none}
 body:has([class^="pg-index"]) .hero-flank .panel{max-width:720px;margin:0 auto}
 body:has([class^="pg-index"]) .flank-stack{display:grid;grid-template-columns:1fr 1fr;max-width:720px;margin:0 auto;width:100%}
 }
+
+/* familia square media: photo on desktop, the family film on phones */
+body:has([class^="pg-index"]) .familia-video{display:none}
+@media(max-width:880px){
+body:has([class^="pg-index"]) .familia-img{display:none}
+body:has([class^="pg-index"]) .familia-video{display:block}
+body:has([class^="pg-index"]) .familia .photo{aspect-ratio:3/4;min-height:0;height:auto}
+}

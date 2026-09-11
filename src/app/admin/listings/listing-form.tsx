@@ -179,9 +179,9 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
             <BedTypesEditor initial={listing.bedTypes} />
           </div>
         </div>
-        <label className="text-xs font-bold">AMENITIES <span className="font-normal text-grey">(comma-separated)</span>
-          <textarea name="amenities" rows={2} className={inputCls}
-            defaultValue={listing.amenities.join(", ")} />
+        <label className="text-xs font-bold">AMENITIES <span className="font-normal text-grey">(one per line — a line like &ldquo;KITCHEN: Oven, Toaster, Fridge&rdquo; makes a group with a heading; plain lines are single amenities)</span>
+          <textarea name="amenities" rows={5} className={inputCls}
+            defaultValue={listing.amenities.join("\n")} />
         </label>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">

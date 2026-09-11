@@ -357,9 +357,22 @@ export function PdGrid({ p }: { p: PdData }) {
         <div className="pd-sec">
           <T as="h2" k="pd_offers" />
           <div className="pd-amen">
-            {p.amen.map((a) => {
+            {p.amen.flatMap((a, gi) => {
+              // "KITCHEN: Oven, Toaster" → full-width heading + its items
+              const m = a.match(/^([^:]{2,40}):\s*(.+)$/);
+              if (m) {
+                return [
+                  <div key={`h${gi}`} style={{ gridColumn: "1 / -1", fontWeight: 800, fontSize: 13, letterSpacing: ".05em", textTransform: "uppercase", color: "var(--grey)", marginTop: gi > 0 ? 8 : 0 }}>
+                    {m[1].trim()}
+                  </div>,
+                  ...m[2].split(",").map((x) => x.trim()).filter(Boolean).map((item) => {
+                    const ic = AMEN_ICONS.find(([k]) => item.indexOf(k) > -1)?.[1] ?? "✓";
+                    return <div key={`${gi}-${item}`}><span className="ai">{ic}</span> {item}</div>;
+                  }),
+                ];
+              }
               const ic = AMEN_ICONS.find(([k]) => a.indexOf(k) > -1)?.[1] ?? "✓";
-              return <div key={a}><span className="ai">{ic}</span> {a}</div>;
+              return [<div key={a}><span className="ai">{ic}</span> {a}</div>];
             })}
           </div>
         </div>
