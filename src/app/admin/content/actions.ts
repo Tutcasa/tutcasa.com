@@ -348,3 +348,25 @@ export async function saveInvestorsAction(
   revalidatePath("/admin/content");
   return { ok: true, message: "Investors page updated — live now." };
 }
+
+/* ---------------- family media upload (signed, browser → storage) ---------------- */
+
+/** Signed upload slot so images AND large videos go straight from the
+    admin's browser to storage — server actions can't carry video bodies. */
+export async function signFamilyUploadAction(
+  filename: string,
+  contentType: string,
+): Promise<{ ok: true; path: string; token: string; publicUrl: string } | { ok: false; message: string }> {
+  await requireAdmin();
+  const sb = getSupabaseAdmin();
+  if (!sb) return { ok: false, message: "Uploads need the Supabase service key (SUPABASE_SERVICE_ROLE_KEY)." };
+  if (!/^(image\/(jpeg|png|webp|avif)|video\/(mp4|webm|quicktime))$/.test(contentType)) {
+    return { ok: false, message: "Use a JPEG/PNG/WebP image or an MP4/WebM video." };
+  }
+  const ext = (filename.match(/\.(\w{2,5})$/)?.[1] ?? contentType.split("/")[1]).toLowerCase();
+  const path = `site/family-${Date.now()}.${ext}`;
+  const { data, error } = await sb.storage.from("listing-photos").createSignedUploadUrl(path);
+  if (error || !data) return { ok: false, message: error?.message ?? "Couldn't prepare the upload." };
+  const { data: pub } = sb.storage.from("listing-photos").getPublicUrl(path);
+  return { ok: true, path, token: data.token, publicUrl: pub.publicUrl };
+}

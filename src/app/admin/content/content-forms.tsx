@@ -1,7 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
-import { saveContactAction, saveFamilyAction, saveFxAction, saveGoogleReviewsAction, saveListPropertyAction, uploadDeckAction, type ContentFormState } from "./actions";
+import { useActionState, useState, useTransition } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { saveContactAction, saveFamilyAction, saveFxAction, saveGoogleReviewsAction, saveListPropertyAction, signFamilyUploadAction, uploadDeckAction, type ContentFormState } from "./actions";
+import { compressPhoto } from "../listings/photo-manager";
 import type { ContactSettings, FamilyContent, InvestorSettings, ListPropertyContent } from "@/modules/settings";
 
 const initial: ContentFormState = { ok: true, message: "" };
@@ -206,6 +208,54 @@ export function ListPropertyForm({ content }: { content: ListPropertyContent }) 
   );
 }
 
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
+/** URL box + direct upload (browser → storage, so videos work too). */
+function FamilyMediaField({ initialUrl }: { initialUrl: string }) {
+  const [url, setUrl] = useState(initialUrl);
+  const [msg, setMsg] = useState("");
+  const [busy, start] = useTransition();
+
+  function pick(file: File | undefined) {
+    if (!file) return;
+    start(async () => {
+      try {
+        setMsg("Uploading…");
+        let f = file;
+        if (f.type.startsWith("image/")) f = await compressPhoto(f);
+        else if (f.size > MAX_VIDEO_BYTES) { setMsg("Video too large — keep it under 50 MB (compress it first)."); return; }
+        const slot = await signFamilyUploadAction(f.name, f.type);
+        if (!slot.ok) { setMsg(slot.message); return; }
+        const sb = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        );
+        const { error } = await sb.storage
+          .from("listing-photos")
+          .uploadToSignedUrl(slot.path, slot.token, f, { contentType: f.type });
+        if (error) { setMsg(`Upload failed: ${error.message}`); return; }
+        setUrl(slot.publicUrl);
+        setMsg("Uploaded ✓ — now hit “Save & publish” below to put it live.");
+      } catch {
+        setMsg("Upload failed — check your connection and try again.");
+      }
+    });
+  }
+
+  return (
+    <div className="grid gap-1">
+      <label className="text-xs font-bold">STORY PHOTO / VIDEO <span className="font-normal text-grey">(upload a file, or paste a URL — .mp4/.webm plays as a silent looping video)</span>
+        <input name="mediaUrl" value={url} onChange={(e) => setUrl(e.target.value)} className={inputCls} />
+      </label>
+      <div className="flex flex-wrap items-center gap-2">
+        <input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime"
+          disabled={busy} onChange={(e) => pick(e.target.files?.[0])} className="text-sm" />
+        {msg && <span className={`text-xs font-semibold ${msg.includes("✓") ? "text-cactus" : "text-grey"}`}>{msg}</span>}
+      </div>
+    </div>
+  );
+}
+
 export function FamilyForm({ content }: { content: FamilyContent }) {
   const [state, action, pending] = useActionState(saveFamilyAction, initial);
   return (
@@ -219,9 +269,7 @@ export function FamilyForm({ content }: { content: FamilyContent }) {
           <input name="title" defaultValue={content.title} className={inputCls} />
         </label>
       </div>
-      <label className="text-xs font-bold">STORY PHOTO / VIDEO URL <span className="font-normal text-grey">(paste an image URL, or a .mp4 link for a silent looping video)</span>
-        <input name="mediaUrl" defaultValue={content.mediaUrl} className={inputCls} />
-      </label>
+      <FamilyMediaField initialUrl={content.mediaUrl} />
       <label className="text-xs font-bold">INTRO
         <textarea name="intro" rows={2} defaultValue={content.intro} className={inputCls} />
       </label>
