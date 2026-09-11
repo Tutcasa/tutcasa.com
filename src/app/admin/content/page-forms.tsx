@@ -3,12 +3,14 @@
 import { useActionState } from "react";
 import type {
   FaqContent,
+  InvestorsContent,
   ConciergeContent,
   LoyaltyContent,
   PoliciesContent,
   WhyBookContent,
 } from "@/modules/settings";
 import {
+  saveInvestorsAction,
   savePoliciesAction,
   saveWhyAction,
   saveConciergeAction,
@@ -171,6 +173,140 @@ export function FaqForm({ content }: { content: FaqContent }) {
       <label className="text-xs font-bold">QUESTIONS <span className="font-normal text-grey">(one per line: Question? :: Answer)</span>
         <textarea name="items" rows={12} className={inputCls}
           defaultValue={content.items.map((f) => `${f.q} :: ${f.a}`).join("\n")} />
+      </label>
+      <SaveRow state={state} pending={pending} />
+    </form>
+  );
+}
+
+export function InvestorsForm({ content }: { content: InvestorsContent }) {
+  const [state, action, pending] = useActionState(saveInvestorsAction, initial);
+  const rows3 = (xs: { icon: string; title: string; text: string }[]) =>
+    xs.map((x) => `${x.icon} | ${x.title} | ${x.text}`).join("\n");
+  return (
+    <form action={action} className="grid gap-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">HERO TITLE
+          <input name="heroTitle" defaultValue={content.heroTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">HERO TITLE — colored part
+          <input name="heroHighlight" defaultValue={content.heroHighlight} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">HERO PARAGRAPH
+        <textarea name="heroIntro" rows={3} defaultValue={content.heroIntro} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">METRICS <span className="font-normal text-grey">(one per line: Number :: label)</span>
+        <textarea name="metrics" rows={3} className={inputCls}
+          defaultValue={content.metrics.map((mt) => `${mt.b} :: ${mt.s}`).join("\n")} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">VISION TITLE
+          <input name="visionTitle" defaultValue={content.visionTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">OPPORTUNITY TITLE
+          <input name="oppTitle" defaultValue={content.oppTitle} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">VISION TEXT
+        <textarea name="visionText" rows={3} defaultValue={content.visionText} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">OPPORTUNITY TEXT
+        <textarea name="oppText" rows={3} defaultValue={content.oppText} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">PAIN BOX TITLE
+          <input name="painTitle" defaultValue={content.painTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">PAIN POINTS <span className="font-normal text-grey">(one per line)</span>
+          <textarea name="painPoints" rows={2} defaultValue={content.painPoints.join("\n")} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">ADVANTAGES TITLE
+        <input name="advTitle" defaultValue={content.advTitle} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">ADVANTAGE CARDS <span className="font-normal text-grey">(one per line: icon | title | text)</span>
+        <textarea name="advantages" rows={5} defaultValue={rows3(content.advantages)} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">MARKET TITLE
+          <input name="marketTitle" defaultValue={content.marketTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">TREND PILLS <span className="font-normal text-grey">(one per line)</span>
+          <textarea name="trends" rows={2} defaultValue={content.trends.join("\n")} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">MARKET TEXT
+        <textarea name="marketText" rows={2} defaultValue={content.marketText} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">REVENUE TITLE
+          <input name="revTitle" defaultValue={content.revTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">REVENUE INTRO
+          <input name="revText" defaultValue={content.revText} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">REVENUE CARDS <span className="font-normal text-grey">(one per line: icon | title | text)</span>
+        <textarea name="revenue" rows={5} defaultValue={rows3(content.revenue)} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">GROWTH TITLE
+          <input name="growthTitle" defaultValue={content.growthTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">GROWTH NOTE
+          <input name="growthNote" defaultValue={content.growthNote} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">PHASES <span className="font-normal text-grey">(one per line: Phase One | Riviera Maya | description)</span>
+        <textarea name="phases" rows={3} className={inputCls}
+          defaultValue={content.phases.map((ph) => `${ph.p} | ${ph.title} | ${ph.text}`).join("\n")} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">WHY-INVEST TITLE
+          <input name="whyTitle" defaultValue={content.whyTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">WHY-INVEST TEXT
+          <input name="whyText" defaultValue={content.whyText} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">WHY-INVEST CHECKLIST <span className="font-normal text-grey">(one per line)</span>
+        <textarea name="whyItems" rows={4} defaultValue={content.whyItems.join("\n")} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">VALUES TITLE
+          <input name="valuesTitle" defaultValue={content.valuesTitle} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">VALUES INTRO
+          <input name="valuesText" defaultValue={content.valuesText} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">VALUE CARDS <span className="font-normal text-grey">(one per line: icon | title | text)</span>
+        <textarea name="values" rows={4} defaultValue={rows3(content.values)} className={inputCls} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">ROADMAP TITLE
+          <input name="roadTitle" defaultValue={content.roadTitle} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">ROADMAP <span className="font-normal text-grey">(one per line: Year :: item; item; item)</span>
+        <textarea name="roadmap" rows={3} className={inputCls}
+          defaultValue={content.roadmap.map((tl) => `${tl.yr} :: ${tl.items.join("; ")}`).join("\n")} />
+      </label>
+      <label className="text-xs font-bold">INVESTOR FAQ <span className="font-normal text-grey">(one per line: Question? :: Answer)</span>
+        <textarea name="faq" rows={5} className={inputCls}
+          defaultValue={content.faq.map((f) => `${f.q} :: ${f.a}`).join("\n")} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">CLOSING TITLE
+          <input name="finalTitle" defaultValue={content.finalTitle} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">CLOSING TEXT
+        <textarea name="finalText" rows={2} defaultValue={content.finalText} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">LEGAL DISCLAIMER
+        <textarea name="disclaimer" rows={3} defaultValue={content.disclaimer} className={inputCls} />
       </label>
       <SaveRow state={state} pending={pending} />
     </form>

@@ -119,6 +119,23 @@ export interface FaqContent {
   items: { q: string; a: string }[];
 }
 
+/** The whole /investors page, editable from Content & info. */
+export interface InvestorsContent {
+  heroTitle: string; heroHighlight: string; heroIntro: string;
+  metrics: { b: string; s: string }[];
+  visionTitle: string; visionText: string;
+  oppTitle: string; oppText: string; painTitle: string; painPoints: string[];
+  advTitle: string; advantages: { icon: string; title: string; text: string }[];
+  marketTitle: string; marketText: string; trends: string[];
+  revTitle: string; revText: string; revenue: { icon: string; title: string; text: string }[];
+  growthTitle: string; phases: { p: string; title: string; text: string }[]; growthNote: string;
+  whyTitle: string; whyText: string; whyItems: string[];
+  valuesTitle: string; valuesText: string; values: { icon: string; title: string; text: string }[];
+  roadTitle: string; roadmap: { yr: string; items: string[] }[];
+  faq: { q: string; a: string }[];
+  finalTitle: string; finalText: string; disclaimer: string;
+}
+
 /** Synced from amanahvacations.com — the tour add-ons picker catalog. */
 export interface TourAddonsSetting {
   items: { name: string; icon: string; priceMXN: number; unit: string }[];
@@ -132,6 +149,7 @@ const DEFAULTS: {
   page_concierge: ConciergeContent;
   page_loyalty: LoyaltyContent;
   page_faq: FaqContent;
+  page_investors: InvestorsContent;
   tour_addons: TourAddonsSetting;
   fx: FxSettings;
   google_reviews: GoogleReviewsSettings;
@@ -173,6 +191,74 @@ const DEFAULTS: {
   investor: { deck_url: "", deck_name: "" },
   tour_addons: { items: [] },
 
+  page_investors: {
+    heroTitle: "Invest in the future of", heroHighlight: "luxury vacation rentals.",
+    heroIntro: "Building the next generation of luxury villa and condo bookings through technology, exceptional guest experiences and premium hospitality. Join us as we redefine how travelers discover, book and experience luxury accommodations.",
+    metrics: [
+      { b: "40+", s: "homes in the curated collection" },
+      { b: "200+", s: "guests welcomed" },
+      { b: "Riviera Maya", s: "launch market, expanding" },
+    ],
+    visionTitle: "A new standard for luxury travel",
+    visionText: "TutCasa was created with a simple belief: luxury travelers deserve more than a place to stay. They deserve an effortless experience from the moment they begin planning until they return home. By combining premium vacation rentals with personalized concierge services, curated experiences and innovative technology, we're building a platform designed for the future of luxury hospitality.",
+    oppTitle: "A fragmented market ready for innovation",
+    oppText: "The luxury vacation rental market continues to expand, yet many guests still face inconsistent quality and limited service. TutCasa bridges this gap with a curated marketplace where every property meets high standards and every guest receives exceptional service. Rather than competing solely on inventory, we compete on trust, quality and experience.",
+    painTitle: "What guests still struggle with",
+    painPoints: ["Inconsistent quality", "Limited personalized service", "Complex booking experiences", "Little support before or during their stay"],
+    advTitle: "Our competitive advantages",
+    advantages: [
+      { icon: "\u{1F3E0}", title: "Curated Collection", text: "Every property is carefully selected and professionally managed to maintain consistent quality." },
+      { icon: "\u{1F6E0}\uFE0F", title: "Concierge-First Experience", text: "Transportation, chefs, excursions, grocery delivery, wellness, celebrations and personalized recommendations — all from a single platform." },
+      { icon: "⚡", title: "Technology-Driven", text: "Built to streamline booking, property management and guest communication while delivering an exceptional user experience." },
+      { icon: "\u{1F91D}", title: "Trusted Local Partnerships", text: "Strong relationships with local providers let us deliver authentic experiences while maintaining premium standards." },
+      { icon: "\u{1F4C8}", title: "Scalable Business Model", text: "A platform built to expand into new destinations while keeping quality and operational excellence consistent." },
+    ],
+    marketTitle: "Why now?",
+    marketText: "Luxury travelers increasingly seek these things — and as the trends grow, TutCasa is positioned to become a trusted destination for discerning travelers seeking both luxury and convenience.",
+    trends: ["Private accommodations", "Personalized experiences", "Flexible travel", "Premium concierge services", "Digital-first booking"],
+    revTitle: "Multiple revenue streams",
+    revText: "TutCasa generates revenue through a diversified business model.",
+    revenue: [
+      { icon: "\u{1F3E0}", title: "Villa & Condo Bookings", text: "Commission earned on every reservation." },
+      { icon: "\u{1F6E0}\uFE0F", title: "Concierge Services", text: "Premium travel services before and during each stay." },
+      { icon: "⛵", title: "Luxury Experiences", text: "Private chefs, transportation, yacht charters, wellness and exclusive excursions." },
+      { icon: "\u{1F91D}", title: "Strategic Partnerships", text: "Preferred relationships with local hospitality and tourism partners." },
+      { icon: "\u{1F680}", title: "Future Platform Expansion", text: "Additional premium services and technology that increase lifetime customer value." },
+    ],
+    growthTitle: "Scaling with purpose — quality before quantity",
+    phases: [
+      { p: "Phase One", title: "Riviera Maya", text: "Establish a strong presence in the Riviera Maya." },
+      { p: "Phase Two", title: "Mexico", text: "Expand across Mexico's premier luxury destinations." },
+      { p: "Phase Three", title: "International", text: "Enter additional international markets through strategic partnerships." },
+    ],
+    growthNote: "Every expansion is supported by technology, operational standards and a curated hospitality network.",
+    whyTitle: "The investment opportunity",
+    whyText: "Investors partnering with TutCasa gain exposure to a company focused on long-term value creation through:",
+    whyItems: ["High-growth luxury travel market", "Asset-light marketplace model", "Diversified revenue streams", "Scalable technology platform", "Strong focus on customer experience", "Strategic local partnerships", "Significant expansion potential"],
+    valuesTitle: "Hospitality with purpose",
+    valuesText: "Everything we build is guided by four principles.",
+    values: [
+      { icon: "\u{1F396}\uFE0F", title: "Excellence", text: "Delivering exceptional quality at every touchpoint." },
+      { icon: "\u{1F91D}", title: "Integrity", text: "Building trust with guests, homeowners and partners." },
+      { icon: "\u{1F4A1}", title: "Innovation", text: "Using technology to simplify luxury travel." },
+      { icon: "\u{1F33F}", title: "Sustainability", text: "Supporting local communities while promoting responsible tourism." },
+    ],
+    roadTitle: "Our journey",
+    roadmap: [
+      { yr: "2026", items: ["Platform launch", "Initial luxury villa and condo portfolio", "Concierge services", "Technology foundation"] },
+      { yr: "2027", items: ["Expanded inventory", "Guest mobile experience", "Strategic hospitality partnerships", "Operational automation"] },
+      { yr: "2028+", items: ["International destinations", "AI-powered guest experience", "Enterprise partnerships", "Global brand expansion"] },
+    ],
+    faq: [
+      { q: "Are you currently raising capital?", a: "TutCasa periodically evaluates strategic investment opportunities to support growth initiatives. Interested investors are encouraged to contact our team." },
+      { q: "Who can invest?", a: "We welcome conversations with qualified angel investors, venture capital firms, family offices, strategic partners and hospitality-focused investors." },
+      { q: "How will investment be used?", a: "Capital is expected to support platform development, market expansion, strategic hiring, marketing and continued innovation." },
+      { q: "Where is TutCasa focused?", a: "Our initial focus is the Riviera Maya, with a long-term strategy to expand into additional luxury travel destinations." },
+    ],
+    finalTitle: "Let's build the future of luxury hospitality together.",
+    finalText: "We're looking for partners who share our vision of transforming the luxury vacation experience through technology, hospitality and exceptional service.",
+    disclaimer: "This page is provided for general informational purposes only and does not constitute an offer to sell, or the solicitation of an offer to buy, any security, nor investment, legal or tax advice. Any figures shown are operational metrics, not financial performance or projections. Detailed materials are shared only with qualified investors, subject to confidentiality where applicable.",
+  },
   page_faq: {
     hero: {
       eyebrow: "Answers, upfront",

@@ -344,7 +344,7 @@ export function ToursClient({
     ? `https://wa.me/${whatsapp}?text=${encodeURIComponent("Hi TutCasa! \u{1F44B} I’d like to request this tour:\n\n" + reqLines + "\n\nThank you!")}`
     : "";
   const reqMail = modal
-    ? `mailto:${email || "hello@tutcasa.com"}?subject=${encodeURIComponent("Tour Request — " + modal.name)}&body=${encodeURIComponent("Hi TutCasa! \u{1F44B} I’d like to request this tour:\n\n" + reqLines + "\n\nThank you!")}`
+    ? `mailto:${email || "admin@tutcasa.com"}?subject=${encodeURIComponent("Tour Request — " + modal.name)}&body=${encodeURIComponent("Hi TutCasa! \u{1F44B} I’d like to request this tour:\n\n" + reqLines + "\n\nThank you!")}`
     : "";
 
   return (

@@ -49,7 +49,6 @@ export function SiteFooter({ whatsapp }: { whatsapp: string }) {
             <Link href="/faq">FAQ</Link>
             <Link href="/policies"><T k="foot_help" /></Link>
             <Link href="/contact"><T k="foot_contact" /></Link>
-            <Link href="/contact?subject=partnership">Partnerships &amp; collaborations</Link>
             <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener"><T k="foot_concierge" /></a>
           </div>
         </div>

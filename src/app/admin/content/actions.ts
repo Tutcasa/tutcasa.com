@@ -300,3 +300,50 @@ export async function saveFamilyAction(
   revalidatePath("/our-family");
   return { ok: true, message: "Our Family page saved — live now." };
 }
+
+/* ---------------- investors page ---------------- */
+
+const iconRows = (v: FormDataEntryValue | null) =>
+  lines(v)
+    .map((l) => l.split("|").map((x) => x.trim()))
+    .filter((p) => p.length >= 3 && p[1])
+    .map(([icon, title, text]) => ({ icon, title, text }));
+
+export async function saveInvestorsAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  await requireAdmin();
+  const s = (k: string) => String(formData.get(k) ?? "").trim();
+  const list = (k: string) => lines(formData.get(k));
+  const pair = (k: string) =>
+    lines(formData.get(k))
+      .filter((l) => l.includes("::"))
+      .map((l) => {
+        const i = l.indexOf("::");
+        return [l.slice(0, i).trim(), l.slice(i + 2).trim()] as const;
+      });
+
+  await setSetting("page_investors", {
+    heroTitle: s("heroTitle"), heroHighlight: s("heroHighlight"), heroIntro: s("heroIntro"),
+    metrics: pair("metrics").map(([b, sub]) => ({ b, s: sub })),
+    visionTitle: s("visionTitle"), visionText: s("visionText"),
+    oppTitle: s("oppTitle"), oppText: s("oppText"),
+    painTitle: s("painTitle"), painPoints: list("painPoints"),
+    advTitle: s("advTitle"), advantages: iconRows(formData.get("advantages")),
+    marketTitle: s("marketTitle"), marketText: s("marketText"), trends: list("trends"),
+    revTitle: s("revTitle"), revText: s("revText"), revenue: iconRows(formData.get("revenue")),
+    growthTitle: s("growthTitle"),
+    phases: iconRows(formData.get("phases")).map((r) => ({ p: r.icon, title: r.title, text: r.text })),
+    growthNote: s("growthNote"),
+    whyTitle: s("whyTitle"), whyText: s("whyText"), whyItems: list("whyItems"),
+    valuesTitle: s("valuesTitle"), valuesText: s("valuesText"), values: iconRows(formData.get("values")),
+    roadTitle: s("roadTitle"),
+    roadmap: pair("roadmap").map(([yr, items]) => ({ yr, items: items.split(";").map((x) => x.trim()).filter(Boolean) })),
+    faq: pair("faq").map(([q, a]) => ({ q, a })),
+    finalTitle: s("finalTitle"), finalText: s("finalText"), disclaimer: s("disclaimer"),
+  });
+  revalidatePath("/investors");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Investors page updated — live now." };
+}

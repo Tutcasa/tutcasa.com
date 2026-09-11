@@ -23,7 +23,7 @@ export function ContactClient({ whatsapp, email, initialSubject }: { whatsapp: s
     void submitContactLead({ name, email: mail, phone, message: `[${subj}] ${msg}` });
   }
 
-  const contactEmail = email || "hello@tutcasa.com";
+  const contactEmail = email || "admin@tutcasa.com";
 
   return (
     <>
@@ -71,11 +71,11 @@ export function ContactClient({ whatsapp, email, initialSubject }: { whatsapp: s
           <a className="ct-item" href={`mailto:${contactEmail}`}>
             <div className="ic">&#9993;&#65039;</div><div><b>Email</b><span>{contactEmail}</span></div>
           </a>
-          <div className="ct-item">
-            <div className="ic">&#128205;</div><div><b>Where we host</b><span>Playa del Carmen &amp; the Riviera Maya, Mexico &middot; Egypt &middot; Florida</span></div>
-          </div>
           <a className="ct-item" href="https://www.instagram.com/tutcasa/" target="_blank" rel="noopener">
-            <div className="ic">&#128248;</div><div><b>Follow along</b><span>@tutcasa on Instagram &amp; Facebook</span></div>
+            <div className="ic">&#128248;</div><div><b>Instagram</b><span>@tutcasa</span></div>
+          </a>
+          <a className="ct-item" href="https://www.facebook.com/TutCasa" target="_blank" rel="noopener">
+            <div className="ic">&#128077;</div><div><b>Facebook</b><span>facebook.com/TutCasa</span></div>
           </a>
         </div>
       </div>

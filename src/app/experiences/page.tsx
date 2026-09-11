@@ -50,19 +50,13 @@ export default async function ExperiencesPage() {
       <div style={{ maxWidth: 1180, margin: "0 auto", padding: "26px 18px 60px" }}>
         {activities.length === 0 ? (
           <p style={{ textAlign: "center", color: "var(--grey)" }}>
-            The experience catalog is loading &mdash;{" "}
-            <a href="https://amanahvacations.com/en/activities?ref=tutcasa" target="_blank" rel="noopener" style={{ color: "var(--rosa)", fontWeight: 700 }}>
-              browse it on Amanah Vacations
-            </a>{" "}in the meantime.
+            The experience catalog is loading &mdash; check back in a moment.
           </p>
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(255px, 1fr))", gap: 18 }}>
             {activities.map((a) => (
-              <a
+              <div
                 key={a.slug}
-                href={a.url}
-                target="_blank"
-                rel="noopener"
                 style={{
                   background: "var(--paper, #FFFDF9)", borderRadius: 20,
                   overflow: "hidden", boxShadow: "0 4px 14px rgba(58,44,40,.07)",
@@ -79,9 +73,8 @@ export default async function ExperiencesPage() {
                   <p style={{ fontSize: 13.5, color: "var(--grey)", margin: 0, flexGrow: 1 }}>
                     {a.blurb}{a.blurb.length >= 220 ? "…" : ""}
                   </p>
-                  <span style={{ color: "var(--rosa)", fontWeight: 800, fontSize: 13.5 }}>Explore &rarr;</span>
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         )}
