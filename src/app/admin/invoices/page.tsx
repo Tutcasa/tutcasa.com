@@ -55,10 +55,18 @@ async function allInvoices(): Promise<InvoiceRow[]> {
 
 export default async function AdminInvoices({
   searchParams,
-}: { searchParams: Promise<{ q?: string }> }) {
-  const { q = "" } = await searchParams;
-  const invoices = (await allInvoices()).filter((inv) =>
+}: { searchParams: Promise<{ q?: string; tab?: string }> }) {
+  const { q = "", tab: rawTab } = await searchParams;
+  const tab = rawTab === "stays" || rawTab === "tours" ? rawTab : "all";
+  const all = (await allInvoices()).filter((inv) =>
     rowMatches(q, inv.invoiceNo, inv.guestName, inv.guestEmail, inv.what));
+  const counts = {
+    all: all.length,
+    stays: all.filter((i) => i.kind === "stay").length,
+    tours: all.filter((i) => i.kind === "tour").length,
+  };
+  const invoices = tab === "all" ? all : all.filter((i) => (tab === "stays" ? i.kind === "stay" : i.kind === "tour"));
+  const TABS = [["all", `All (${counts.all})`], ["stays", `Stays (${counts.stays})`], ["tours", `Tours (${counts.tours})`]] as const;
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Invoices</h1>
@@ -66,7 +74,16 @@ export default async function AdminInvoices({
         Every booking gets an invoice number and a shareable link — copy it and
         send it straight to the guest, exactly like the old site.
       </p>
-      <AdminSearch placeholder="Search by invoice #, guest or home…" q={q} />
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {TABS.map(([t, label]) => (
+          <a key={t} href={`/admin/invoices?tab=${t}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+            className={`rounded-pill border-[1.5px] px-4 py-1.5 text-sm font-bold ${
+              tab === t ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}>
+            {label}
+          </a>
+        ))}
+      </div>
+      <AdminSearch placeholder="Search by invoice #, guest or home…" q={q} extra={{ tab }} />
       <div className="overflow-x-auto rounded-card bg-paper shadow-soft">
         <table className="w-full min-w-[860px] text-sm">
           <thead className="border-b border-line text-left text-xs uppercase text-grey">
