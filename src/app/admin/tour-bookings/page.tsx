@@ -57,7 +57,7 @@ export default async function AdminTourBookings() {
                     groupSize: b.groupSize,
                     totalLabel: `${(b.totalCents / 100).toLocaleString("en-US")} ${b.currency}`,
                     guestName: b.guestName, guestEmail: b.guestEmail,
-                    guestPhone: b.guestPhone, notes: b.notes,
+                    guestPhone: b.guestPhone, notes: b.notes, partnerTour: true,
                     ref: b.id.slice(0, 8).toUpperCase(),
                   })}
                   target="_blank" rel="noopener"

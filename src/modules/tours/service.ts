@@ -154,6 +154,7 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     guestPhone: req.guestPhone,
     notes: req.notes,
     ref: id.slice(0, 8).toUpperCase(),
+    partnerTour: tour.source === "amanah",
   });
 
   return { ok: true, bookingId: id };

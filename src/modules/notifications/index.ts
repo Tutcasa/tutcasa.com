@@ -68,6 +68,8 @@ export interface TourBookingNotification {
   guestPhone?: string | null;
   notes?: string | null;
   ref: string;
+  /** true only for tours synced from Amanah — local tours never ping them */
+  partnerTour: boolean;
 }
 
 /** wa.me deep link with the partner operation message prefilled. */
@@ -90,8 +92,10 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
 
   try {
     // 0. Amanah's admin queue — server-to-server push (their site shows
-    //    the booking instantly; email + WhatsApp below stay the fallback)
-    const amanahKey = process.env.AMANAH_PARTNER_KEY;
+    //    the booking instantly; email + WhatsApp below stay the fallback).
+    //    ONLY for Amanah's own tours — TutCasa's local tours are none of
+    //    their business.
+    const amanahKey = n.partnerTour ? process.env.AMANAH_PARTNER_KEY : undefined;
     if (amanahKey) {
       await fetch(`${process.env.AMANAH_SITE_URL ?? "https://amanahvacations.com"}/api/partner/tutcasa-tours`, {
         method: "POST",
@@ -113,8 +117,8 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
       }).catch(() => {});
     }
 
-    // 1. partner email → Amanah Vacations
-    await sendEmail({
+    // 1. partner email → Amanah Vacations (their tours only)
+    if (n.partnerTour) await sendEmail({
       kind: "tour_booking_partner_email",
       to: AMANAH_EMAIL,
       subject: `New tour booking ${n.ref} — ${n.tourTitle} (${n.tourDate})`,
@@ -126,7 +130,7 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
 
     // 2. partner WhatsApp — logged as a one-click manual link until the
     //    WhatsApp Business API is connected
-    await log({
+    if (n.partnerTour) await log({
       kind: "tour_booking_partner_whatsapp",
       channel: "whatsapp",
       recipient: `+${AMANAH_WHATSAPP}`,
@@ -157,7 +161,7 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
       tourBookingId: n.tourBookingId,
     });
 
-    await getDb().query(
+    if (n.partnerTour) await getDb().query(
       "update tour_bookings set partner_notified_at = now() where id = $1",
       [n.tourBookingId],
     );
