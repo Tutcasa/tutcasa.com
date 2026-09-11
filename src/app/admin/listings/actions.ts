@@ -333,8 +333,24 @@ export async function saveListingAction(
     ],
   );
 
+  // "Keep calendar clean" must also apply to bookings that already exist —
+  // toggling it syncs every future booking's blocking behavior
+  let cleanNote = "";
+  try {
+    await db.query(
+      `update bookings set no_block=$2
+        where listing_id=$1 and upper(stay) >= current_date
+          and no_block is distinct from $2`,
+      [id, on(formData.get("keepCalendarClean"))],
+    );
+  } catch {
+    // exclusion constraint: re-enabling blocking would make existing
+    // bookings overlap — leave them unblocked rather than fail the save
+    cleanNote = " (Some existing bookings overlap, so they stay non-blocking.)";
+  }
+
   revalidatePublic();
-  return { ok: true, message: `Home updated — live on the site now.${geoNote}` };
+  return { ok: true, message: `Home updated — live on the site now.${geoNote}${cleanNote}` };
 }
 
 /* ------------------------------------------------------------------ */
@@ -529,19 +545,21 @@ export async function applyCalendarDaysAction(
     return { ok: false, message: "Pick either Block or Unblock, not both." };
   }
   const note = orNull(formData.get("note"));
+  const clearNote = on(formData.get("clearNote"));
 
   // is_blocked: Block wins → true, Unblock → false, neither → keep as-is
+  // note: new text replaces, "remove note" clears, blank keeps
   await getDb().query(
     `insert into listing_price_days (listing_id, day, nightly_cents, min_stay, is_blocked, note)
-     select $1, d::date, $2, $3, $4, $5
+     select $1, d::date, $2, $3, $4, case when $9 then null else $5 end
        from generate_series($6::date, $7::date, interval '1 day') d
      on conflict (listing_id, day) do update set
        nightly_cents = coalesce($2, listing_price_days.nightly_cents),
        min_stay      = coalesce($3, listing_price_days.min_stay),
        is_blocked    = case when $8 then false else listing_price_days.is_blocked or $4 end,
-       note          = coalesce($5, listing_price_days.note),
+       note          = case when $9 then null else coalesce($5, listing_price_days.note) end,
        updated_at    = now()`,
-    [id, price, minStay, blocked, note, from, to, unblocked],
+    [id, price, minStay, blocked, note, from, to, unblocked, clearNote],
   );
   revalidatePublic();
   return { ok: true, message: `Applied to ${from} → ${to}.` };

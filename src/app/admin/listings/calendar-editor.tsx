@@ -177,7 +177,10 @@ export function CalendarEditor({
                  onChange={(e) => setTo(e.target.value)} className={inputCls} />
           <input name="nightlyUSD" type="number" min="1" placeholder="$/night (blank = keep current)" className={inputCls} />
           <input name="minStay" type="number" min="1" placeholder="Min stay (blank = keep)" className={inputCls} />
-          <input name="note" placeholder="Note (shows on hover, blank = keep)" className={inputCls} />
+          <input name="note" placeholder="Note (new text replaces, blank = keep)" className={inputCls} />
+          <label className="flex items-center gap-2 text-sm font-semibold">
+            <input type="checkbox" name="clearNote" className="h-4 w-4 accent-rosa" /> Remove note
+          </label>
           <label className="flex items-center gap-2 text-sm font-semibold">
             <input type="checkbox" name="blocked" className="h-4 w-4 accent-rosa" /> Block these nights
           </label>

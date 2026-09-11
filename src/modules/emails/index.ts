@@ -153,7 +153,10 @@ export function renderEmailHtml(opts: {
         </td></tr>
         <tr><td style="padding:18px 10px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#8A7A72;line-height:1.6;">
           TutCasa · Riviera Maya · Egypt · Florida<br>
-          Questions? Contact us on WhatsApp — we answer in minutes.
+          If you have any questions, contact us at
+          <a href="mailto:admin@tutcasa.com" style="color:#E4326B;font-weight:700;">admin@tutcasa.com</a>
+          or WhatsApp us at <a href="https://wa.me/201069706782" style="color:#E4326B;font-weight:700;">+2&nbsp;01069706782</a>
+          or message us at <a href="https://wa.me/14322000632" style="color:#E4326B;font-weight:700;">+1&nbsp;(432)&nbsp;200-0632</a>.
         </td></tr>
       </table>
     </td></tr>

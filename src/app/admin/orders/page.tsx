@@ -20,6 +20,7 @@ interface OrderRow {
   provider: string | null;
   createdAt: string;
   marketingRef: string | null;
+  amountPaidCents: number;
 }
 
 async function allOrders(): Promise<OrderRow[]> {
@@ -27,6 +28,7 @@ async function allOrders(): Promise<OrderRow[]> {
     `select b.id, b.invoice_no, b.status, b.total_cents, b.currency,
             b.marketing_ref, b.price_breakdown, b.coupon_code, b.coupon_discount_cents,
             b.payment_provider, b.created_at, b.guest_name, b.guests,
+            coalesce(b.amount_paid_cents, 0) as amount_paid_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') || ' → ' || to_char(upper(b.stay),'YYYY-MM-DD') as dates,
             l.title, l.city
        from bookings b join listings l on l.id = b.listing_id
@@ -42,6 +44,7 @@ async function allOrders(): Promise<OrderRow[]> {
     couponCode: r.coupon_code, couponDiscountCents: r.coupon_discount_cents ?? 0,
     provider: r.payment_provider, createdAt: r.created_at,
     marketingRef: r.marketing_ref,
+    amountPaidCents: Number(r.amount_paid_cents),
   }));
 }
 
@@ -94,13 +97,22 @@ export default async function AdminOrders({
                   const v = Number(o.breakdown[key] ?? 0);
                   if (!v) return null;
                   const neg = isDiscount(key);
+                  const nights = Number(o.breakdown.nights ?? 0);
+                  const shown = key === "accommodationCents" && nights > 0
+                    ? `${label} (avg ${fmtMoney(Math.round(v / nights))} × ${nights} nights)`
+                    : label;
                   return (
                     <div key={key} className="flex justify-between">
-                      <span>{label}</span>
+                      <span>{shown}</span>
                       <span className={neg ? "font-semibold text-cactus" : ""}>{neg ? "−" : ""}{fmtMoney(v)}</span>
                     </div>
                   );
                 })}
+                {(Array.isArray(o.breakdown.addonLines) ? o.breakdown.addonLines as { name: string; totalCents: number }[] : []).map((a) => (
+                  <div key={a.name} className="flex justify-between">
+                    <span>Extra: {a.name}</span><span>{fmtMoney(a.totalCents)}</span>
+                  </div>
+                ))}
                 {Number(o.breakdown.thirdPartyCommissionCents ?? 0) > 0 && (
                   <div className="flex justify-between text-xs font-semibold text-terra">
                     <span>· of which commission{o.marketingRef ? ` (via ${o.marketingRef})` : " (partner channel)"}</span>
@@ -115,6 +127,27 @@ export default async function AdminOrders({
                 <div className="flex justify-between border-t border-line pt-1 font-extrabold">
                   <span>Total</span><span>{fmtMoney(o.totalCents)}</span>
                 </div>
+                {o.amountPaidCents > 0 && (
+                  <>
+                    <div className="flex justify-between text-xs">
+                      <span>Collected so far</span><span>{fmtMoney(o.amountPaidCents)}</span>
+                    </div>
+                    {o.provider === "stripe" && (() => {
+                      // Stripe's standard 2.9% + 30¢ per charge — estimate
+                      const fee = Math.round(o.amountPaidCents * 0.029) + 30;
+                      return (
+                        <>
+                          <div className="flex justify-between text-xs text-terra">
+                            <span>Stripe fee (est. 2.9% + 30&cent;)</span><span>−{fmtMoney(fee)}</span>
+                          </div>
+                          <div className="flex justify-between text-xs font-bold">
+                            <span>Net collected (est.)</span><span>{fmtMoney(o.amountPaidCents - fee)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
                 {Number(o.breakdown.balanceCents ?? 0) > 0 && (
                   <div className="flex justify-between text-xs text-grey">
                     <span>Deposit {fmtMoney(Number(o.breakdown.dueNowCents ?? 0))} · balance {fmtMoney(Number(o.breakdown.balanceCents ?? 0))}
