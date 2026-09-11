@@ -50,6 +50,8 @@ export interface PdData {
   allowParty: boolean;
   allowPets: boolean;
   unavailable: { from: string; to: string }[];
+  /** published guest reviews — when present they replace the samples */
+  guestReviews: { n: string; d: string; t: string; r: number }[];
   /** active extra options guests can add to the booking */
   addons: { id: string; name: string; priceCents: number; mode: string }[];
   whatsapp: string;
@@ -449,7 +451,10 @@ export function PdGrid({ p }: { p: PdData }) {
             </div>
           </div>
           <div className="pd-reviews">
-            {REVIEW_POOL.map((r) => (
+            {(p.guestReviews.length > 0
+              ? p.guestReviews.map((g, i) => ({ n: g.n, d: g.d, t: g.t, c: ["#E4326B", "#2E9E6B", "#57B8DF", "#E8703A"][i % 4] }))
+              : REVIEW_POOL
+            ).map((r) => (
               <div className="pd-review" key={r.n}>
                 <div className="rv-top">
                   <div className="pd-av" style={{ background: r.c }}>{r.n.charAt(0)}</div>

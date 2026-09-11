@@ -18,6 +18,7 @@ const NAV = [
   { href: "/admin/content", label: "Content & info", icon: "\u{1F4DD}" },
   { href: "/admin/leads", label: "Leads", icon: "\u{1F4E5}" },
   { href: "/admin/emails", label: "Email automations", icon: "\u{1F4E8}" },
+  { href: "/admin/reviews", label: "Guest reviews", icon: "\u{2B50}" },
   { href: "/admin/notifications", label: "Notifications log", icon: "\u{2709}\u{FE0F}" },
 ];
 

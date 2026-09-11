@@ -26,6 +26,7 @@ const TRIGGERS: [string, string][] = [
   ["payment_receipt", "Payment completed"],
   ["before_checkin", "N days before check-in"],
   ["before_checkout", "N days before check-out"],
+  ["after_checkout", "N days after check-out (review request)"],
   ["custom", "Manual — only sent when you send it yourself"],
 ];
 
@@ -33,6 +34,7 @@ const TRIGGERS: [string, string][] = [
 const DAYS_LABEL: Record<string, string> = {
   before_checkin: "days before check-in",
   before_checkout: "days before check-out",
+  after_checkout: "days after check-out",
   second_payment_due: "days before the balance due date",
   deposit_unpaid: "days after booking (still unpaid)",
 };

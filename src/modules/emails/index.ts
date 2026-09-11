@@ -29,6 +29,7 @@ export const TRIGGER_LABELS: Record<string, string> = {
   payment_receipt: "After each completed payment",
   before_checkin: "N days before check-in",
   before_checkout: "N days before check-out",
+  after_checkout: "N days after check-out (review request)",
   deposit_unpaid: "N days after booking, if the deposit is still unpaid",
   double_booking: "When a double booking is detected (daily check)",
   custom: "Manual — only sent when you send it yourself",
@@ -85,6 +86,7 @@ const SAMPLE: Record<string, string> = {
   tours_link: `${process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app"}/tours`,
   stays_link: `${process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app"}/stays`,
   coupon_code: "WELCOME-A1B2C3",
+  review_link: `${process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app"}/review/…`,
 };
 
 export function fillVars(text: string, vars: Record<string, string> = {}): string {

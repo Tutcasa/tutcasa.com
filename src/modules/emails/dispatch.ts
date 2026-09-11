@@ -247,6 +247,16 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
             and upper(b.stay) >= current_date
           group by b.id`,
       )).rows;
+    } else if (a.trigger_event === "after_checkout") {
+      // stay ended within the last N days → ask for a review (the
+      // per-booking claim in deliver() keeps it to exactly one email)
+      bookings = (await db.query(
+        `select id from bookings
+          where status in ('confirmed','completed')
+            and upper(stay) <= current_date
+            and upper(stay) >= current_date - ($1 || ' days')::interval`,
+        [String(a.offset_days)],
+      )).rows;
     } else if (a.trigger_event === "deposit_unpaid") {
       // booked N+ days ago, nothing paid yet, stay hasn't started
       bookings = (await db.query(
@@ -274,7 +284,10 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
     for (const b of bookings) {
       checked++;
       const before = await alreadySent(a.key, b.id);
-      await sendAutomationForBooking(a.key, b.id, b.conflict ? { conflict: b.conflict } : undefined);
+      const extra: Record<string, string> = {};
+      if (b.conflict) extra.conflict = b.conflict;
+      if (a.trigger_event === "after_checkout") extra.review_link = `${SITE}/review/${b.id}`;
+      await sendAutomationForBooking(a.key, b.id, Object.keys(extra).length ? extra : undefined);
       if (!before && (await alreadySent(a.key, b.id))) sent++;
     }
   }
