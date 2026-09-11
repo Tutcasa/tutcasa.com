@@ -97,6 +97,8 @@ async function loadReport(y: number, m: number | null, listingId: string | null)
 }
 
 const ACTIVE = (s: string) => s !== "cancelled";
+/** revenue counts real bookings only — never pending requests */
+const REVENUE = (s: string) => s !== "cancelled" && s !== "pending";
 
 export default async function AdminAnalytics({
   searchParams,
@@ -110,8 +112,8 @@ export default async function AdminAnalytics({
   const r = await loadReport(y, m, listingId);
   const listingName = listingId ? r.listings.find((l) => l.id === listingId)?.title : null;
 
-  const activeStays = r.stays.filter((s) => ACTIVE(s.status));
-  const paidTours = r.tours.filter((t) => ACTIVE(t.status));
+  const activeStays = r.stays.filter((s) => REVENUE(s.status));
+  const paidTours = r.tours.filter((t) => REVENUE(t.status));
   const grossCents =
     activeStays.reduce((s, x) => s + x.totalCents, 0) +
     paidTours.reduce((s, x) => s + x.totalCents, 0);
