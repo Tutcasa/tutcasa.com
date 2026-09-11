@@ -1,7 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { getDb } from "@/lib/db";
-import { renderEmailHtml } from "@/modules/emails";
+import { renderEmailHtml, getAutomation, fillVars } from "@/modules/emails";
 
 /**
  * Growth features: the newsletter 10%-coupon signup and loyalty referral
@@ -102,23 +102,25 @@ export async function subscribeNewsletter(
     notifyTeam(clean, cleanPhone, code);
   }
 
-  const sent = await sendBranded(
-    clean,
-    "Your 10% TutCasa welcome coupon",
-    [
-      "Hola!",
-      "",
-      "Welcome to the TutCasa family — here's your welcome gift:",
-      "",
-      `- Coupon code: ${code}`,
-      "- 10% off your first booking",
-      "- Enter it at checkout on any home",
-      "",
-      "We'll also send you the occasional deal and new-home announcement — good things only, no spam.",
-      "",
-      `Find your casa: ${SITE}/stays`,
-    ].join("\n"),
-  );
+  // subject & body come from the admin-editable automation (Email
+  // automations → "Welcome coupon"); hardcoded copy is only the fallback
+  const tpl = await getAutomation("guest_welcome_coupon").catch(() => null);
+  const vars = { coupon_code: code, stays_link: `${SITE}/stays` };
+  const subject = tpl ? fillVars(tpl.subject, vars) : "Your 10% TutCasa welcome coupon";
+  const body = tpl
+    ? fillVars(tpl.body, vars)
+    : [
+        "Hola!",
+        "",
+        "Welcome to the TutCasa family — here's your welcome gift:",
+        "",
+        `- Coupon code: ${code}`,
+        "- 10% off your first booking",
+        "- Enter it at checkout on any home",
+        "",
+        `Find your casa: ${SITE}/stays`,
+      ].join("\n");
+  const sent = tpl && !tpl.enabled ? false : await sendBranded(clean, subject, body);
   return sent
     ? { ok: true, message: "Check your inbox — your 10% coupon is on its way! 🎉" }
     : { ok: true, message: `You're in! Your 10% coupon code is ${code} — save it now (the email couldn't be delivered).` };
