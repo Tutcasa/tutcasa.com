@@ -83,6 +83,8 @@ const SAMPLE: Record<string, string> = {
   source: "direct",
   conflict: "booking INV-1042 (Jane D., 2026-10-05 → 2026-10-10)",
   tours_link: `${process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app"}/tours`,
+  stays_link: `${process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app"}/stays`,
+  coupon_code: "WELCOME-A1B2C3",
 };
 
 export function fillVars(text: string, vars: Record<string, string> = {}): string {
