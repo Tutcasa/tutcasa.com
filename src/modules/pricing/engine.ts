@@ -13,8 +13,9 @@
  *   4. fees — extra-guest (per guest over the included count, per night),
  *      cleaning (single | per_night), city fee (single | per_night)
  *   5. add-ons — flat | per_night | per_guest | per_guest_night
- *   6. tax on everything above ("taxes applied all over website")
- *   7. security deposit — refundable hold, NOT taxed, NOT in totalCents
+ *   6. tax on everything above PLUS the security deposit ("taxes applied
+ *      all over website" — owner's rule includes the deposit)
+ *   7. security deposit — refundable hold, taxed, but NOT in totalCents
  *   8. payment schedule — depositPct due now, balance due secondPaymentDays
  *      before check-in
  */
@@ -46,7 +47,7 @@ export interface PricingConfig {
   cleaningFeeMode: FeeMode;
   cityFeeCents: number;
   cityFeeMode: FeeMode;
-  /** refundable hold — reported separately, never taxed, never in total */
+  /** refundable hold — reported separately, taxed, but never in total */
   securityDepositCents: number;
   /** % off accommodation for 7+ night stays */
   weeklyDiscountPct: number;
@@ -270,14 +271,17 @@ export function computeQuote(input: QuoteInput): Quote {
   }));
   const addonsCents = addonLines.reduce((s, a) => s + a.totalCents, 0);
 
-  // 6. tax on the whole taxable amount
+  // 6. tax on the whole taxable amount — owner's rule: the security deposit
+  //    is taxed too (the deposit itself still stays out of totalCents)
   const taxableCents =
     accommodationNetCents +
     extraGuestFeeCents +
     cleaningCents +
     cityFeeCents +
     addonsCents;
-  const taxCents = Math.round(taxableCents * (config.taxPct / 100));
+  const taxCents = Math.round(
+    (taxableCents + config.securityDepositCents) * (config.taxPct / 100),
+  );
   const totalCents = taxableCents + taxCents;
 
   // 8. payment schedule — no split for last-minute bookings: when the
