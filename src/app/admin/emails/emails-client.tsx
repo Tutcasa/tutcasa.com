@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import type { EmailAutomation } from "@/modules/emails";
+import type { ScheduledBroadcast } from "@/modules/emails/broadcast";
 import {
   saveAutomationAction,
   toggleAutomationAction,
@@ -10,6 +11,7 @@ import {
   sendTestAction,
   broadcastTestAction,
   broadcastSendAction,
+  cancelBroadcastAction,
   type EmailFormState,
 } from "./actions";
 
@@ -154,8 +156,16 @@ function AutomationCard({ a }: { a: EmailAutomation }) {
 
 const BROADCAST_VARS = "{{guest_name}} {{guest_email}} {{listing}} {{check_in}} {{check_out}} {{guests}}";
 
-function BroadcastCard({ listings }: { listings: { id: string; title: string }[] }) {
+function BroadcastCard({ listings, scheduled }: {
+  listings: { id: string; title: string }[];
+  scheduled: ScheduledBroadcast[];
+}) {
   const [audience, setAudience] = useState("upcoming");
+  const [sendAt, setSendAt] = useState("");
+  // browser UTC offset, set after mount so the server's UTC render never leaks in
+  const [tz, setTz] = useState<number | null>(null);
+  useEffect(() => setTz(new Date().getTimezoneOffset()), []);
+  const [busy, start] = useTransition();
   const [state, action, pending] = useActionState(broadcastSendAction, initial);
   const [testState, testAction, testPending] = useActionState(broadcastTestAction, initial);
 
@@ -196,6 +206,11 @@ function BroadcastCard({ listings }: { listings: { id: string; title: string }[]
           Variables: <span className="font-mono">{BROADCAST_VARS}</span> — filled from each guest&#39;s most recent booking.
         </div>
         <div className="flex flex-wrap items-end gap-3">
+          <label className="text-xs font-bold">SCHEDULE <span className="font-normal text-grey">(optional — leave empty to send now)</span>
+            <input name="sendAtLocal" type="datetime-local" value={sendAt}
+              onChange={(e) => setSendAt(e.target.value)} className={inputCls} />
+          </label>
+          <input type="hidden" name="tzOffset" value={tz ?? ""} />
           <label className="text-xs font-bold">TRY IT ON YOURSELF FIRST
             <input name="to" type="email" placeholder="you@email.com" className={inputCls} />
           </label>
@@ -208,10 +223,13 @@ function BroadcastCard({ listings }: { listings: { id: string; title: string }[]
           </button>
           <button disabled={pending}
             onClick={(e) => {
-              if (!confirm("Send this email to every guest in the selected audience?")) e.preventDefault();
+              const q = sendAt
+                ? "Schedule this email for every guest in the selected audience?"
+                : "Send this email to every guest in the selected audience?";
+              if (!confirm(q)) e.preventDefault();
             }}
             className="rounded-pill bg-rosa px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
-            {pending ? "Sending to guests…" : "Send to guests"}
+            {pending ? "Working…" : sendAt ? "Schedule it" : "Send to guests"}
           </button>
         </div>
         {(testState.message || state.message) && (
@@ -220,11 +238,48 @@ function BroadcastCard({ listings }: { listings: { id: string; title: string }[]
           </p>
         )}
       </form>
+
+      {scheduled.length > 0 && (
+        <div className="mt-4 border-t border-line pt-3">
+          <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wider text-grey">Scheduled &amp; recent blasts</div>
+          <div className="grid gap-1.5">
+            {scheduled.map((b) => (
+              <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-crema/60 px-3 py-2 text-sm">
+                <div className="min-w-0">
+                  <b>{b.subject}</b>
+                  <span className="ml-2 text-xs text-grey">
+                    {new Date(b.sendAt).toLocaleString()} · {b.audience}
+                    {b.result ? ` · ${b.result}` : ""}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`rounded-pill px-2.5 py-0.5 text-[11px] font-bold uppercase ${
+                    b.status === "scheduled" ? "bg-sol/15 text-terra"
+                    : b.status === "sent" ? "bg-cactus/15 text-cactus" : "bg-grey/15 text-grey"}`}>
+                    {b.status}
+                  </span>
+                  {b.status === "scheduled" && (
+                    <button disabled={busy}
+                      onClick={() => { if (confirm("Cancel this scheduled blast?")) start(() => cancelBroadcastAction(b.id)); }}
+                      className="rounded-pill border-[1.5px] border-line px-3 py-1 text-xs font-bold text-grey hover:border-rosa hover:text-rosa-deep disabled:opacity-50">
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-export function EmailsClient({ automations, listings }: { automations: EmailAutomation[]; listings: { id: string; title: string }[] }) {
+export function EmailsClient({ automations, listings, scheduled }: {
+  automations: EmailAutomation[];
+  listings: { id: string; title: string }[];
+  scheduled: ScheduledBroadcast[];
+}) {
   const [addState, addAction, addPending] = useActionState(addAutomationAction, initial);
   const guest = automations.filter((a) => a.audience === "guest");
   const admin = automations.filter((a) => a.audience === "admin");
@@ -240,7 +295,7 @@ export function EmailsClient({ automations, listings }: { automations: EmailAuto
         <div className="grid gap-3">{admin.map((a) => <AutomationCard key={a.id} a={a} />)}</div>
       </div>
 
-      <BroadcastCard listings={listings} />
+      <BroadcastCard listings={listings} scheduled={scheduled} />
 
       <div className="rounded-card bg-paper p-4 shadow-soft">
         <div className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey">Add an automation</div>

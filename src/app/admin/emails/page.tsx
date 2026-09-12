@@ -12,6 +12,8 @@ export default async function AdminEmails() {
   const listings = (
     await getDb().query("select id, title from listings order by title")
   ).rows as { id: string; title: string }[];
+  const { listScheduledBroadcasts } = await import("@/modules/emails/broadcast");
+  const scheduled = await listScheduledBroadcasts();
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Email automations</h1>
@@ -21,7 +23,7 @@ export default async function AdminEmails() {
         guests receive. These emails send automatically on live bookings; you
         can also fire a test-send to yourself any time.
       </p>
-      <EmailsClient automations={automations} listings={listings} />
+      <EmailsClient automations={automations} listings={listings} scheduled={scheduled} />
     </div>
   );
 }

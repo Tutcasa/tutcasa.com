@@ -9,18 +9,36 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminTours({
   searchParams,
-}: { searchParams: Promise<{ edit?: string; q?: string }> }) {
-  const { edit, q = "" } = await searchParams;
+}: { searchParams: Promise<{ edit?: string; q?: string; src?: string }> }) {
+  const { edit, q = "", src = "all" } = await searchParams;
   const allTours = await listTours({ includeUnpublished: true });
-  const tours = allTours.filter((t) => rowMatches(q, t.title, t.city, t.category));
+  const isAmanah = (t: { source: string | null }) => t.source === "amanah";
+  const tours = allTours
+    .filter((t) => src === "amanah" ? isAmanah(t) : src === "ours" ? !isAmanah(t) : true)
+    .filter((t) => rowMatches(q, t.title, t.city, t.category));
   const editing = edit ? allTours.find((t) => t.id === edit) : undefined;
+  const srcTabs: [string, string, number][] = [
+    ["all", "All", allTours.length],
+    ["amanah", "Amanah tours", allTours.filter(isAmanah).length],
+    ["ours", "Our own", allTours.filter((t) => !isAmanah(t)).length],
+  ];
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
       <div>
         <h1 className="mb-4 text-2xl font-extrabold">Tours &amp; parks</h1>
         <SyncButton />
-        <AdminSearch placeholder="Search by tour name, city or type…" q={q} />
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {srcTabs.map(([key, label, n]) => (
+            <a key={key} href={`/admin/tours?src=${key}${q ? `&q=${encodeURIComponent(q)}` : ""}`}
+              className={`rounded-pill border-[1.5px] px-4 py-1.5 text-sm font-bold ${
+                src === key ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}>
+              {label} ({n})
+            </a>
+          ))}
+        </div>
+        <AdminSearch placeholder="Search by tour name, city or type…" q={q}
+          extra={{ src: src !== "all" ? src : undefined }} />
         <div className="grid gap-2">
           {tours.map((t) => (
             <a

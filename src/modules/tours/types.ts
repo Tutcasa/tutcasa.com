@@ -69,6 +69,9 @@ export interface TourBooking {
   createdAt: string;
   /** Amanah's question/decision note from their admin queue */
   amanahNote?: string | null;
+  /** where the tour itself comes from — 'amanah' (synced) or 'local' */
+  tourSource: string;
+  tourCity: string;
 }
 
 export type TourReserveResult =

@@ -262,6 +262,7 @@ export function ToursClient({
   const [town, setTown] = useState("Playa del Carmen");
   const [destInput, setDestInput] = useState("Playa del Carmen");
   const [destOpen, setDestOpen] = useState(false);
+  const [nameQ, setNameQ] = useState("");
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [modal, setModal] = useState<TourCardData | null>(null);
@@ -298,9 +299,11 @@ export function ToursClient({
 
   // case-insensitive town match — the admin may type "NUBA"/"nuba"
   const norm = (v: string) => v.trim().toLowerCase();
-  const list = tours.filter((t) =>
-    view === "parks" ? t.park : !t.park && norm(t.city || "Playa del Carmen") === norm(town)
-  );
+  const list = tours
+    .filter((t) =>
+      view === "parks" ? t.park : !t.park && norm(t.city || "Playa del Carmen") === norm(town)
+    )
+    .filter((t) => !nameQ.trim() || norm(t.name).includes(norm(nameQ)));
 
   // towns = the built-in list PLUS any city an admin-added tour uses,
   // so client-created destinations are always pickable
@@ -360,8 +363,8 @@ export function ToursClient({
         </div>
       </section>
 
-      <div className="dest-wrap" style={view === "parks" ? { display: "none" } : undefined}>
-        <div className="dest-combo">
+      <div className="dest-wrap" style={{ gap: 14, flexWrap: "wrap" }}>
+        <div className="dest-combo" style={view === "parks" ? { display: "none" } : undefined}>
           <label>&#128205; Destination</label>
           <input
             className="dest-input" type="text" autoComplete="off" placeholder="Playa del Carmen"
@@ -379,6 +382,15 @@ export function ToursClient({
               </div>
             ))}
           </div>
+        </div>
+        <div className="dest-combo">
+          <label>&#128269; {view === "parks" ? "Park name" : "Tour name"}</label>
+          <input
+            className="dest-input" type="text" autoComplete="off"
+            placeholder={view === "parks" ? "Search parks…" : "Search tours…"}
+            value={nameQ}
+            onChange={(e) => setNameQ(e.target.value)}
+          />
         </div>
       </div>
 

@@ -14,15 +14,57 @@ const BADGE: Record<string, string> = {
   cancelled: "bg-grey/15 text-grey",
 };
 
-export default async function AdminTourBookings() {
-  const bookings = await listTourBookings();
+export default async function AdminTourBookings({
+  searchParams,
+}: { searchParams: Promise<{ src?: string; city?: string }> }) {
+  const { src = "all", city = "" } = await searchParams;
+  const allBookings = await listTourBookings();
+  const bookings = allBookings
+    .filter((b) => src === "amanah" ? b.tourSource === "amanah"
+                 : src === "ours" ? b.tourSource !== "amanah" : true)
+    .filter((b) => !city || b.tourCity.toLowerCase() === city.toLowerCase());
+  const cities = [...new Set(allBookings.map((b) => b.tourCity).filter(Boolean))].sort();
+  const link = (s: string, c: string) =>
+    `/admin/tour-bookings?src=${s}${c ? `&city=${encodeURIComponent(c)}` : ""}`;
+  const srcTabs: [string, string, number][] = [
+    ["all", "All", allBookings.length],
+    ["amanah", "Amanah tours", allBookings.filter((b) => b.tourSource === "amanah").length],
+    ["ours", "Our own", allBookings.filter((b) => b.tourSource !== "amanah").length],
+  ];
   return (
     <div>
       <h1 className="mb-2 text-2xl font-extrabold">Tour bookings</h1>
-      <p className="mb-6 text-sm text-grey">
-        Amanah Vacations is notified by email automatically on every booking —
-        the WhatsApp button opens the same message ready to send.
+      <p className="mb-4 text-sm text-grey">
+        Amanah Vacations is notified by email automatically on every booking
+        of THEIR tours — the WhatsApp button opens the same message ready to
+        send. Bookings of your own tours stay yours alone.
       </p>
+      <div className="mb-4 flex flex-wrap items-center gap-1.5">
+        {srcTabs.map(([key, label, n]) => (
+          <a key={key} href={link(key, city)}
+            className={`rounded-pill border-[1.5px] px-4 py-1.5 text-sm font-bold ${
+              src === key ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}>
+            {label} ({n})
+          </a>
+        ))}
+        {cities.length > 1 && (
+          <span className="ml-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold uppercase text-grey">Destination:</span>
+            <a href={link(src, "")}
+              className={`rounded-pill border-[1.5px] px-3 py-1 text-xs font-bold ${
+                !city ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}>
+              All
+            </a>
+            {cities.map((c) => (
+              <a key={c} href={link(src, c)}
+                className={`rounded-pill border-[1.5px] px-3 py-1 text-xs font-bold ${
+                  city.toLowerCase() === c.toLowerCase() ? "border-ink bg-ink text-white" : "border-line bg-paper hover:border-rosa hover:text-rosa"}`}>
+                {c}
+              </a>
+            ))}
+          </span>
+        )}
+      </div>
       <div className="grid gap-4">
         {bookings.map((b) => (
           <div key={b.id} className="rounded-card bg-paper p-5 shadow-soft">
@@ -37,7 +79,7 @@ export default async function AdminTourBookings() {
                 </div>
                 <h2 className="mt-1 font-display text-lg font-bold">{b.tourTitle}</h2>
                 <p className="text-sm text-grey">
-                  {b.tourDate} · {b.groupSize} people ·{" "}
+                  {b.tourDate} · {b.tourCity && <>{b.tourCity} · </>}{b.groupSize} people ·{" "}
                   <b className="text-ink">${(b.totalCents / 100).toLocaleString("en-US")} {b.currency}</b>
                 </p>
                 <p className="mt-1 text-sm">

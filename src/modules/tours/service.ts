@@ -162,6 +162,7 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
 
 interface TourBookingRow {
   id: string; tour_id: string; title: string;
+  tour_source: string | null; tour_city: string | null;
   tour_date: string; group_size: number; status: TourBooking["status"];
   total_cents: number; currency: string; guest_name: string;
   guest_email: string; guest_phone: string | null; notes: string | null;
@@ -173,6 +174,7 @@ interface TourBookingRow {
 function toTourBooking(r: TourBookingRow): TourBooking {
   return {
     id: r.id, tourId: r.tour_id, tourTitle: r.title,
+    tourSource: r.tour_source ?? 'local', tourCity: r.tour_city ?? '',
     tourDate: r.tour_date, groupSize: r.group_size, status: r.status,
     totalCents: r.total_cents, currency: r.currency,
     guestName: r.guest_name, guestEmail: r.guest_email,
@@ -183,7 +185,7 @@ function toTourBooking(r: TourBookingRow): TourBooking {
   };
 }
 
-const TB_SELECT = `tb.id, tb.tour_id, t.title,
+const TB_SELECT = `tb.id, tb.tour_id, t.title, t.source as tour_source, t.city as tour_city,
   to_char(tb.tour_date,'YYYY-MM-DD') as tour_date, tb.group_size, tb.status,
   tb.total_cents, tb.currency, tb.guest_name, tb.guest_email, tb.guest_phone,
   tb.notes, tb.amanah_note, tb.partner_notified_at, tb.partner_confirmed_at, tb.created_at

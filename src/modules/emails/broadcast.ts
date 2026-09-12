@@ -114,6 +114,70 @@ export async function sendBroadcastTest(
     : { ok: true, message: `Test sent to ${to} (sample data).` };
 }
 
+export interface ScheduledBroadcast {
+  id: string;
+  audience: BroadcastAudience;
+  listingId: string | null;
+  subject: string;
+  sendAt: string;
+  status: string;
+  result: string | null;
+}
+
+/** Queue a blast for a future moment (sent by the dispatch cron). */
+export async function scheduleBroadcast(opts: {
+  audience: BroadcastAudience;
+  listingId?: string;
+  subject: string;
+  body: string;
+  sendAt: Date;
+}): Promise<void> {
+  await getDb().query(
+    `insert into scheduled_broadcasts (audience, listing_id, subject, body, send_at)
+     values ($1,$2,$3,$4,$5)`,
+    [opts.audience, opts.listingId ?? null, opts.subject, opts.body, opts.sendAt],
+  );
+}
+
+export async function listScheduledBroadcasts(): Promise<ScheduledBroadcast[]> {
+  const res = await getDb().query(
+    `select id, audience, listing_id, subject, send_at, status, result
+       from scheduled_broadcasts
+      where status in ('scheduled','sending') or created_at > now() - interval '7 days'
+      order by send_at desc limit 30`);
+  return res.rows.map((r) => ({
+    id: r.id, audience: r.audience, listingId: r.listing_id,
+    subject: r.subject, sendAt: r.send_at, status: r.status, result: r.result,
+  }));
+}
+
+export async function cancelScheduledBroadcast(id: string): Promise<void> {
+  await getDb().query(
+    "update scheduled_broadcasts set status='cancelled' where id=$1 and status='scheduled'", [id]);
+}
+
+/** Send every due scheduled blast — called by the dispatch cron. The
+    status flip to 'sending' claims the row, so overlapping cron runs
+    can't double-send. */
+export async function runDueBroadcasts(): Promise<{ sent: number }> {
+  const due = await getDb().query(
+    `update scheduled_broadcasts set status='sending'
+      where status='scheduled' and send_at <= now()
+      returning id, audience, listing_id, subject, body`);
+  let n = 0;
+  for (const b of due.rows) {
+    const res = await sendBroadcast({
+      audience: b.audience, listingId: b.listing_id ?? undefined,
+      subject: b.subject, body: b.body,
+    });
+    await getDb().query(
+      "update scheduled_broadcasts set status='sent', result=$2 where id=$1",
+      [b.id, res.message.slice(0, 500)]);
+    if (res.ok) n++;
+  }
+  return { sent: n };
+}
+
 /** Send the blast for real, one personalised email per guest. */
 export async function sendBroadcast(opts: {
   audience: BroadcastAudience;

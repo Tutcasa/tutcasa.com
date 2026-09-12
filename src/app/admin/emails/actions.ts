@@ -99,13 +99,45 @@ export async function broadcastSendAction(
   if (audience === "listing" && !listingId) {
     return { ok: false, message: "Pick which home's guests should get it." };
   }
-  const { sendBroadcast } = await import("@/modules/emails/broadcast");
-  return sendBroadcast({
+  const mod = await import("@/modules/emails/broadcast");
+
+  // optional schedule: "YYYY-MM-DDTHH:MM" in the admin's browser time,
+  // with the browser's UTC offset alongside so the server stores true UTC
+  const sendAtLocal = s(formData.get("sendAtLocal"));
+  if (sendAtLocal) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(sendAtLocal);
+    const tzOffset = Number(formData.get("tzOffset"));
+    if (!m || !Number.isFinite(tzOffset)) {
+      return { ok: false, message: "That schedule date/time doesn't look right." };
+    }
+    const sendAt = new Date(
+      Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) + tzOffset * 60_000,
+    );
+    if (sendAt.getTime() <= Date.now()) {
+      return { ok: false, message: "That time is already in the past — pick a future one, or clear it to send now." };
+    }
+    await mod.scheduleBroadcast({
+      audience: audience as "upcoming" | "past" | "listing" | "all",
+      listingId: listingId || undefined,
+      subject, body, sendAt,
+    });
+    revalidatePath("/admin/emails");
+    return { ok: true, message: `Scheduled for ${sendAtLocal.replace("T", " at ")} your time — it goes out within ~15 min of that.` };
+  }
+
+  return mod.sendBroadcast({
     audience: audience as "upcoming" | "past" | "listing" | "all",
     listingId: listingId || undefined,
     subject,
     body,
   });
+}
+
+export async function cancelBroadcastAction(id: string): Promise<void> {
+  await requireAdmin();
+  const { cancelScheduledBroadcast } = await import("@/modules/emails/broadcast");
+  await cancelScheduledBroadcast(id);
+  revalidatePath("/admin/emails");
 }
 
 export async function sendTestAction(
