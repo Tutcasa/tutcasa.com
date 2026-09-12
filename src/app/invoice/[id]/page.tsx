@@ -37,6 +37,7 @@ interface InvoiceData {
   commissionCents: number;
   commissionPct: number;
   provider: string | null;
+  stripeFeeCents: number; // exact, from the webhook; 0 = fall back to estimate
 }
 
 async function loadInvoice(id: string): Promise<InvoiceData | null> {
@@ -45,7 +46,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
 
   const stay = await db.query(
     `select b.invoice_no, b.created_at, b.status, b.guest_name, b.guest_email,
-            b.guests, b.total_cents, b.currency, b.price_breakdown, b.payment_provider,
+            b.guests, b.total_cents, b.currency, b.price_breakdown, b.payment_provider, b.stripe_fee_cents,
             b.coupon_code, b.coupon_discount_cents, b.amount_paid_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') as check_in,
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
@@ -91,12 +92,13 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       commissionCents: Number(p.thirdPartyCommissionCents ?? 0),
       commissionPct: Number(p.thirdPartyCommissionPct ?? 0),
       provider: b.payment_provider,
+      stripeFeeCents: Number(b.stripe_fee_cents ?? 0),
     };
   }
 
   const tour = await db.query(
     `select tb.invoice_no, tb.created_at, tb.status, tb.guest_name, tb.guest_email,
-            tb.group_size, tb.total_cents, tb.currency, tb.payment_provider,
+            tb.group_size, tb.total_cents, tb.currency, tb.payment_provider, tb.stripe_fee_cents,
             to_char(tb.tour_date,'YYYY-MM-DD') as tour_date,
             tb.coupon_code, tb.coupon_discount_cents, tb.amount_paid_cents, t.title
        from tour_bookings tb join tours t on t.id = tb.tour_id
@@ -117,6 +119,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       amountPaidCents: b.amount_paid_cents ?? 0,
       commissionCents: 0, commissionPct: 0,
       provider: b.payment_provider,
+      stripeFeeCents: Number(b.stripe_fee_cents ?? 0),
     };
   }
   return null;
@@ -227,9 +230,12 @@ export default async function InvoicePage({
         {/* internal numbers — only when logged in as admin; never printed,
             so a printed/PDF'd invoice stays guest-safe */}
         {admin && (inv.commissionCents > 0 || inv.amountPaidCents > 0) && (() => {
-          const fee = inv.provider === "stripe" && inv.amountPaidCents > 0
-            ? Math.round(inv.amountPaidCents * 0.029) + 30 // standard 2.9% + 30¢, estimate
-            : 0;
+          const exact = inv.stripeFeeCents > 0;
+          const fee = exact
+            ? inv.stripeFeeCents
+            : inv.provider === "stripe" && inv.amountPaidCents > 0
+              ? Math.round(inv.amountPaidCents * 0.029) + 30 // standard 2.9% + 30¢, estimate
+              : 0;
           const net = inv.amountPaidCents - fee - inv.commissionCents;
           return (
             <div className="mt-4 rounded-xl border-[1.5px] border-dashed border-terra/40 bg-sol/5 p-3 text-sm print:hidden">
@@ -244,7 +250,7 @@ export default async function InvoicePage({
               )}
               {fee > 0 && (
                 <div className="flex justify-between">
-                  <span>Stripe fee (est. 2.9% + 30&cent;)</span>
+                  <span>Stripe fee {exact ? "(exact)" : <>(est. 2.9% + 30&cent;)</>}</span>
                   <span>−{money(fee)}</span>
                 </div>
               )}

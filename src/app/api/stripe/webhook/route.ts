@@ -23,6 +23,28 @@ function verify(payload: string, header: string | null, secret: string): boolean
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Pull the charge's exact fee and add it to the row (sums deposit +
+    balance charges; the payment_ref guard above already ran, so this
+    fires once per new charge). Best-effort — a miss leaves the estimate. */
+async function recordExactFee(
+  db: ReturnType<typeof getDb>,
+  table: "bookings" | "tour_bookings",
+  id: string,
+  ref: string,
+): Promise<void> {
+  try {
+    const { stripeFeeForPaymentRef } = await import("@/lib/stripe");
+    const fee = await stripeFeeForPaymentRef(ref);
+    if (fee == null) return;
+    await db.query(
+      `update ${table} set stripe_fee_cents = coalesce(stripe_fee_cents,0) + $2 where id = $1`,
+      [id, fee],
+    );
+  } catch (e) {
+    console.error("stripe fee lookup:", e);
+  }
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) return NextResponse.json({ error: "not configured" }, { status: 503 });
@@ -71,6 +93,7 @@ export async function POST(req: NextRequest) {
       [id, paidCents, ref],
     );
     if (upd.rows[0]) {
+      await recordExactFee(db, "bookings", id, ref);
       const { fireAutomations } = await import("@/modules/emails/dispatch");
       const wasPending = upd.rows[0].prev_status === "pending";
       fireAutomations(
@@ -83,15 +106,17 @@ export async function POST(req: NextRequest) {
       void rewardReferrerForBooking(id).catch(() => {});
     }
   } else if (kind === "tour") {
-    await db.query(
+    const upd = await db.query(
       `update tour_bookings set
          amount_paid_cents = coalesce(amount_paid_cents,0) + $2,
          payment_ref = $3,
          status = case when status = 'pending' then 'paid' else status end
        where id = $1 and status <> 'cancelled'
-         and (payment_ref is distinct from $3)`,
+         and (payment_ref is distinct from $3)
+       returning id`,
       [id, paidCents, ref],
     );
+    if (upd.rows[0]) await recordExactFee(db, "tour_bookings", id, ref);
   }
 
   return NextResponse.json({ received: true });

@@ -21,6 +21,7 @@ interface OrderRow {
   createdAt: string;
   marketingRef: string | null;
   amountPaidCents: number;
+  stripeFeeCents: number; // exact, recorded by the webhook; 0 = estimate
 }
 
 async function allOrders(): Promise<OrderRow[]> {
@@ -29,6 +30,7 @@ async function allOrders(): Promise<OrderRow[]> {
             b.marketing_ref, b.price_breakdown, b.coupon_code, b.coupon_discount_cents,
             b.payment_provider, b.created_at, b.guest_name, b.guests,
             coalesce(b.amount_paid_cents, 0) as amount_paid_cents,
+            coalesce(b.stripe_fee_cents, 0) as stripe_fee_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') || ' → ' || to_char(upper(b.stay),'YYYY-MM-DD') as dates,
             l.title, l.city
        from bookings b join listings l on l.id = b.listing_id
@@ -45,6 +47,7 @@ async function allOrders(): Promise<OrderRow[]> {
     provider: r.payment_provider, createdAt: r.created_at,
     marketingRef: r.marketing_ref,
     amountPaidCents: Number(r.amount_paid_cents),
+    stripeFeeCents: Number(r.stripe_fee_cents),
   }));
 }
 
@@ -133,15 +136,17 @@ export default async function AdminOrders({
                       <span>Collected so far</span><span>{fmtMoney(o.amountPaidCents)}</span>
                     </div>
                     {o.provider === "stripe" && (() => {
-                      // Stripe's standard 2.9% + 30¢ per charge — estimate
-                      const fee = Math.round(o.amountPaidCents * 0.029) + 30;
+                      // exact fee from the webhook when we have it, else
+                      // Stripe's standard 2.9% + 30¢ per charge as estimate
+                      const exact = o.stripeFeeCents > 0;
+                      const fee = exact ? o.stripeFeeCents : Math.round(o.amountPaidCents * 0.029) + 30;
                       return (
                         <>
                           <div className="flex justify-between text-xs text-terra">
-                            <span>Stripe fee (est. 2.9% + 30&cent;)</span><span>−{fmtMoney(fee)}</span>
+                            <span>Stripe fee {exact ? "(exact)" : <>(est. 2.9% + 30&cent;)</>}</span><span>−{fmtMoney(fee)}</span>
                           </div>
                           <div className="flex justify-between text-xs font-bold">
-                            <span>Net collected (est.)</span><span>{fmtMoney(o.amountPaidCents - fee)}</span>
+                            <span>Net collected{exact ? "" : " (est.)"}</span><span>{fmtMoney(o.amountPaidCents - fee)}</span>
                           </div>
                         </>
                       );

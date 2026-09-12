@@ -47,12 +47,13 @@ export function RichText({ text }: { text: string }) {
   lines.forEach((raw, i) => {
     const line = raw.trim();
     if (!line) { flushBullets(`b${i}`); flushPara(`p${i}`); return; }
-    if (line.startsWith("## ")) {
+    // the space after #/## is optional — admins forget it constantly
+    if (line.startsWith("##")) {
       flushBullets(`b${i}`); flushPara(`p${i}`);
-      out.push(<h3 key={i} style={H2_STYLE}>{line.slice(3)}</h3>);
-    } else if (line.startsWith("# ")) {
+      out.push(<h3 key={i} style={H2_STYLE}>{line.slice(2).trim()}</h3>);
+    } else if (line.startsWith("#")) {
       flushBullets(`b${i}`); flushPara(`p${i}`);
-      out.push(<h2 key={i} style={H1_STYLE}>{line.slice(2)}</h2>);
+      out.push(<h2 key={i} style={H1_STYLE}>{line.slice(1).trim()}</h2>);
     } else if (line.startsWith("- ")) {
       flushPara(`p${i}`);
       bullets.push(line.slice(2));

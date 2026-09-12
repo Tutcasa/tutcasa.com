@@ -2,6 +2,7 @@ import { listTourBookings } from "@/modules/tours";
 import { amanahWhatsAppLink } from "@/modules/notifications";
 import { StatusButtons } from "./status-buttons";
 import { TourAnswerForm } from "./answer-form";
+import { TourEditForm } from "./edit-form";
 
 export const dynamic = "force-dynamic";
 
@@ -68,6 +69,11 @@ export default async function AdminTourBookings() {
                 <StatusButtons id={b.id} status={b.status} />
               </div>
             </div>
+            <TourEditForm b={{
+              id: b.id, guestName: b.guestName, guestEmail: b.guestEmail,
+              guestPhone: b.guestPhone, tourDate: b.tourDate,
+              groupSize: b.groupSize, totalCents: b.totalCents,
+            }} />
           </div>
         ))}
         {bookings.length === 0 && (

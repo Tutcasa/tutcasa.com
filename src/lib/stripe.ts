@@ -30,6 +30,33 @@ async function stripePost(path: string, params: Record<string, string>): Promise
   return data;
 }
 
+/**
+ * Exact Stripe fee (in cents) for a payment-intent id, from the charge's
+ * balance transaction. Returns null when it can't be determined (non-pi
+ * ref, API error, transaction not settled yet) — callers fall back to
+ * the 2.9% + 30¢ estimate.
+ */
+export async function stripeFeeForPaymentRef(ref: string): Promise<number | null> {
+  if (!ref.startsWith("pi_") || !stripeConfigured()) return null;
+  try {
+    const res = await fetch(
+      `${API}/payment_intents/${ref}?expand[]=latest_charge.balance_transaction`,
+      {
+        headers: { Authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}` },
+        signal: AbortSignal.timeout(15_000),
+      },
+    );
+    if (!res.ok) return null;
+    const pi = (await res.json()) as {
+      latest_charge?: { balance_transaction?: { fee?: number } };
+    };
+    const fee = pi.latest_charge?.balance_transaction?.fee;
+    return typeof fee === "number" && fee >= 0 ? fee : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface PayableInvoice {
   kind: "stay" | "tour";
   id: string;

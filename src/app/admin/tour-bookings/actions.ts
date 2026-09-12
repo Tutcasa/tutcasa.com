@@ -45,6 +45,37 @@ export async function deleteTourBookingAction(id: string): Promise<void> {
 
 export interface TourAnswerState { ok: boolean; message: string }
 
+/** Edit a tour booking's details — mirrors the stay-booking edit form. */
+export async function updateTourBookingAction(
+  _prev: TourAnswerState,
+  formData: FormData,
+): Promise<TourAnswerState> {
+  await requireAdmin();
+  const id = String(formData.get("id") ?? "");
+  const guestName = String(formData.get("guestName") ?? "").trim();
+  const guestEmail = String(formData.get("guestEmail") ?? "").trim();
+  const guestPhone = String(formData.get("guestPhone") ?? "").trim();
+  const tourDate = String(formData.get("tourDate") ?? "");
+  const groupSize = Number(formData.get("groupSize"));
+  const totalUSD = Number(formData.get("totalUSD"));
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !guestName || !guestEmail
+      || !/^\d{4}-\d{2}-\d{2}$/.test(tourDate)
+      || !(groupSize >= 1) || !(totalUSD >= 0)) {
+    return { ok: false, message: "Fill name, email, date, group size and total." };
+  }
+  await (await import("@/lib/db")).getDb().query(
+    `update tour_bookings set
+       guest_name=$2, guest_email=$3,
+       guest_phone=case when $4='' then guest_phone else $4 end,
+       tour_date=$5::date, group_size=$6, total_cents=$7
+     where id=$1`,
+    [id, guestName, guestEmail, guestPhone, tourDate, groupSize, Math.round(totalUSD * 100)],
+  );
+  revalidatePath("/admin/tour-bookings");
+  revalidatePath("/admin/invoices");
+  return { ok: true, message: "Booking updated." };
+}
+
 /** Answer Amanah's question on a tour booking — clears it here and shows
     the reply in Amanah's queue instantly. */
 export async function answerTourQuestionAction(
