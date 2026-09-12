@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
+import { isAdmin } from "@/lib/admin-auth";
 import { fmtMoney } from "@/modules/pricing";
 import { InvoiceActions } from "./invoice-actions";
 import { PayNow } from "./pay-now";
@@ -32,6 +33,10 @@ interface InvoiceData {
   balanceDueDate: string | null;
   securityDepositCents: number;
   amountPaidCents: number;
+  // internal (admin-only box; never shown to guests or printed)
+  commissionCents: number;
+  commissionPct: number;
+  provider: string | null;
 }
 
 async function loadInvoice(id: string): Promise<InvoiceData | null> {
@@ -40,7 +45,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
 
   const stay = await db.query(
     `select b.invoice_no, b.created_at, b.status, b.guest_name, b.guest_email,
-            b.guests, b.total_cents, b.currency, b.price_breakdown,
+            b.guests, b.total_cents, b.currency, b.price_breakdown, b.payment_provider,
             b.coupon_code, b.coupon_discount_cents, b.amount_paid_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') as check_in,
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
@@ -83,12 +88,15 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       balanceDueDate: p.balanceDueDate ? String(p.balanceDueDate).slice(0, 10) : null,
       securityDepositCents: p.depositInTotal ? 0 : (p.securityDepositCents ?? 0),
       amountPaidCents: b.amount_paid_cents ?? 0,
+      commissionCents: Number(p.thirdPartyCommissionCents ?? 0),
+      commissionPct: Number(p.thirdPartyCommissionPct ?? 0),
+      provider: b.payment_provider,
     };
   }
 
   const tour = await db.query(
     `select tb.invoice_no, tb.created_at, tb.status, tb.guest_name, tb.guest_email,
-            tb.group_size, tb.total_cents, tb.currency,
+            tb.group_size, tb.total_cents, tb.currency, tb.payment_provider,
             to_char(tb.tour_date,'YYYY-MM-DD') as tour_date,
             tb.coupon_code, tb.coupon_discount_cents, tb.amount_paid_cents, t.title
        from tour_bookings tb join tours t on t.id = tb.tour_id
@@ -107,6 +115,8 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       dueNowCents: null, balanceCents: null, balanceDueDate: null,
       securityDepositCents: 0,
       amountPaidCents: b.amount_paid_cents ?? 0,
+      commissionCents: 0, commissionPct: 0,
+      provider: b.payment_provider,
     };
   }
   return null;
@@ -125,7 +135,7 @@ export default async function InvoicePage({
   params,
 }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const inv = await loadInvoice(id);
+  const [inv, admin] = await Promise.all([loadInvoice(id), isAdmin()]);
   if (!inv) notFound();
 
   const money = (c: number) => fmtMoney(Math.abs(c), inv.currency === "MXN" ? "MXN" : "USD");
@@ -213,6 +223,38 @@ export default async function InvoicePage({
             ✓ Paid in full — thank you!
           </div>
         )}
+
+        {/* internal numbers — only when logged in as admin; never printed,
+            so a printed/PDF'd invoice stays guest-safe */}
+        {admin && (inv.commissionCents > 0 || inv.amountPaidCents > 0) && (() => {
+          const fee = inv.provider === "stripe" && inv.amountPaidCents > 0
+            ? Math.round(inv.amountPaidCents * 0.029) + 30 // standard 2.9% + 30¢, estimate
+            : 0;
+          const net = inv.amountPaidCents - fee - inv.commissionCents;
+          return (
+            <div className="mt-4 rounded-xl border-[1.5px] border-dashed border-terra/40 bg-sol/5 p-3 text-sm print:hidden">
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wider text-terra">
+                Internal — only visible to you
+              </div>
+              {inv.commissionCents > 0 && (
+                <div className="flex justify-between">
+                  <span>Third-party commission ({inv.commissionPct}%)</span>
+                  <span>−{money(inv.commissionCents)}</span>
+                </div>
+              )}
+              {fee > 0 && (
+                <div className="flex justify-between">
+                  <span>Stripe fee (est. 2.9% + 30&cent;)</span>
+                  <span>−{money(fee)}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-terra/20 pt-1 font-bold">
+                <span>Net after fees{inv.amountPaidCents < inv.totalCents ? " (on paid so far)" : ""}</span>
+                <span>{money(net)}</span>
+              </div>
+            </div>
+          );
+        })()}
 
         <p className="mt-6 text-xs text-grey">
           Questions about this invoice? Contact us on WhatsApp — we&rsquo;re at your service 24/7.
