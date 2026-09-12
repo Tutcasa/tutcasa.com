@@ -174,13 +174,13 @@ export function TransfersClient({
                   {t.address && ` · 📍 ${t.address}`}{t.whatsapp && ` · 💬 ${t.whatsapp}`}
                   {!t.sentAt && " · ⚠️ not delivered to Amanah yet"}
                 </div>
-                {/* who pays Amanah: ≤4 pax rides on the host's account
-                    (TutCasa pays Amanah, then bills the host); bigger
-                    groups settle with Amanah directly on the day */}
-                <div className={`mt-0.5 text-xs font-semibold ${t.passengers > 4 ? "text-terra" : "text-cactus"}`}>
-                  {t.passengers > 4
-                    ? "💳 Guest pays Amanah directly — card or cash on the day"
-                    : "🏠 Host covers it — TutCasa pays Amanah, billed to the host"}
+                {/* who pays: UNDER 4 pax is free for the guest (TutCasa
+                    pays Amanah, then bills the host); 4 OR MORE pay the
+                    driver directly on the day */}
+                <div className={`mt-0.5 text-xs font-semibold ${t.passengers >= 4 ? "text-terra" : "text-cactus"}`}>
+                  {t.passengers >= 4
+                    ? "💳 Guest pays the driver directly — cash or card on the day"
+                    : "🏠 Free for the guest — TutCasa pays Amanah, billed to the host"}
                 </div>
                 {t.status === "need_details" && t.amanahNote && (
                   <div className="mt-1 rounded-xl bg-rosa/10 px-3 py-2 text-sm">

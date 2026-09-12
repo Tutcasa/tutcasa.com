@@ -21,8 +21,8 @@ const MODE_LABEL: Record<string, string> = {
   per_night: "per night",
   per_guest: "per guest",
   per_guest_night: "per guest / night",
-  for_4: "for 4 people or fewer",
-  over_4: "for more than 4 people",
+  for_4: "for fewer than 4 people",
+  over_4: "for 4 people or more",
 };
 
 const initial: ListingFormState = { ok: true, message: "" };
@@ -83,8 +83,8 @@ export function AddonsEditor({
           <option value="per_night">Per night</option>
           <option value="per_guest">Per guest</option>
           <option value="per_guest_night">Per guest / night</option>
-          <option value="for_4">For 4 people or fewer</option>
-          <option value="over_4">For more than 4 people</option>
+          <option value="for_4">For fewer than 4 people</option>
+          <option value="over_4">For 4 people or more</option>
         </select>
         <button disabled={pending}
           className="rounded-pill border-[1.5px] border-rosa px-4 py-2 text-sm font-bold text-rosa hover:bg-rosa hover:text-white disabled:opacity-50">

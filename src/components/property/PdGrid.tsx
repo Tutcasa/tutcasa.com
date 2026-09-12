@@ -153,7 +153,7 @@ export function PdGrid({ p }: { p: PdData }) {
   /* group-size-conditional options only show when they apply — the
      booking's own guest count decides */
   const addonApplies = (mode: string, g: number) =>
-    mode === "for_4" ? g <= 4 : mode === "over_4" ? g > 4 : true;
+    mode === "for_4" ? g < 4 : mode === "over_4" ? g >= 4 : true;
   const visibleAddons = p.addons.filter((a) => addonApplies(a.mode, guests));
 
   function pdG(d: number) {
