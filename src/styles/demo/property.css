@@ -286,7 +286,15 @@ body:has([class^="pg-property"]) .pd-rev-bars{flex:1;min-width:220px;display:gri
 body:has([class^="pg-property"]) .pd-bar{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--grey)}
 body:has([class^="pg-property"]) .pd-bar .track{display:block;flex:1;height:5px;background:var(--line);border-radius:4px;overflow:hidden}
 body:has([class^="pg-property"]) .pd-bar .fill{display:block;height:100%;background:var(--ink)}
-body:has([class^="pg-property"]) .pd-reviews{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+/* sliding review carousel (matches the home page's rev-carousel) */
+body:has([class^="pg-property"]) .pd-rev-carousel{position:relative}
+body:has([class^="pg-property"]) .pd-reviews{display:flex;gap:22px;overflow-x:auto;scroll-behavior:smooth;padding:6px 2px 10px;scrollbar-width:none}
+body:has([class^="pg-property"]) .pd-reviews::-webkit-scrollbar{display:none}
+body:has([class^="pg-property"]) .pd-review{flex:0 0 min(346px,80vw);background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}
+body:has([class^="pg-property"]) .pd-rev-arrow{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;z-index:2;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+body:has([class^="pg-property"]) .pd-rev-arrow:hover{background:var(--rosa);color:#fff;border-color:var(--rosa)}
+body:has([class^="pg-property"]) .pd-rev-arrow.left{left:-14px}
+body:has([class^="pg-property"]) .pd-rev-arrow.right{right:-14px}
 body:has([class^="pg-property"]) .pd-review .rv-top{display:flex;align-items:center;gap:11px;margin-bottom:7px}
 body:has([class^="pg-property"]) .pd-av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:15px}
 body:has([class^="pg-property"]) .pd-review .rv-name{font-weight:700;font-size:14.5px}
@@ -329,7 +337,6 @@ body:has([class^="pg-property"]) .pd-grid{grid-template-columns:1fr}
 body:has([class^="pg-property"]) .pd-book{position:static}
 body:has([class^="pg-property"]) .pd-gallery{grid-template-columns:1fr 1fr;grid-template-rows:none;grid-auto-rows:160px;height:auto}
 body:has([class^="pg-property"]) .pd-gallery .pdph:first-child{grid-row:auto}
-body:has([class^="pg-property"]) .pd-reviews{grid-template-columns:1fr}
 body:has([class^="pg-property"]) .pd-rules{grid-template-columns:1fr}
 body:has([class^="pg-property"]) .pd-similar{grid-template-columns:1fr 1fr}
 }

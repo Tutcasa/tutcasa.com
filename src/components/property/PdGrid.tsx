@@ -137,6 +137,7 @@ export function PdGrid({ p }: { p: PdData }) {
   const overlaps = (from: string, to: string) => p.unavailable.some((r) => from < r.to && to > r.from);
 
   const latestKeyRef = useRef("");
+  const revTrack = useRef<HTMLDivElement>(null);
   const addonsKey = selAddons.join(",");
   useEffect(() => {
     if (!ci || !co || co <= ci || nights < p.minStay) return;
@@ -450,19 +451,27 @@ export function PdGrid({ p }: { p: PdData }) {
               })()}
             </div>
           </div>
-          <div className="pd-reviews">
-            {(p.guestReviews.length > 0
-              ? p.guestReviews.map((g, i) => ({ n: g.n, d: g.d, t: g.t, c: ["#E4326B", "#2E9E6B", "#57B8DF", "#E8703A"][i % 4] }))
-              : REVIEW_POOL
-            ).map((r) => (
-              <div className="pd-review" key={r.n}>
-                <div className="rv-top">
-                  <div className="pd-av" style={{ background: r.c }}>{r.n.charAt(0)}</div>
-                  <div><div className="rv-name">{r.n}</div><div className="rv-date">{r.d}</div></div>
+          {/* sliding carousel like the home page — not capped at 4:
+              every published review rides the track, arrows scroll it */}
+          <div className="pd-rev-carousel">
+            <button type="button" className="pd-rev-arrow left" aria-label="Previous reviews"
+              onClick={() => revTrack.current?.scrollBy({ left: -368, behavior: "smooth" })}>&#8249;</button>
+            <div className="pd-reviews" ref={revTrack}>
+              {(p.guestReviews.length > 0
+                ? p.guestReviews.map((g, i) => ({ n: g.n, d: g.d, t: g.t, c: ["#E4326B", "#2E9E6B", "#57B8DF", "#E8703A"][i % 4] }))
+                : REVIEW_POOL
+              ).map((r, i) => (
+                <div className="pd-review" key={`${r.n}${i}`}>
+                  <div className="rv-top">
+                    <div className="pd-av" style={{ background: r.c }}>{r.n.charAt(0)}</div>
+                    <div><div className="rv-name">{r.n}</div><div className="rv-date">{r.d}</div></div>
+                  </div>
+                  <p>{r.t}</p>
                 </div>
-                <p>{r.t}</p>
-              </div>
-            ))}
+              ))}
+            </div>
+            <button type="button" className="pd-rev-arrow right" aria-label="More reviews"
+              onClick={() => revTrack.current?.scrollBy({ left: 368, behavior: "smooth" })}>&#8250;</button>
           </div>
         </div>
         <div className="pd-sec">

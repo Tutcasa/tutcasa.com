@@ -84,7 +84,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
               to_char(coalesce(stayed_at, created_at::date), 'FMMonth YYYY') as when_label
          from listing_reviews
         where listing_id=$1 and status='published'
-        order by created_at desc limit 12`,
+        order by created_at desc limit 40`,
       [listing.id],
     ),
   ]);
