@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/email-dispatch",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/sync-google-reviews",
