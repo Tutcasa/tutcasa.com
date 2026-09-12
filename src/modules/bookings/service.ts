@@ -62,6 +62,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
   // the guest is looking at a discounted total.
   let couponCode: string | null = null;
   let couponDiscountCents = 0;
+  let couponCommissionPct = 0;
   if (req.couponCode?.trim()) {
     const cp = await checkCoupon(req.couponCode, {
       nights: q.nights,
@@ -76,7 +77,14 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     if (!(await tryRedeemCoupon(cp.code))) return { ok: false, error: "COUPON_INVALID" };
     couponCode = cp.code;
     couponDiscountCents = cp.discountCents;
+    couponCommissionPct = cp.commissionPct ?? 0;
   }
+  // a coupon handed to a third party carries its commission % — recorded
+  // on the same basis as the manual admin button (guest total excl. tax,
+  // after the coupon discount; the deposit is never commissionable)
+  const couponCommissionCents = couponCommissionPct > 0
+    ? Math.round(Math.max(0, q.totalCents - couponDiscountCents - q.taxCents) * (couponCommissionPct / 100))
+    : 0;
   // the security deposit is COLLECTED WITH THE BOOKING (returned after
   // checkout per policy) — it joins the charge, untaxed and un-couponed
   const chargeCents = q.totalCents - couponDiscountCents + q.securityDepositCents;
@@ -131,7 +139,8 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           addonsCents: q.addonsCents,
           addonLines: q.addonLines,
           securityDepositCents: q.securityDepositCents,
-          thirdPartyCommissionCents: q.thirdPartyCommissionCents ?? 0,
+          thirdPartyCommissionCents: (q.thirdPartyCommissionCents ?? 0) + couponCommissionCents,
+          ...(couponCommissionCents > 0 ? { thirdPartyCommissionPct: couponCommissionPct } : {}),
           couponCode,
           couponDiscountCents,
           requestToBook: isRequest,

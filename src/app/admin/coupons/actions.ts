@@ -25,18 +25,23 @@ export async function addCouponAction(
   const perUserLimit = formData.get("perUserLimit") ? Number(formData.get("perUserLimit")) : null;
   const allowedEmail = String(formData.get("allowedEmail") ?? "").trim().toLowerCase() || null;
   const blockOnSale = formData.get("blockOnSale") === "on";
+  const commissionPct = formData.get("commissionPct") ? Number(formData.get("commissionPct")) : null;
+  if (commissionPct != null && !(commissionPct > 0 && commissionPct <= 100)) {
+    return { ok: false, message: "Commission must be between 0 and 100%." };
+  }
 
   try {
     await getDb().query(
       `insert into coupons (code, kind, percent_off, amount_cents, min_nights, max_uses,
-                            expires_at, note, listing_id, per_user_limit, allowed_email, block_on_sale)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+                            expires_at, note, listing_id, per_user_limit, allowed_email, block_on_sale,
+                            commission_pct)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [code, kind,
        kind === "percent" ? value : null,
        kind === "fixed" ? Math.round(value * 100) : null,
        minNights, maxUses, expires,
        String(formData.get("note") ?? "").trim() || null,
-       listingId, perUserLimit, allowedEmail, blockOnSale],
+       listingId, perUserLimit, allowedEmail, blockOnSale, commissionPct],
     );
   } catch (e) {
     if ((e as { code?: string }).code === "23505") {

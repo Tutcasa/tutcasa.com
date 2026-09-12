@@ -8,7 +8,7 @@ async function allCoupons(): Promise<AdminCoupon[]> {
     `select c.id, c.code, c.kind, c.percent_off, c.amount_cents, c.min_nights,
             c.max_uses, c.used_count, to_char(c.expires_at,'YYYY-MM-DD') as expires_at,
             c.active, c.note, c.per_user_limit, c.allowed_email,
-            coalesce(c.block_on_sale,false) as block_on_sale,
+            coalesce(c.block_on_sale,false) as block_on_sale, c.commission_pct,
             l.title as listing_title,
             coalesce(b.cents, 0) as redeemed_cents,
             coalesce(b.n, 0) as redeemed_bookings
@@ -28,6 +28,7 @@ async function allCoupons(): Promise<AdminCoupon[]> {
     expiresAt: r.expires_at, active: r.active, note: r.note,
     perUserLimit: r.per_user_limit, allowedEmail: r.allowed_email,
     blockOnSale: r.block_on_sale, listingTitle: r.listing_title,
+    commissionPct: r.commission_pct == null ? null : Number(r.commission_pct),
     redeemedCents: Number(r.redeemed_cents), redeemedBookings: Number(r.redeemed_bookings),
   }));
 }

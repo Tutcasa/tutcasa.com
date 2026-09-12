@@ -11,6 +11,8 @@ export interface CouponCheck {
   ok: boolean;
   code: string;
   discountCents: number;
+  /** third-party commission % auto-applied to bookings using this code */
+  commissionPct?: number;
   reason?:
     | "NOT_FOUND" | "EXPIRED" | "USED_UP" | "MIN_NIGHTS"
     | "LISTING_ONLY" | "USER_LIMIT" | "WRONG_EMAIL" | "NEEDS_EMAIL" | "NO_SALE_STACK";
@@ -42,6 +44,7 @@ interface CouponRow {
   per_user_limit: number | null;
   allowed_email: string | null;
   block_on_sale: boolean;
+  commission_pct: string | null;
 }
 
 /** Validate a code against a stay context; returns the discount in cents. */
@@ -54,7 +57,8 @@ export async function checkCoupon(rawCode: string, ctx: CouponContext): Promise<
   const res = await getDb().query<CouponRow>(
     `select code, kind, percent_off, amount_cents, min_nights, max_uses, used_count,
             to_char(expires_at,'YYYY-MM-DD') as expires_at, active,
-            listing_id, per_user_limit, allowed_email, coalesce(block_on_sale,false) as block_on_sale
+            listing_id, per_user_limit, allowed_email, coalesce(block_on_sale,false) as block_on_sale,
+            commission_pct
        from coupons where code = $1`,
     [code],
   );
@@ -88,7 +92,7 @@ export async function checkCoupon(rawCode: string, ctx: CouponContext): Promise<
       ? Math.round(ctx.totalCents * (Number(c.percent_off) / 100))
       : (c.amount_cents ?? 0),
   );
-  return { ok: true, code, discountCents };
+  return { ok: true, code, discountCents, commissionPct: Number(c.commission_pct ?? 0) || undefined };
 }
 
 /**

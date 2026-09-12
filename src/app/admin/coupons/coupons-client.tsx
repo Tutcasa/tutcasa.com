@@ -24,6 +24,7 @@ export interface AdminCoupon {
   allowedEmail: string | null;
   blockOnSale: boolean;
   listingTitle: string | null;
+  commissionPct: number | null;
   redeemedCents: number; // total discount given on bookings using this code
   redeemedBookings: number;
 }
@@ -66,6 +67,9 @@ export function CouponsClient({
           <input name="perUserLimit" type="number" min="1" placeholder="Uses per guest (∞)" className={inputCls} title="How many times ONE guest (by email) can use it" />
           <input name="allowedEmail" type="email" placeholder="Only for email… (optional)" className={inputCls} />
           <input name="note" placeholder="Internal note (optional)" className={inputCls} />
+          <input name="commissionPct" type="number" min="0.5" max="100" step="0.5"
+                 placeholder="3rd-party commission % (optional)" className={inputCls}
+                 title="For codes given to a third party: bookings using this coupon automatically record this % as commission in the breakdown" />
           <label className="flex items-center gap-2 text-xs font-bold">
             <input type="checkbox" name="blockOnSale" /> Not valid on sale prices
           </label>
@@ -123,7 +127,8 @@ export function CouponsClient({
                   {c.perUserLimit != null && <div>{c.perUserLimit}×/guest</div>}
                   {c.allowedEmail && <div>only {c.allowedEmail}</div>}
                   {c.blockOnSale && <div>not on sale prices</div>}
-                  {!c.minNights && !c.expiresAt && !c.listingTitle && c.perUserLimit == null && !c.allowedEmail && !c.blockOnSale && "—"}
+                  {c.commissionPct != null && <div className="font-bold text-terra">{c.commissionPct}% commission</div>}
+                  {!c.minNights && !c.expiresAt && !c.listingTitle && c.perUserLimit == null && !c.allowedEmail && !c.blockOnSale && c.commissionPct == null && "—"}
                 </td>
                 <td className="p-3">{c.usedCount}{c.maxUses != null ? ` / ${c.maxUses}` : ""}</td>
                 <td className="p-3 text-xs">
