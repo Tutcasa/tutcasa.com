@@ -48,7 +48,11 @@ async function sendEmail(job: EmailJob): Promise<void> {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: FROM_EMAIL, to: [job.to], subject: job.subject, text: job.body }),
+      body: JSON.stringify({
+        from: FROM_EMAIL, to: [job.to], subject: job.subject, text: job.body,
+        // branded layout + the contact-info footer every guest email carries
+        html: (await import("@/modules/emails")).renderEmailHtml({ subject: job.subject, body: job.body }),
+      }),
     });
     if (!res.ok) throw new Error(`resend ${res.status}: ${await res.text()}`);
     await log({ ...job, channel: "email", recipient: job.to }, "sent");
@@ -149,17 +153,25 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
       });
     }
 
-    // 4. guest confirmation email
-    await sendEmail({
-      kind: "tour_booking_guest_email",
-      to: n.guestEmail,
-      subject: `Your TutCasa tour request ${n.ref} — ${n.tourTitle}`,
-      body:
-        `Hola ${n.guestName}! 👋\n\nWe received your tour booking and our team ` +
-        `is confirming it with the operator now.\n\n${summary}\n\n` +
-        `We'll be in touch shortly to complete payment and confirm.\n\n— The TutCasa family`,
-      tourBookingId: n.tourBookingId,
-    });
+    // 4. guest email — two flows:
+    //    • partner (Amanah) tours are INSTANT: the guest is paying on the
+    //      checkout page right now, so no email here — the "payment
+    //      received, you're booked" one fires from the Stripe webhook
+    //    • our own tours are REQUEST-FIRST: nothing is charged; the guest
+    //      learns the payment link comes once the tour is accepted
+    if (!n.partnerTour) {
+      await sendEmail({
+        kind: "tour_booking_guest_email",
+        to: n.guestEmail,
+        subject: `Your TutCasa tour request ${n.ref} — ${n.tourTitle}`,
+        body:
+          `Hola ${n.guestName}! 👋\n\nWe received your tour request and our team ` +
+          `is checking availability now.\n\n${summary}\n\n` +
+          `Nothing has been charged. As soon as your tour is accepted, we'll ` +
+          `email you a secure payment link to confirm your spot.\n\n— The TutCasa family`,
+        tourBookingId: n.tourBookingId,
+      });
+    }
 
     if (n.partnerTour) await getDb().query(
       "update tour_bookings set partner_notified_at = now() where id = $1",
@@ -169,4 +181,58 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
     // notifications must never break the booking itself
     console.error("notifyTourBooking failed:", e);
   }
+}
+
+const tourRow = async (id: string) => (await getDb().query(
+  `select tb.id, tb.guest_name, tb.guest_email, tb.group_size, tb.total_cents, tb.currency,
+          to_char(tb.tour_date,'YYYY-MM-DD') as tour_date, t.title
+     from tour_bookings tb join tours t on t.id = tb.tour_id where tb.id = $1`, [id],
+)).rows[0];
+
+const tourMoney = (cents: number, cur: string) =>
+  `$${Math.round(cents / 100).toLocaleString("en-US")} ${cur}`;
+
+/** Instant (Amanah) tours: fired by the Stripe webhook once payment lands. */
+export async function sendTourPaidGuestEmail(tourBookingId: string): Promise<void> {
+  try {
+    const b = await tourRow(tourBookingId);
+    if (!b) return;
+    await sendEmail({
+      kind: "tour_paid_guest_email",
+      to: b.guest_email,
+      subject: `You're booked! 🎉 ${b.title} — ${b.tour_date}`,
+      body:
+        `Hola ${String(b.guest_name).split(" ")[0]}! 👋\n\n` +
+        `Payment received — your tour is booked!\n\n` +
+        `Tour: ${b.title}\nDate: ${b.tour_date}\nPeople: ${b.group_size}\n` +
+        `Paid: ${tourMoney(b.total_cents, b.currency)}\n\n` +
+        `The tour operator confirms your exact pickup time and meeting point ` +
+        `within 24 hours.\n\n— The TutCasa family`,
+      tourBookingId,
+    });
+  } catch (e) {
+    console.error("sendTourPaidGuestEmail failed:", e);
+  }
+}
+
+/** Request-first tours: the admin accepted — email the guest their secure
+    payment link (the invoice page, which takes card payment directly). */
+export async function sendTourPaymentLinkEmail(tourBookingId: string): Promise<{ ok: boolean; message: string }> {
+  const b = await tourRow(tourBookingId);
+  if (!b) return { ok: false, message: "Booking not found." };
+  const site = process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app";
+  await sendEmail({
+    kind: "tour_payment_link_email",
+    to: b.guest_email,
+    subject: `Your tour is accepted! 🌴 ${b.title} — complete your payment`,
+    body:
+      `Hola ${String(b.guest_name).split(" ")[0]}! 👋\n\n` +
+      `Great news — your tour has been accepted:\n\n` +
+      `Tour: ${b.title}\nDate: ${b.tour_date}\nPeople: ${b.group_size}\n` +
+      `Total: ${tourMoney(b.total_cents, b.currency)}\n\n` +
+      `Pay securely here to confirm your spot:\n${site}/invoice/${b.id}\n\n` +
+      `— The TutCasa family`,
+    tourBookingId,
+  });
+  return { ok: true, message: `Payment link emailed to ${b.guest_email}.` };
 }

@@ -116,7 +116,11 @@ export async function POST(req: NextRequest) {
        returning id`,
       [id, paidCents, ref],
     );
-    if (upd.rows[0]) await recordExactFee(db, "tour_bookings", id, ref);
+    if (upd.rows[0]) {
+      await recordExactFee(db, "tour_bookings", id, ref);
+      const { sendTourPaidGuestEmail } = await import("@/modules/notifications");
+      await sendTourPaidGuestEmail(id);
+    }
   }
 
   return NextResponse.json({ received: true });

@@ -171,10 +171,14 @@ export function CheckoutClient({
               couponCode: coupon?.code,
             });
       if (res.ok) {
-        // instant stays AND tours pay ON THIS PAGE (Payment Element);
-        // if the publishable key can't drive the embedded form we fall
-        // back to Stripe's hosted page; requests keep the review flow
-        const goesToStripe = payload.kind === "tour" || !requestToBook;
+        // instant stays AND instant (Amanah) tours pay ON THIS PAGE
+        // (Payment Element); if the publishable key can't drive the
+        // embedded form we fall back to Stripe's hosted page. Requests
+        // (request-to-book stays + our own tours) keep the review flow:
+        // nothing charged, payment link comes after acceptance.
+        const goesToStripe = payload.kind === "tour"
+          ? ("instant" in res && res.instant)
+          : !requestToBook;
         if (goesToStripe && "bookingId" in res && res.bookingId) {
           const pi = await createPaymentIntentAction(res.bookingId);
           if (pi.clientSecret && pi.mode && publishableKeyMode() === pi.mode) {

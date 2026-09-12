@@ -75,5 +75,5 @@ export interface TourBooking {
 }
 
 export type TourReserveResult =
-  | { ok: true; bookingId: string }
+  | { ok: true; bookingId: string; instant: boolean }
   | { ok: false; error: "TOUR_NOT_FOUND" | "INVALID_DATE" | "INVALID_GROUP" | "COUPON_INVALID" | "INVALID_CONTACT" | "ON_REQUEST" };

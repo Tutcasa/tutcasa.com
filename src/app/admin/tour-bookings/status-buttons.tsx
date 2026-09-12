@@ -1,7 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
-import { setStatusAction } from "./actions";
+import { useState, useTransition } from "react";
+import { setStatusAction, sendTourPaymentLinkAction } from "./actions";
 import type { TourBooking } from "@/modules/tours";
 import { DeleteBookingButton } from "../delete-button";
 
@@ -23,9 +23,22 @@ const NEXT: Record<string, { to: TourBooking["status"]; label: string }[]> = {
 
 export function StatusButtons({ id, status }: { id: string; status: TourBooking["status"] }) {
   const [pending, start] = useTransition();
+  const [linkMsg, setLinkMsg] = useState("");
   const opts = NEXT[status] ?? [];
   return (
     <div className="flex flex-col gap-1.5">
+      {status === "pending" && (
+        <>
+          <button
+            disabled={pending}
+            onClick={() => start(async () => setLinkMsg((await sendTourPaymentLinkAction(id)).message))}
+            className="rounded-pill border-[1.5px] border-rosa px-4 py-1.5 text-xs font-bold text-rosa hover:bg-rosa hover:text-white disabled:opacity-50"
+          >
+            Accept &amp; send payment link 💳
+          </button>
+          {linkMsg && <span className="max-w-[180px] text-[11px] font-semibold text-cactus">{linkMsg}</span>}
+        </>
+      )}
       {opts.map((o) => (
         <button
           key={o.to}

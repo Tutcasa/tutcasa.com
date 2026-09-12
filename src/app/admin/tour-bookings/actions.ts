@@ -45,6 +45,17 @@ export async function deleteTourBookingAction(id: string): Promise<void> {
 
 export interface TourAnswerState { ok: boolean; message: string }
 
+/** Request-first tours: accept the request and email the guest their
+    secure payment link (the invoice page). */
+export async function sendTourPaymentLinkAction(id: string): Promise<TourAnswerState> {
+  await requireAdmin();
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, message: "Invalid booking." };
+  const { sendTourPaymentLinkEmail } = await import("@/modules/notifications");
+  const res = await sendTourPaymentLinkEmail(id);
+  revalidatePath("/admin/tour-bookings");
+  return res;
+}
+
 /** Edit a tour booking's details — mirrors the stay-booking edit form. */
 export async function updateTourBookingAction(
   _prev: TourAnswerState,

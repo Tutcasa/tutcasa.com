@@ -157,7 +157,8 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     partnerTour: tour.source === "amanah",
   });
 
-  return { ok: true, bookingId: id };
+  // Amanah tours are instant-pay; our own tours are request-first
+  return { ok: true, bookingId: id, instant: tour.source === "amanah" };
 }
 
 interface TourBookingRow {
