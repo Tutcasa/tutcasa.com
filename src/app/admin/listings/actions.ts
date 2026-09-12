@@ -697,6 +697,26 @@ export async function addAddonAction(
   return { ok: true, message: "Extra option added." };
 }
 
+/** Inline edit of an extra option — name, price and pricing mode. */
+export async function updateAddonAction(
+  _prev: ListingFormState,
+  formData: FormData,
+): Promise<ListingFormState> {
+  await requireAdmin();
+  const id = String(formData.get("addonId") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const priceUSD = Number(formData.get("priceUSD") ?? 0);
+  if (!/^[0-9a-f-]{36}$/i.test(id) || !name || !(priceUSD >= 0)) {
+    return { ok: false, message: "A name and a price (0 or more) are required." };
+  }
+  await getDb().query(
+    "update listing_addons set name=$2, price_cents=$3, mode=$4 where id=$1",
+    [id, name, usd(formData.get("priceUSD")), String(formData.get("mode") ?? "flat")],
+  );
+  revalidatePublic();
+  return { ok: true, message: "Extra option updated." };
+}
+
 export async function toggleAddonAction(addonId: string): Promise<void> {
   await requireAdmin();
   await getDb().query(
