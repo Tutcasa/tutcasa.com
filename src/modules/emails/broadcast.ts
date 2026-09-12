@@ -10,13 +10,14 @@ import { fillVars, renderEmailHtml } from "./index";
  * notifications_log (kind 'broadcast').
  */
 
-export type BroadcastAudience = "upcoming" | "past" | "listing" | "all";
+export type BroadcastAudience = "upcoming" | "past" | "listing" | "all" | "everybody";
 
 export const AUDIENCE_LABELS: Record<BroadcastAudience, string> = {
   upcoming: "Guests with upcoming stays",
   past: "Past guests",
   listing: "Guests of one home",
-  all: "All guests",
+  all: "All guests (people who booked)",
+  everybody: "Everybody — guests + every email ever left on the site",
 };
 
 interface Recipient {
@@ -54,7 +55,7 @@ async function recipientsFor(
       order by lower(b.guest_email), b.created_at desc`,
     params,
   );
-  return res.rows.map((r) => ({
+  const out: Recipient[] = res.rows.map((r) => ({
     email: r.guest_email as string,
     vars: {
       guest_name: (r.guest_name ?? "").split(" ")[0] || "there",
@@ -65,6 +66,30 @@ async function recipientsFor(
       guests: String(r.guests),
     },
   }));
+
+  // "everybody" also reaches people who only ever LEFT their email —
+  // newsletter signups, contact messages, referrals (the leads table).
+  // They have no booking, so booking variables are deliberately blank
+  // (never sample data) — keep those messages generic.
+  if (audience === "everybody") {
+    const seen = new Set(out.map((r) => r.email.toLowerCase()));
+    const leads = await getDb().query(
+      `select distinct on (lower(email)) email, name
+         from leads where email like '%@%'
+        order by lower(email), created_at desc`);
+    for (const l of leads.rows) {
+      if (seen.has(String(l.email).toLowerCase())) continue;
+      out.push({
+        email: l.email,
+        vars: {
+          guest_name: (l.name ?? "").split(" ")[0] || "there",
+          guest_email: l.email,
+          listing: "", check_in: "", check_out: "", guests: "",
+        },
+      });
+    }
+  }
+  return out;
 }
 
 export async function countBroadcastRecipients(

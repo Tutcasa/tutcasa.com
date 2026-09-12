@@ -93,7 +93,7 @@ export async function broadcastSendAction(
   const audience = s(formData.get("audience"));
   const listingId = s(formData.get("listingId"));
   if (!subject || !body) return { ok: false, message: "Write a subject and message first." };
-  if (!["upcoming", "past", "listing", "all"].includes(audience)) {
+  if (!["upcoming", "past", "listing", "all", "everybody"].includes(audience)) {
     return { ok: false, message: "Pick an audience." };
   }
   if (audience === "listing" && !listingId) {
@@ -117,7 +117,7 @@ export async function broadcastSendAction(
       return { ok: false, message: "That time is already in the past — pick a future one, or clear it to send now." };
     }
     await mod.scheduleBroadcast({
-      audience: audience as "upcoming" | "past" | "listing" | "all",
+      audience: audience as import("@/modules/emails/broadcast").BroadcastAudience,
       listingId: listingId || undefined,
       subject, body, sendAt,
     });
@@ -126,7 +126,7 @@ export async function broadcastSendAction(
   }
 
   return mod.sendBroadcast({
-    audience: audience as "upcoming" | "past" | "listing" | "all",
+    audience: audience as import("@/modules/emails/broadcast").BroadcastAudience,
     listingId: listingId || undefined,
     subject,
     body,

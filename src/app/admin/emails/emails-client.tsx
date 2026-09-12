@@ -184,7 +184,8 @@ function BroadcastCard({ listings, scheduled }: {
               <option value="upcoming">Guests with upcoming stays</option>
               <option value="past">Past guests</option>
               <option value="listing">Guests of one home</option>
-              <option value="all">All guests</option>
+              <option value="all">All guests (people who booked)</option>
+              <option value="everybody">Everybody — guests + every email left on the site</option>
             </select>
           </label>
           {audience === "listing" && (
@@ -204,6 +205,10 @@ function BroadcastCard({ listings, scheduled }: {
         </label>
         <div className="text-[11px] leading-5 text-grey">
           Variables: <span className="font-mono">{BROADCAST_VARS}</span> — filled from each guest&#39;s most recent booking.
+          {audience === "everybody" && (
+            <> <b>Everybody includes people who never booked</b> (newsletter &amp; contact signups) — for them the booking
+            variables like {"{{listing}}"} are blank, so keep this message generic.</>
+          )}
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <label className="text-xs font-bold">SCHEDULE <span className="font-normal text-grey">(optional — leave empty to send now)</span>
