@@ -51,9 +51,13 @@ export function deriveTokens(l: Listing): string[] {
   if (l.country === "US") toks.push("florida");
   if (l.propertyType === "villa") toks.push("villas");
   if (l.propertyType === "penthouse") toks.push("penthouses");
-  const blob = (l.headline + " " + l.amenities.join(" ") + " " + l.description).toLowerCase();
-  if (blob.includes("beach")) toks.push("beachfront");
-  if (blob.includes("pool")) toks.push("private pool");
+  // filter chips derive from the TITLE, HEADLINE and AMENITIES only — the
+  // description is marketing prose ("in Mareazul's beachfront community…")
+  // that made EVERY home match every chip. Precise phrases, so an
+  // "Oceanview Penthouse" is beachview but NOT beachfront.
+  const blob = (l.title + " " + l.headline + " " + l.amenities.join(" ")).toLowerCase();
+  if (/beach\s?front|ocean\s?front/.test(blob)) toks.push("beachfront");
+  if (/private pool|plunge pool|walkout pool/.test(blob) || l.amenities.some((a) => /pool/i.test(a))) toks.push("private pool");
   if (/beach\s?view|ocean\s?view|sea\s?view/.test(blob)) toks.push("beachview");
   if (blob.includes("parking")) toks.push("free parking");
   if (blob.includes("washer") || blob.includes("dryer") || blob.includes("laundry")) toks.push("washer & dryer");

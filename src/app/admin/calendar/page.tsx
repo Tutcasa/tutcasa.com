@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 interface DayCell {
   kind: "booked" | "blocked" | "free";
   label?: string;   // guest name on the first covered day
+  tooltip?: string; // full guest details — hover on ANY covered day
   invoiceNo?: string;
   priceCents?: number;
   status?: string;
@@ -41,7 +42,8 @@ export default async function AdminCalendar({
       `select id, title, city, status from listings
         where status <> 'archived' order by title`),
     db.query(
-      `select b.listing_id, b.guest_name, b.invoice_no, b.status, b.guests,
+      `select b.listing_id, b.guest_name, b.guest_phone, b.guest_email,
+              b.invoice_no, b.status, b.guests,
               to_char(lower(b.stay),'YYYY-MM-DD') as ci,
               to_char(upper(b.stay),'YYYY-MM-DD') as co
          from bookings b
@@ -85,6 +87,13 @@ export default async function AdminCalendar({
         return {
           kind: "booked",
           label: firstDay ? `${bk.guest_name} · ${bk.guests}p` : undefined,
+          tooltip: [
+            `${bk.guest_name} · ${bk.guests} guests`,
+            bk.invoice_no ? `#${bk.invoice_no}` : null,
+            `${bk.ci} → ${bk.co}`,
+            bk.guest_phone ? `📞 ${bk.guest_phone}` : null,
+            bk.guest_email ? `✉️ ${bk.guest_email}` : null,
+          ].filter(Boolean).join("\n"),
           invoiceNo: bk.invoice_no ? String(bk.invoice_no) : undefined,
           status: bk.status,
         };
@@ -187,7 +196,7 @@ export default async function AdminCalendar({
                 {(grid.get(l.id) ?? []).map((c, i) => {
                   if (c.kind === "booked") {
                     return (
-                      <td key={i} title={c.label ? `${c.label}${c.invoiceNo ? ` · #${c.invoiceNo}` : ""}` : undefined}
+                      <td key={i} title={c.tooltip}
                         className={`relative p-0 ${c.status === "pending" ? "bg-sol/70" : "bg-cactus/80"}`}>
                         {c.label && (
                           <span className="absolute inset-y-0 left-1 z-[5] flex items-center overflow-visible whitespace-nowrap text-[10px] font-bold text-white drop-shadow">
