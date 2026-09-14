@@ -70,7 +70,7 @@ export async function checkGiftCard(code: string): Promise<GiftCardCheck> {
             (expires_at is not null and expires_at < now()) as expired
        from gift_cards where code_hash = $1`, [hashCode(code)]);
   const c = res.rows[0];
-  if (!c || c.status === "disabled") return { ok: false, reason: "NOT_FOUND" };
+  if (!c || c.status === "void") return { ok: false, reason: "NOT_FOUND" };
   if (c.expired) return { ok: false, reason: "EXPIRED" };
   if (c.status !== "active" || c.balance_cents <= 0) return { ok: false, reason: "EMPTY" };
   return { ok: true, id: c.id, last4: c.code_last4, balanceCents: c.balance_cents };
@@ -82,7 +82,7 @@ export async function redeemGiftCard(id: string, amountCents: number, note: stri
   const res = await getDb().query(
     `update gift_cards
         set balance_cents = balance_cents - $2,
-            status = case when balance_cents - $2 <= 0 then 'used' else status end,
+            status = case when balance_cents - $2 <= 0 then 'redeemed' else status end,
             updated_at = now()
       where id = $1 and status = 'active' and balance_cents >= $2
       returning id`, [id, amountCents]);
@@ -98,7 +98,7 @@ export async function refundGiftCard(id: string, amountCents: number, note: stri
   await getDb().query(
     `update gift_cards
         set balance_cents = balance_cents + $2,
-            status = case when status = 'used' then 'active' else status end,
+            status = case when status = 'redeemed' then 'active' else status end,
             updated_at = now()
       where id = $1`, [id, amountCents]);
   await getDb().query(
@@ -118,8 +118,8 @@ export async function listGiftCards(): Promise<GiftCardRow[]> {
   }));
 }
 
-export async function setGiftCardStatus(id: string, status: "active" | "disabled"): Promise<void> {
+export async function setGiftCardStatus(id: string, status: "active" | "void"): Promise<void> {
   await getDb().query(
-    "update gift_cards set status=$2, updated_at=now() where id=$1 and status <> 'used'",
+    "update gift_cards set status=$2, updated_at=now() where id=$1 and status <> 'redeemed'",
     [id, status]);
 }

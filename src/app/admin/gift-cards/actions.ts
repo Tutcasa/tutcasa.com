@@ -25,7 +25,7 @@ export async function createGiftCardAction(
   return { ok: true, message: `Card created — the code is ${code} — copy it NOW, it can never be shown again.` };
 }
 
-export async function setGiftCardStatusAction(id: string, status: "active" | "disabled"): Promise<void> {
+export async function setGiftCardStatusAction(id: string, status: "active" | "void"): Promise<void> {
   await requireAdmin();
   const { setGiftCardStatus } = await import("@/modules/giftcards");
   await setGiftCardStatus(id, status);

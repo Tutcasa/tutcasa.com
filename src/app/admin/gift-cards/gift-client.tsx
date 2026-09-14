@@ -56,15 +56,15 @@ export function GiftClient({ cards }: { cards: GiftCardRow[] }) {
                 <td className="p-3">
                   <span className={`rounded-pill px-2.5 py-1 text-xs font-bold ${
                     c.status === "active" ? "bg-cactus/15 text-cactus"
-                    : c.status === "used" ? "bg-cielo/15 text-cielo" : "bg-grey/15 text-grey"}`}>
-                    {c.status}
+                    : c.status === "redeemed" ? "bg-cielo/15 text-cielo" : "bg-grey/15 text-grey"}`}>
+                    {c.status === "redeemed" ? "fully used" : c.status === "void" ? "disabled" : c.status}
                   </span>
                 </td>
                 <td className="p-3 text-xs text-grey">{new Date(c.createdAt).toLocaleDateString()}</td>
                 <td className="p-3">
-                  {c.status !== "used" && (
+                  {c.status !== "redeemed" && (
                     <button disabled={busy}
-                      onClick={() => start(() => setGiftCardStatusAction(c.id, c.status === "active" ? "disabled" : "active"))}
+                      onClick={() => start(() => setGiftCardStatusAction(c.id, c.status === "active" ? "void" : "active"))}
                       className="text-xs font-bold text-grey hover:text-ink disabled:opacity-50">
                       {c.status === "active" ? "Disable" : "Re-enable"}
                     </button>
