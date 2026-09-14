@@ -5,12 +5,14 @@ import { usePathname } from "next/navigation";
 
 const NAV = [
   { href: "/admin", label: "Overview", icon: "\u{1F4CA}" },
+  { href: "/admin/calendar", label: "All-in-one calendar", icon: "\u{1F5D3}\u{FE0F}" },
   { href: "/admin/bookings", label: "Stay bookings", icon: "\u{1F4C5}" },
   { href: "/admin/tour-bookings", label: "Tour bookings", icon: "\u{1F3DD}\u{FE0F}" },
   { href: "/admin/transfers", label: "Airport transfers", icon: "\u{1F690}" },
   { href: "/admin/invoices", label: "Invoices", icon: "\u{1F9FE}" },
   { href: "/admin/orders", label: "Payments & orders", icon: "\u{1F4B3}" },
   { href: "/admin/coupons", label: "Coupons", icon: "\u{1F3F7}\u{FE0F}" },
+  { href: "/admin/gift-cards", label: "Gift cards", icon: "\u{1F381}" },
   { href: "/admin/affiliates", label: "Affiliate links", icon: "\u{1F517}" },
   { href: "/admin/analytics", label: "Analytics", icon: "\u{1F4C8}" },
   { href: "/admin/listings", label: "Stays & homes", icon: "\u{1F3E0}" },

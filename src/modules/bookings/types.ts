@@ -11,6 +11,8 @@ export interface BookingRequest {
   couponCode?: string;
   /** guest-picked extra options — listing_addons ids, re-priced server-side */
   addonIds?: string[];
+  /** gift card code to redeem against the charge (stored value) */
+  giftCardCode?: string;
   /** ?via=CODE tracked-link attribution (server-verified, never trusted raw) */
   marketingRef?: string;
   marketingCommissionPct?: number;
@@ -63,4 +65,4 @@ export type ReserveError =
   | "TOO_MANY_GUESTS"
   | "LISTING_NOT_FOUND"
   | "INVALID_CONTACT"
-  | "COUPON_INVALID";     // coupon no longer valid for this guest/booking
+  | "COUPON_INVALID" | "GIFT_CARD_INVALID";     // coupon no longer valid for this guest/booking

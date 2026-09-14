@@ -22,8 +22,8 @@ const MODE_LABEL: Record<string, string> = {
   per_night: "per night",
   per_guest: "per guest",
   per_guest_night: "per guest / night",
-  for_4: "for fewer than 4 people",
-  over_4: "for 4 people or more",
+  for_4: "up to 4 people",
+  over_4: "more than 4 people",
 };
 
 const MODE_OPTIONS: [string, string][] = [
@@ -31,8 +31,8 @@ const MODE_OPTIONS: [string, string][] = [
   ["per_night", "Per night"],
   ["per_guest", "Per guest"],
   ["per_guest_night", "Per guest / night"],
-  ["for_4", "For fewer than 4 people"],
-  ["over_4", "For 4 people or more"],
+  ["for_4", "Variant: up to 4 people"],
+  ["over_4", "Variant: more than 4 people"],
 ];
 
 const initial: ListingFormState = { ok: true, message: "" };

@@ -48,6 +48,7 @@ const ERRORS: Record<string, string> = {
   LISTING_NOT_FOUND: "This home is no longer available.",
   INVALID_CONTACT: "Please add your name and a valid email.",
   UNAVAILABLE: "Some of those nights are already booked.",
+  GIFT_CARD_INVALID: "That gift card can\u2019t be used \u2014 check the code and balance.",
   COUPON_INVALID: "That coupon can't be used for this booking (it may be tied to another email, home, or already used) — remove it or fix it, then try again.",
   TOUR_NOT_FOUND: "This tour is no longer available.",
   INVALID_DATE: "Please pick a valid tour date.",
@@ -79,6 +80,10 @@ export function CheckoutClient({
   const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [giftInput, setGiftInput] = useState("");
+  const [gift, setGift] = useState<{ code: string; last4: string; balance: number } | null>(null);
+  const [giftErr, setGiftErr] = useState<string | null>(null);
+  const [checkingGift, setCheckingGift] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [paying, setPaying] = useState(false);
   const [paid, setPaid] = useState(false);
@@ -104,7 +109,25 @@ export function CheckoutClient({
   const show = (a: number) => (cur === "MXN" ? fromMXN(a) : fromUSD(a));
   const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
   const discount = Math.min(coupon?.discount ?? 0, totalBefore);
-  const total = totalBefore - discount;
+  // the gift card is stored value: it covers up to the remaining charge,
+  // the rest stays on the card (server re-checks everything)
+  const giftApplied = payload.kind === "stay" ? Math.min(gift?.balance ?? 0, totalBefore - discount) : 0;
+  const total = totalBefore - discount - giftApplied;
+
+  async function applyGiftCard() {
+    setGiftErr(null);
+    if (!giftInput.trim()) return;
+    if (payload.kind !== "stay") { setGiftErr("Gift cards apply to home bookings."); return; }
+    setCheckingGift(true);
+    try {
+      const { validateGiftCardAction } = await import("@/app/stays/[slug]/actions");
+      const res = await validateGiftCardAction(giftInput);
+      if (res.ok) { setGift({ code: giftInput.trim(), last4: res.last4 ?? "", balance: res.balanceUSD ?? 0 }); }
+      else { setGift(null); setGiftErr(res.message ?? "That gift card can’t be used."); }
+    } finally {
+      setCheckingGift(false);
+    }
+  }
 
   async function applyCoupon() {
     setCouponErr(null);
@@ -162,6 +185,7 @@ export function CheckoutClient({
               guests: payload.guests, guestName: name, guestEmail: email.trim(),
               guestPhone: phone.trim() || undefined,
               couponCode: coupon?.code,
+              giftCardCode: gift?.code,
               addonIds: payload.addonIds,
             })
           : await reserveTourAction({
@@ -237,6 +261,22 @@ export function CheckoutClient({
               <input placeholder="Coupon code" value={promo} onChange={(e) => setPromo(e.target.value)} />
               <button onClick={applyCoupon} disabled={checkingCoupon}>{checkingCoupon ? "Checking…" : "Apply"}</button>
             </div>
+            {payload.kind === "stay" && (
+              <>
+                <div className="co-promo">
+                  <input placeholder="Gift card code" value={giftInput} onChange={(e) => setGiftInput(e.target.value)} />
+                  <button onClick={applyGiftCard} disabled={checkingGift}>{checkingGift ? "Checking…" : "Apply"}</button>
+                </div>
+                {gift && (
+                  <div style={{ fontSize: "12.5px", color: "var(--cactus)", marginBottom: 8 }}>
+                    🎁 Gift card ****{gift.last4} — {show(giftApplied)} applied{gift.balance > giftApplied ? `, ${show(gift.balance - giftApplied)} stays on the card` : ""}
+                  </div>
+                )}
+                {giftErr && (
+                  <div style={{ fontSize: "12.5px", color: "var(--rosa-deep, #B3123F)", marginBottom: 8 }}>{giftErr}</div>
+                )}
+              </>
+            )}
             <div style={{ fontSize: "12.5px", color: "var(--cactus)", display: promoMsg ? "block" : "none", marginBottom: 8 }}>
               Coupon saved &mdash; we&rsquo;ll validate it before charging.
             </div>

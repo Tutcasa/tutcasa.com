@@ -14,6 +14,7 @@ interface TourRow {
   source: string | null;
   stops: { time: string; place: string; desc: string }[] | null;
   category: "tour" | "park"; status: Tour["status"];
+  instant_book: boolean | null;
 }
 
 function toTour(r: TourRow): Tour {
@@ -26,12 +27,13 @@ function toTour(r: TourRow): Tour {
     stops: r.stops ?? [],
     minGroup: r.min_group, maxGroup: r.max_group,
     category: r.category, status: r.status,
+    instantBook: !!r.instant_book,
   };
 }
 
 const SELECT = `id, slug, title, subtitle, partner, city, duration_label,
   description, highlights, price_cents, currency, min_group, max_group,
-  group_prices, photo_url, source, stops, category, status`;
+  group_prices, photo_url, source, stops, category, status, instant_book`;
 
 export async function listTours(opts?: { category?: "tour" | "park"; includeUnpublished?: boolean }): Promise<Tour[]> {
   const wh: string[] = [];
@@ -155,10 +157,12 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     notes: req.notes,
     ref: id.slice(0, 8).toUpperCase(),
     partnerTour: tour.source === "amanah",
+    instantPay: tour.source === "amanah" || tour.instantBook,
   });
 
-  // Amanah tours are instant-pay; our own tours are request-first
-  return { ok: true, bookingId: id, instant: tour.source === "amanah" };
+  // Amanah tours are always instant-pay; our own tours choose per tour
+  // (Instant booking toggle) and default to request-first
+  return { ok: true, bookingId: id, instant: tour.source === "amanah" || tour.instantBook };
 }
 
 interface TourBookingRow {
@@ -212,6 +216,7 @@ export async function upsertTour(input: {
   currency?: "MXN" | "USD";
   minGroup: number; maxGroup: number; category: "tour" | "park";
   status: "draft" | "published" | "archived";
+  instantBook?: boolean;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const currency = input.currency === "USD" ? "USD" : "MXN";
   const slugBase = input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -221,26 +226,26 @@ export async function upsertTour(input: {
     await db.query(
       `update tours set title=$2, subtitle=$3, city=$4, duration_label=$5,
          description=$6, price_cents=$7, min_group=$8, max_group=$9,
-         category=$10, status=$11,
+         category=$10, status=$11, instant_book=$13,
          currency = case when source='amanah' then currency else $12 end
        where id=$1`,
       [input.id, input.title, input.subtitle ?? null, input.city ?? null,
        input.durationLabel ?? null, input.description ?? null,
        Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
-       input.category, input.status, currency],
+       input.category, input.status, currency, !!input.instantBook],
     );
     return { ok: true, id: input.id };
   }
   const ins = await db.query<{ id: string }>(
     `insert into tours (slug, title, subtitle, city, duration_label,
-       description, price_cents, currency, min_group, max_group, category, status)
-     values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11)
+       description, price_cents, currency, min_group, max_group, category, status, instant_book)
+     values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11,$13)
      on conflict (slug) do nothing
      returning id`,
     [slugBase, input.title, input.subtitle ?? null, input.city ?? null,
      input.durationLabel ?? null, input.description ?? null,
      Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
-     input.category, input.status, currency],
+     input.category, input.status, currency, !!input.instantBook],
   );
   // slug already taken → insert skipped; report the existing row instead
   const id = ins.rows[0]?.id

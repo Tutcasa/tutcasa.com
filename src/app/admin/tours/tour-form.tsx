@@ -90,6 +90,13 @@ export function TourForm({ tour }: { tour?: Tour }) {
             <option value="archived">Archived</option>
           </select>
         </label>
+        <label className="text-xs font-bold">BOOKING
+          <select name="instantBook" defaultValue={tour?.instantBook ? "1" : ""} className={inputCls}
+            title="Instant: the guest pays at checkout. Request first: no payment until you accept and send the payment link. Amanah tours are always instant.">
+            <option value="">Request first (you accept, then send payment link)</option>
+            <option value="1">Instant booking (guest pays at checkout)</option>
+          </select>
+        </label>
       </div>
       {state.message && (
         <p className={`text-sm font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</p>

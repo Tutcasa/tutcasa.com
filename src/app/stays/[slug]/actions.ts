@@ -38,6 +38,7 @@ export async function reserveAction(input: {
   guestEmail: string;
   guestPhone?: string;
   couponCode?: string;
+  giftCardCode?: string;
   addonIds?: string[];
 }): Promise<ReserveResult> {
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -91,4 +92,21 @@ export async function validateCouponAction(
     return { ok: false, message: msg };
   }
   return { ok: true, code: cp.code, discount: Math.round(cp.discountCents / 100) };
+}
+
+/** Checkout: validate a gift card code and report its balance. */
+export async function validateGiftCardAction(code: string): Promise<{
+  ok: boolean; last4?: string; balanceUSD?: number; message?: string;
+}> {
+  const { checkGiftCard } = await import("@/modules/giftcards");
+  const res = await checkGiftCard(String(code ?? ""));
+  if (!res.ok) {
+    return {
+      ok: false,
+      message: res.reason === "EMPTY" ? "That gift card has no balance left."
+        : res.reason === "EXPIRED" ? "That gift card has expired."
+        : "We couldn\u2019t find that gift card \u2014 check the code.",
+    };
+  }
+  return { ok: true, last4: res.last4, balanceUSD: Math.round((res.balanceCents ?? 0) / 100) };
 }

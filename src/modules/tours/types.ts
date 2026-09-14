@@ -21,6 +21,8 @@ export interface Tour {
   maxGroup: number;
   category: "tour" | "park";
   status: "draft" | "published" | "archived";
+  /** local tours only: guest pays at checkout (Amanah tours always do) */
+  instantBook: boolean;
 }
 
 /** Total group price in MXN for `pax` people from the tier map, clamping to

@@ -87,7 +87,26 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     : 0;
   // the security deposit is COLLECTED WITH THE BOOKING (returned after
   // checkout per policy) — it joins the charge, untaxed and un-couponed
-  const chargeCents = q.totalCents - couponDiscountCents + q.securityDepositCents;
+  let chargeCents = q.totalCents - couponDiscountCents + q.securityDepositCents;
+
+  // gift card (stored value, combinable with a coupon): claim its value
+  // BEFORE the insert, mirroring the coupon; refunded if the insert fails.
+  // It covers up to the whole charge; anything left stays on the card.
+  let giftCardId: string | null = null;
+  let giftCardCents = 0;
+  if (req.giftCardCode?.trim()) {
+    const { checkGiftCard, redeemGiftCard } = await import("@/modules/giftcards");
+    const gc = await checkGiftCard(req.giftCardCode);
+    if (!gc.ok || !gc.id) return { ok: false, error: "GIFT_CARD_INVALID" };
+    giftCardCents = Math.min(gc.balanceCents ?? 0, chargeCents);
+    if (giftCardCents > 0) {
+      if (!(await redeemGiftCard(gc.id, giftCardCents, "redeemed on booking"))) {
+        return { ok: false, error: "GIFT_CARD_INVALID" };
+      }
+      giftCardId = gc.id;
+      chargeCents -= giftCardCents;
+    }
+  }
 
   const db = getDb();
   await db.query("select release_expired_holds()"); // lazy expiry
@@ -114,11 +133,12 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
       `insert into bookings
          (listing_id, guest_name, guest_email, guest_phone, stay, guests,
           status, hold_expires_at, total_cents, currency, price_breakdown, source,
-          coupon_code, coupon_discount_cents, no_block, marketing_ref)
+          coupon_code, coupon_discount_cents, no_block, marketing_ref,
+          gift_card_id, gift_card_cents)
        values ($1, $2, $3, $4, daterange($5::date, $6::date), $7,
                'pending', case when $8::text is null then null
                                else now() + ($8 || ' minutes')::interval end,
-               $9, $10, $11, 'direct', $12, $13, $14, $15)
+               $9, $10, $11, 'direct', $12, $13, $14, $15, $16, $17)
        returning id`,
       [
         listing.id, name, email, req.guestPhone?.trim() || null,
@@ -143,6 +163,7 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           ...(couponCommissionCents > 0 ? { thirdPartyCommissionPct: couponCommissionPct } : {}),
           couponCode,
           couponDiscountCents,
+          giftCardCents,
           requestToBook: isRequest,
           depositInTotal: q.securityDepositCents > 0,
           // the coupon eats the LATER balance first — whatever remains of
@@ -150,14 +171,14 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
           // deposit splits like the stay: half now, half with the balance
           // (all now when the booking is pay-in-full).
           dueNowCents: chargeCents
-            - Math.max(0, q.schedule.balanceCents - couponDiscountCents)
+            - Math.max(0, q.schedule.balanceCents - couponDiscountCents - giftCardCents)
             - (q.schedule.balanceCents > 0 ? Math.round(q.securityDepositCents / 2) : 0),
-          balanceCents: Math.max(0, q.schedule.balanceCents - couponDiscountCents)
+          balanceCents: Math.max(0, q.schedule.balanceCents - couponDiscountCents - giftCardCents)
             + (q.schedule.balanceCents > 0 ? Math.round(q.securityDepositCents / 2) : 0),
           balanceDueDate: q.schedule.balanceDueDate?.toISOString() ?? null,
         }),
         couponCode, couponDiscountCents, listing.keepCalendarClean,
-        req.marketingRef ?? null,
+        req.marketingRef ?? null, giftCardId, giftCardCents,
       ],
     );
     // M3: new-booking emails (never block the booking). Only request-to-book
@@ -175,6 +196,10 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     return { ok: true, bookingId: res.rows[0].id };
   } catch (e) {
     if (couponCode) await unredeemCoupon(couponCode).catch(() => {});
+    if (giftCardId && giftCardCents > 0) {
+      const { refundGiftCard } = await import("@/modules/giftcards");
+      await refundGiftCard(giftCardId, giftCardCents, "booking insert failed").catch(() => {});
+    }
     const err = e as { code?: string; constraint?: string };
     if (err.code === "23P01" && err.constraint === "no_double_booking") {
       return { ok: false, error: "DATES_TAKEN" };

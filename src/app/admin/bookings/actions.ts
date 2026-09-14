@@ -26,8 +26,9 @@ export async function setBookingStatusAction(
 ): Promise<void> {
   await requireAdmin();
   const db = getDb();
-  const cur = await db.query<{ status: BookingStatus; future: boolean; coupon_code: string | null }>(
-    `select status, upper(stay) > current_date as future, coupon_code
+  const cur = await db.query<{ status: BookingStatus; future: boolean; coupon_code: string | null; gift_card_id: string | null; gift_card_cents: number }>(
+    `select status, upper(stay) > current_date as future, coupon_code,
+            gift_card_id, coalesce(gift_card_cents,0) as gift_card_cents
        from bookings where id=$1`, [id]);
   const row = cur.rows[0];
   const from = row?.status;
@@ -46,6 +47,10 @@ export async function setBookingStatusAction(
     // give the coupon use back — the discount was never actually spent
     const { unredeemCoupon } = await import("@/modules/coupons");
     await unredeemCoupon(row.coupon_code).catch(() => {});
+  }
+  if (to === "cancelled" && row.gift_card_id && row.gift_card_cents > 0) {
+    const { refundGiftCard } = await import("@/modules/giftcards");
+    await refundGiftCard(row.gift_card_id, row.gift_card_cents, "booking cancelled").catch(() => {});
   }
   if (to === "confirmed") {
     // M3: acceptance email with the invoice link (guest + team copy)
@@ -67,18 +72,22 @@ export async function setBookingStatusAction(
 export async function deleteBookingAction(id: string): Promise<void> {
   await requireAdmin();
   const db = getDb();
-  const res = await db.query<{ coupon_code: string | null; status: string }>(
+  const res = await db.query<{ coupon_code: string | null; status: string; gift_card_id: string | null; gift_card_cents: number }>(
     `with n as (delete from notifications_log where booking_id = $1),
           g as (update gift_card_ledger set booking_id = null where booking_id = $1),
           r as (delete from reviews where booking_id = $1)
      delete from bookings where id = $1
-     returning coupon_code, status`,
+     returning coupon_code, status, gift_card_id, coalesce(gift_card_cents,0) as gift_card_cents`,
     [id],
   );
   const row = res.rows[0];
   if (row?.coupon_code && row.status !== "cancelled") {
     const { unredeemCoupon } = await import("@/modules/coupons");
     await unredeemCoupon(row.coupon_code).catch(() => {});
+  }
+  if (row?.gift_card_id && row.gift_card_cents > 0 && row.status !== "cancelled") {
+    const { refundGiftCard } = await import("@/modules/giftcards");
+    await refundGiftCard(row.gift_card_id, row.gift_card_cents, "booking deleted").catch(() => {});
   }
   revalidate();
   revalidatePath("/admin/invoices");

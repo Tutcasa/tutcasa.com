@@ -169,13 +169,12 @@ function addonTotal(a: AddonSelection, nights: number, guests: number): number {
       return a.priceCents * guests;
     case "per_guest_night":
       return a.priceCents * guests * nights;
-    // group-size-conditional options (charged once per stay) — the system
-    // knows the party size from the booking, so a mismatched pick costs 0.
-    // Owner's transfer rule: "under 4 people" vs "4 people or more".
+    // group-size VARIANTS (e.g. "Airport pickup up to 4 / more than 4"):
+    // both are shown and the guest picks one — the picked one is charged
+    // once per stay, whatever the group size. The labels guide the guest.
     case "for_4":
-      return guests < 4 ? a.priceCents : 0;
     case "over_4":
-      return guests >= 4 ? a.priceCents : 0;
+      return a.priceCents;
   }
 }
 

@@ -22,6 +22,7 @@ interface OrderRow {
   marketingRef: string | null;
   amountPaidCents: number;
   stripeFeeCents: number; // exact, recorded by the webhook; 0 = estimate
+  giftCardCents: number;
 }
 
 async function allOrders(): Promise<OrderRow[]> {
@@ -31,6 +32,7 @@ async function allOrders(): Promise<OrderRow[]> {
             b.payment_provider, b.created_at, b.guest_name, b.guests,
             coalesce(b.amount_paid_cents, 0) as amount_paid_cents,
             coalesce(b.stripe_fee_cents, 0) as stripe_fee_cents,
+            coalesce(b.gift_card_cents, 0) as gift_card_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') || ' → ' || to_char(upper(b.stay),'YYYY-MM-DD') as dates,
             l.title, l.city
        from bookings b join listings l on l.id = b.listing_id
@@ -48,6 +50,7 @@ async function allOrders(): Promise<OrderRow[]> {
     marketingRef: r.marketing_ref,
     amountPaidCents: Number(r.amount_paid_cents),
     stripeFeeCents: Number(r.stripe_fee_cents),
+    giftCardCents: Number(r.gift_card_cents),
   }));
 }
 
@@ -125,6 +128,11 @@ export default async function AdminOrders({
                 {o.couponCode && (
                   <div className="flex justify-between font-semibold text-cactus">
                     <span>Coupon {o.couponCode}</span><span>−{fmtMoney(o.couponDiscountCents)}</span>
+                  </div>
+                )}
+                {o.giftCardCents > 0 && (
+                  <div className="flex justify-between font-semibold text-cactus">
+                    <span>🎁 Gift card</span><span>−{fmtMoney(o.giftCardCents)}</span>
                   </div>
                 )}
                 <div className="flex justify-between border-t border-line pt-1 font-extrabold">

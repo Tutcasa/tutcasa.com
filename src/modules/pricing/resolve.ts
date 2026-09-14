@@ -86,11 +86,12 @@ export async function resolveStayQuote(
   const seasons = ratesRes.rows.filter((r) => !r.is_base);
   const byDay = new Map(daysRes.rows.map((d) => [d.day, d]));
 
-  // third-party marketing commission: ONLY for bookings that come through
-  // a third party (Amanah partner API, or applied by hand on a booking) —
-  // direct guests never pay it. The partner paths opt in explicitly.
-  // partner-API bookings use the LISTING's pct; visitor-attributed
-  // bookings (?via=CODE tracked links) pass the PARTNER's pct explicitly
+  // third-party marketing commission. Partner-API bookings (applyCommission)
+  // use the LISTING's pct as a price MARK-UP; visitor-attributed bookings
+  // (?via=CODE links) pass the PARTNER's pct explicitly. Additionally, when
+  // the listing's pricing has a commission % set, EVERY other booking
+  // RECORDS that % (admin-side bookkeeping — the guest price is untouched);
+  // see the fallback after the quote below.
   const commissionPct = opts?.applyCommission
     ? Number(L.third_party_commission_pct ?? 0)
     : Number(opts?.commissionPct ?? 0);
@@ -174,6 +175,18 @@ export async function resolveStayQuote(
   });
 
   quote.thirdPartyCommissionCents = commissionCents;
+
+  // listing-level commission % applies to EVERY booking automatically:
+  // when no partner/affiliate commission was marked up above, RECORD the
+  // listing's pct (of the pre-tax total) for the admin books — the guest
+  // price is untouched
+  if (!commissionCents) {
+    const autoPct = Number(L.third_party_commission_pct ?? 0);
+    if (autoPct > 0) {
+      quote.thirdPartyCommissionCents = Math.max(
+        0, Math.round((quote.totalCents - quote.taxCents) * (autoPct / 100)));
+    }
+  }
 
   return {
     ok: true,

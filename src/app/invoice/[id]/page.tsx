@@ -26,6 +26,8 @@ interface InvoiceData {
   lines: { label: string; cents: number }[];
   couponCode: string | null;
   couponDiscountCents: number;
+  giftCardCents: number;
+  giftCardLast4: string | null;
   totalCents: number;
   currency: string;
   dueNowCents: number | null;
@@ -47,11 +49,13 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
   const stay = await db.query(
     `select b.invoice_no, b.created_at, b.status, b.guest_name, b.guest_email,
             b.guests, b.total_cents, b.currency, b.price_breakdown, b.payment_provider, b.stripe_fee_cents,
+            coalesce(b.gift_card_cents,0) as gift_card_cents, gc.code_last4 as gift_last4,
             b.coupon_code, b.coupon_discount_cents, b.amount_paid_cents,
             to_char(lower(b.stay),'YYYY-MM-DD') as check_in,
             to_char(upper(b.stay),'YYYY-MM-DD') as check_out,
             l.title, l.city
        from bookings b join listings l on l.id = b.listing_id
+       left join gift_cards gc on gc.id = b.gift_card_id
       where b.id = $1`,
     [id],
   );
@@ -79,6 +83,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       meta: `${b.check_in} → ${b.check_out} · ${b.guests} guests`,
       lines,
       couponCode: b.coupon_code, couponDiscountCents: b.coupon_discount_cents ?? 0,
+      giftCardCents: Number(b.gift_card_cents ?? 0), giftCardLast4: b.gift_last4,
       totalCents: b.total_cents, currency: b.currency,
       // derive the balance from the REAL total so old bookings whose stored
       // schedule predates the coupon fix still show correct numbers
@@ -113,6 +118,7 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       title: b.title, meta: `${b.tour_date} · ${b.group_size} people`,
       lines: [{ label: "Tour booking", cents: b.total_cents + (b.coupon_discount_cents ?? 0) }],
       couponCode: b.coupon_code, couponDiscountCents: b.coupon_discount_cents ?? 0,
+      giftCardCents: 0, giftCardLast4: null,
       totalCents: b.total_cents, currency: b.currency,
       dueNowCents: null, balanceCents: null, balanceDueDate: null,
       securityDepositCents: 0,
@@ -186,6 +192,12 @@ export default async function InvoicePage({
             <div className="flex justify-between border-b border-line/60 py-2 text-sm font-semibold text-cactus">
               <span>Coupon {inv.couponCode}</span>
               <span>−{money(inv.couponDiscountCents)}</span>
+            </div>
+          )}
+          {inv.giftCardCents > 0 && (
+            <div className="flex justify-between border-b border-line/60 py-2 text-sm font-semibold text-cactus">
+              <span>🎁 Gift card ****{inv.giftCardLast4 ?? ""}</span>
+              <span>−{money(inv.giftCardCents)}</span>
             </div>
           )}
           <div className="flex justify-between py-3 text-lg font-extrabold">

@@ -150,21 +150,30 @@ export function PdGrid({ p }: { p: PdData }) {
     });
   }, [ci, co, nights, p.minStay, p.slug, guests, addonsKey]);
 
-  /* group-size-conditional options only show when they apply — the
-     booking's own guest count decides */
-  const addonApplies = (mode: string, g: number) =>
-    mode === "for_4" ? g < 4 : mode === "over_4" ? g >= 4 : true;
-  const visibleAddons = p.addons.filter((a) => addonApplies(a.mode, guests));
+  /* every option is shown with its own label & price — the guest picks.
+     The two group-size variants (up to 4 / more than 4) are exclusive:
+     ticking one unticks the other */
+  const visibleAddons = p.addons;
+  const GROUP_MODES = ["for_4", "over_4"];
+  function toggleAddon(id: string, on: boolean) {
+    const mode = p.addons.find((a) => a.id === id)?.mode ?? "";
+    setSelAddons((s) => {
+      let next = s.filter((v) => v !== id);
+      if (on) {
+        if (GROUP_MODES.includes(mode)) {
+          const groupIds = p.addons.filter((a) => GROUP_MODES.includes(a.mode)).map((a) => a.id);
+          next = next.filter((v) => !groupIds.includes(v));
+        }
+        next = [...next, id];
+      }
+      return next;
+    });
+  }
 
   function pdG(d: number) {
     const next = Math.max(1, Math.min(p.guests, guests + d));
     setGuests(next);
     setGMinDisabled(next <= 1);
-    // drop selected options that no longer apply to the new group size
-    setSelAddons((s) => s.filter((id) => {
-      const a = p.addons.find((x) => x.id === id);
-      return a ? addonApplies(a.mode, next) : false;
-    }));
   }
 
   function setDates(nci: string | null, nco: string | null) {
@@ -581,7 +590,7 @@ export function PdGrid({ p }: { p: PdData }) {
                 <input
                   type="checkbox"
                   checked={selAddons.includes(a.id)}
-                  onChange={() => setSelAddons((s) => s.includes(a.id) ? s.filter((x) => x !== a.id) : [...s, a.id])}
+                  onChange={(e) => toggleAddon(a.id, e.target.checked)}
                   style={{ width: 16, height: 16, accentColor: "var(--rosa, #E4326B)" }}
                 />
                 <span style={{ flex: 1 }}>{a.name}</span>

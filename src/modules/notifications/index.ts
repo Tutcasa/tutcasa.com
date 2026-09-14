@@ -74,6 +74,8 @@ export interface TourBookingNotification {
   ref: string;
   /** true only for tours synced from Amanah — local tours never ping them */
   partnerTour: boolean;
+  /** guest pays on the checkout page right now — skip the request email */
+  instantPay?: boolean;
 }
 
 /** wa.me deep link with the partner operation message prefilled. */
@@ -159,7 +161,7 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
     //      received, you're booked" one fires from the Stripe webhook
     //    • our own tours are REQUEST-FIRST: nothing is charged; the guest
     //      learns the payment link comes once the tour is accepted
-    if (!n.partnerTour) {
+    if (!(n.instantPay ?? n.partnerTour)) {
       await sendEmail({
         kind: "tour_booking_guest_email",
         to: n.guestEmail,
