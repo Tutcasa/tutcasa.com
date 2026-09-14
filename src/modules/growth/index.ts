@@ -74,6 +74,17 @@ export async function subscribeNewsletter(
   );
   let code = prior.rows[0]?.coupon as string | undefined;
 
+  // self-heal: the lead may hold a code whose coupon row was deleted in
+  // admin — recreate it so the guest's code always works
+  if (code) {
+    await db.query(
+      `insert into coupons (code, kind, percent_off, max_uses, per_user_limit, note)
+       values ($1,'percent',10,1,1,'Newsletter signup coupon (restored)')
+       on conflict (code) do nothing`,
+      [code],
+    );
+  }
+
   if (!code) {
     // coupon + lead land together or not at all — a half-committed pair
     // used to mint an orphan coupon on every retry
@@ -182,7 +193,19 @@ export async function createReferral(
 export async function getReferralByCode(code: string) {
   const res = await getDb().query(
     "select code, referrer_name from referrals where code=$1", [code.toUpperCase()]);
-  return res.rows[0] ?? null;
+  const r = res.rows[0] ?? null;
+  // self-heal: referral rows from before the coupon-doubling change (or
+  // whose coupon was deleted) get their $100 friend coupon recreated on
+  // the spot, so every shared invite link always works
+  if (r) {
+    await getDb().query(
+      `insert into coupons (code, kind, amount_cents, per_user_limit, note)
+       values ($1,'fixed',10000,1,'Referral friend coupon (restored)')
+       on conflict (code) do nothing`,
+      [r.code],
+    ).catch(() => {});
+  }
+  return r;
 }
 
 /** Called when a booking is CONFIRMED — if it used a referral coupon,

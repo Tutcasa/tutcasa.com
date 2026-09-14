@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import {
   savePricingAction,
+  syncPriceLabsNowAction,
   addSeasonAction,
   updateSeasonAction,
   deleteSeasonAction,
@@ -31,7 +32,11 @@ export interface AdminPricing {
   secondPaymentDays: number;
   dynamicPricing: boolean;
   thirdPartyCommissionPct: number;
+  /** "plListingId|pms" when mapped to PriceLabs, "" = manual pricing */
+  pricelabsKey: string;
 }
+
+export interface PlOption { id: string; pms: string; name: string; base: number | null }
 
 export interface AdminSeason {
   id: string;
@@ -129,9 +134,10 @@ function SeasonRow({
 }
 
 export function PricingForm({
-  listingId, pricing, seasons,
-}: { listingId: string; pricing: AdminPricing; seasons: AdminSeason[] }) {
+  listingId, pricing, seasons, plListings = [],
+}: { listingId: string; pricing: AdminPricing; seasons: AdminSeason[]; plListings?: PlOption[] }) {
   const [state, action, pending] = useActionState(savePricingAction, initial);
+  const [plState, plAction, plPending] = useActionState(syncPriceLabsNowAction, initial);
   const [seasonState, seasonAction, seasonPending] = useActionState(addSeasonAction, initial);
   const [deleting, startDelete] = useTransition();
 
@@ -240,11 +246,35 @@ export function PricingForm({
                      defaultValue={pricing.secondPaymentDays} className={inputCls} />
             </label>
           </div>
-          <label className="mt-3 flex items-center gap-2 text-sm font-semibold">
-            <input type="checkbox" name="dynamicPricing" defaultChecked={pricing.dynamicPricing}
-                   className="h-4 w-4 accent-rosa" />
-            Dynamic pricing (PriceLabs — connects at a later phase)
-          </label>
+          <div className="mt-3 grid gap-1">
+            <label className="text-xs font-bold">DYNAMIC PRICING (PriceLabs)
+              <select name="pricelabs" defaultValue={pricing.pricelabsKey} className={inputCls}>
+                <option value="">Off — I set prices manually</option>
+                {plListings.map((l) => (
+                  <option key={l.id} value={`${l.id}|${l.pms}`}>
+                    {l.name.slice(0, 60)}{l.base != null ? ` (base $${l.base})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-[11px] leading-4 text-grey">
+              Pick which PriceLabs listing feeds this home. Its nightly prices
+              and min-stays sync automatically every morning (and via the
+              button below) — PriceLabs then owns the per-date prices, so
+              manual per-day price edits get overwritten on the next sync.
+              Seasonal rates and blocked dates are untouched.
+            </p>
+            <div className="flex items-center gap-3">
+              <button formAction={plAction} disabled={plPending}
+                className="rounded-pill border-[1.5px] border-cielo px-4 py-1.5 text-xs font-bold text-cielo hover:bg-cielo hover:text-white disabled:opacity-50">
+                {plPending ? "Syncing…" : "⟳ Sync PriceLabs prices now"}
+              </button>
+              {plState.message && (
+                <span className={`text-xs font-semibold ${plState.ok ? "text-cactus" : "text-rosa-deep"}`}>{plState.message}</span>
+              )}
+            </div>
+            <input type="hidden" name="dynamicPricing" value={pricing.pricelabsKey ? "on" : ""} />
+          </div>
         </div>
 
         {state.message && (

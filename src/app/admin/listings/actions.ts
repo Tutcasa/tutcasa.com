@@ -414,8 +414,8 @@ export async function savePricingAction(
        city_fee_mode, security_deposit_cents, weekly_discount_pct,
        weekly_nightly_cents, monthly_discount_pct, monthly_nightly_cents,
        early_bird_pct, early_bird_min_days, deposit_pct, second_payment_days,
-       dynamic_pricing, third_party_commission_pct)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+       dynamic_pricing, third_party_commission_pct, pricelabs_id, pricelabs_pms)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
      on conflict (listing_id) do update set
        weekend_pct=$2, weekend_cents=$3, extra_guest_cents=$4,
        extra_guest_after=$5, cleaning_fee_mode=$6, city_fee_cents=$7,
@@ -423,7 +423,7 @@ export async function savePricingAction(
        weekly_nightly_cents=$11, monthly_discount_pct=$12,
        monthly_nightly_cents=$13, early_bird_pct=$14, early_bird_min_days=$15,
        deposit_pct=$16, second_payment_days=$17, dynamic_pricing=$18,
-       third_party_commission_pct=$19`,
+       third_party_commission_pct=$19, pricelabs_id=$20, pricelabs_pms=$21`,
     [
       id,
       weekend.pct, weekend.cents,
@@ -441,6 +441,9 @@ export async function savePricingAction(
       num(formData.get("secondPaymentDays")),
       on(formData.get("dynamicPricing")),
       num(formData.get("thirdPartyCommissionPct")),
+      // "plId|pms" from the PriceLabs select; empty = manual pricing
+      String(formData.get("pricelabs") ?? "").split("|")[0] || null,
+      String(formData.get("pricelabs") ?? "").split("|")[1] || null,
     ],
   );
 
@@ -814,4 +817,20 @@ export async function uploadTourPhotoAction(formData: FormData): Promise<Listing
   revalidatePath("/tours");
   revalidatePath("/");
   return { ok: true, message: "Photo set as the excursion's cover." };
+}
+
+/** Pull PriceLabs prices for every mapped home right now. */
+export async function syncPriceLabsNowAction(
+  _prev: ListingFormState,
+  _formData: FormData,
+): Promise<ListingFormState> {
+  await requireAdmin();
+  const { syncPriceLabs } = await import("@/modules/pricelabs");
+  const res = await syncPriceLabs();
+  revalidatePublic();
+  return {
+    ok: res.errors.length === 0,
+    message: `PriceLabs sync: ${res.synced} home${res.synced === 1 ? "" : "s"}, ${res.days} nightly prices updated.` +
+      (res.errors.length ? ` Issues: ${res.errors.join("; ")}` : ""),
+  };
 }

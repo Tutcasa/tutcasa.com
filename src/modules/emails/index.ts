@@ -94,9 +94,14 @@ export function fillVars(text: string, vars: Record<string, string> = {}): strin
   // string quoting), so normalise those to real newlines before anything
   // splits on them — otherwise guests see "\n" as visible characters and the
   // paragraph/bullet formatting never triggers.
-  return text
-    .replace(/\\r\\n|\\n/g, "\n")
-    .replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_, k) => vars[k] ?? SAMPLE[k] ?? `{{${k}}}`);
+  let out = text.replace(/\\r\\n|\\n/g, "\n");
+  // two passes: values inserted for a variable may THEMSELVES contain
+  // variables (the per-listing {{checkin_message}} is written by the admin
+  // with {{guest_name}}, {{listing}}, … inside) — the second pass fills those
+  for (let i = 0; i < 2 && /\{\{/.test(out); i++) {
+    out = out.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_, k) => vars[k] ?? SAMPLE[k] ?? `{{${k}}}`);
+  }
+  return out;
 }
 
 const esc = (s: string) =>

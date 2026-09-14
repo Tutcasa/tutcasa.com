@@ -108,6 +108,7 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
       secondPaymentDays: c.second_payment_days ?? 0,
       dynamicPricing: c.dynamic_pricing ?? false,
       thirdPartyCommissionPct: Number(c.third_party_commission_pct ?? 0),
+      pricelabsKey: c.pricelabs_id ? `${c.pricelabs_id}|${c.pricelabs_pms ?? "hostaway"}` : "",
     },
     seasons: seasonRes.rows.map((s) => ({
       id: s.id, label: s.label, nightlyCents: s.nightly_cents,
@@ -346,7 +347,14 @@ export default async function AdminListings({
               {tab === "details" && <ListingForm key={editing.id} listing={editing} />}
               {tab === "pricing" && pricingData && (
                 <PricingForm key={editing.id} listingId={editing.id}
-                  pricing={pricingData.pricing} seasons={pricingData.seasons} />
+                  pricing={pricingData.pricing} seasons={pricingData.seasons}
+                  plListings={await (async () => {
+                    // PriceLabs listings for the mapping select — best-effort
+                    try {
+                      const { pricelabsConfigured, listPlListings } = await import("@/modules/pricelabs");
+                      return pricelabsConfigured() ? await listPlListings() : [];
+                    } catch { return []; }
+                  })()} />
               )}
               {tab === "calendar" && calendarData && (
                 <CalendarEditor key={editing.id} listingId={editing.id}
