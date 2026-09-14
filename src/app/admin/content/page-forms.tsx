@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import type {
   FaqContent,
+  GiftCardsContent,
   InvestorsContent,
   ConciergeContent,
   LoyaltyContent,
@@ -10,6 +11,7 @@ import type {
   WhyBookContent,
 } from "@/modules/settings";
 import {
+  saveGiftCardsAction,
   saveInvestorsAction,
   savePoliciesAction,
   saveWhyAction,
@@ -173,6 +175,38 @@ export function FaqForm({ content }: { content: FaqContent }) {
       <label className="text-xs font-bold">QUESTIONS <span className="font-normal text-grey">(one per line: Question? :: Answer)</span>
         <textarea name="items" rows={12} className={inputCls}
           defaultValue={content.items.map((f) => `${f.q} :: ${f.a}`).join("\n")} />
+      </label>
+      <SaveRow state={state} pending={pending} />
+    </form>
+  );
+}
+
+export function GiftCardsForm({ content }: { content: GiftCardsContent }) {
+  const [state, action, pending] = useActionState(saveGiftCardsAction, initial);
+  return (
+    <form action={action} className="grid gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">EYEBROW (small line above the title)
+          <input name="eyebrow" defaultValue={content.eyebrow} className={inputCls} />
+        </label>
+        <label className="text-xs font-bold">TITLE
+          <input name="title" defaultValue={content.title} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">INTRO PARAGRAPH
+        <textarea name="intro" rows={3} defaultValue={content.intro} className={inputCls} />
+      </label>
+      <label className="text-xs font-bold">HOW-IT-WORKS STEPS <span className="font-normal text-grey">(one per line: icon | title | text)</span>
+        <textarea name="steps" rows={4} className={inputCls}
+          defaultValue={content.steps.map((x) => `${x.icon} | ${x.title} | ${x.text}`).join("\n")} />
+      </label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-xs font-bold">AFTER-PAYMENT TITLE
+          <input name="paidTitle" defaultValue={content.paidTitle} className={inputCls} />
+        </label>
+      </div>
+      <label className="text-xs font-bold">AFTER-PAYMENT TEXT
+        <textarea name="paidText" rows={3} defaultValue={content.paidText} className={inputCls} />
       </label>
       <SaveRow state={state} pending={pending} />
     </form>

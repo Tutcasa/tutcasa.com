@@ -126,6 +126,7 @@ export function PdGrid({ p }: { p: PdData }) {
   /* booking-box datepicker popover (shows blocked dates, unlike native
      inputs) + selected extra options */
   const [calOpen, setCalOpen] = useState<"" | "ci" | "co">("");
+  const [addonsOpen, setAddonsOpen] = useState(false);
   const [popOffset, setPopOffset] = useState(0);
   const [selAddons, setSelAddons] = useState<string[]>([]);
 
@@ -584,8 +585,14 @@ export function PdGrid({ p }: { p: PdData }) {
         </div>
         {visibleAddons.length > 0 && (
           <div style={{ margin: "10px 0 4px" }}>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--grey)", marginBottom: 4 }}>Extra options</div>
-            {visibleAddons.map((a) => (
+            {/* collapsed by default so the booking box stays short — the
+                button shows how many extras exist and how many are picked */}
+            <button type="button" onClick={() => setAddonsOpen((v) => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "1.5px solid var(--line)", borderRadius: 12, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--grey)" }}>
+              <span>Extra options ({visibleAddons.length}){selAddons.length > 0 ? ` · ${selAddons.length} selected` : ""}</span>
+              <span style={{ fontSize: 14, transform: addonsOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▾</span>
+            </button>
+            {addonsOpen && visibleAddons.map((a) => (
               <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, padding: "4px 0", cursor: "pointer" }}>
                 <input
                   type="checkbox"

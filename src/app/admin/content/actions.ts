@@ -370,3 +370,22 @@ export async function signFamilyUploadAction(
   const { data: pub } = sb.storage.from("listing-photos").getPublicUrl(path);
   return { ok: true, path, token: data.token, publicUrl: pub.publicUrl };
 }
+
+export async function saveGiftCardsAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  await requireAdmin();
+  const s = (k: string) => String(formData.get(k) ?? "").trim();
+  await setSetting("page_giftcards", {
+    eyebrow: s("eyebrow"),
+    title: s("title"),
+    intro: s("intro"),
+    steps: iconRows(formData.get("steps")),
+    paidTitle: s("paidTitle"),
+    paidText: s("paidText"),
+  });
+  revalidatePath("/gift-cards");
+  revalidatePath("/admin/content");
+  return { ok: true, message: "Gift cards page saved." };
+}

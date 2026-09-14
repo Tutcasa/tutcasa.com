@@ -1,11 +1,11 @@
 import { getSetting } from "@/modules/settings";
 import { ContactForm, DeckForm, FamilyForm, FxForm, GoogleReviewsForm, ListPropertyForm } from "./content-forms";
-import { PoliciesForm, WhyForm, ConciergeForm, LoyaltyForm, FaqForm, InvestorsForm } from "./page-forms";
+import { PoliciesForm, WhyForm, ConciergeForm, LoyaltyForm, FaqForm, InvestorsForm, GiftCardsForm } from "./page-forms";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminContent() {
-  const [contact, investor, policies, why, concierge, loyalty, faq, fx, gr, grCache, listProp, family, investorsPage] = await Promise.all([
+  const [contact, investor, policies, why, concierge, loyalty, faq, fx, gr, grCache, listProp, family, investorsPage, giftPage] = await Promise.all([
     getSetting("contact"),
     getSetting("investor"),
     getSetting("page_policies"),
@@ -19,6 +19,7 @@ export default async function AdminContent() {
     getSetting("page_list_property"),
     getSetting("page_family"),
     getSetting("page_investors"),
+    getSetting("page_giftcards"),
   ]);
 
   return (
@@ -84,6 +85,11 @@ export default async function AdminContent() {
         <h2 className="mb-1 font-display text-lg font-bold">Investors page</h2>
         <p className="mb-4 text-xs text-grey">Edits /investors — every section of the page</p>
         <InvestorsForm content={investorsPage} />
+      </section>
+
+      <section className="rounded-card bg-paper p-5 shadow-soft">
+        <h2 className="mb-4 font-display text-lg font-bold">Gift cards page</h2>
+        <GiftCardsForm content={giftPage} />
       </section>
 
       <section className="rounded-card bg-paper p-5 shadow-soft">

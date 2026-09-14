@@ -138,6 +138,16 @@ export interface InvestorsContent {
   finalTitle: string; finalText: string; disclaimer: string;
 }
 
+/** Guest gift-cards shop page — every guest-visible string. */
+export interface GiftCardsContent {
+  eyebrow: string;
+  title: string;
+  intro: string;
+  steps: { icon: string; title: string; text: string }[];
+  paidTitle: string;
+  paidText: string;
+}
+
 /** Synced from amanahvacations.com — the tour add-ons picker catalog. */
 export interface TourAddonsSetting {
   items: { name: string; icon: string; priceMXN: number; unit: string }[];
@@ -158,6 +168,7 @@ const DEFAULTS: {
   google_reviews_cache: GoogleReviewsCache;
   page_list_property: ListPropertyContent;
   page_family: FamilyContent;
+  page_giftcards: GiftCardsContent;
 } = {
   // empty strings mean "keep the built-in three-language text"
   page_list_property: {
@@ -169,6 +180,18 @@ const DEFAULTS: {
     ],
     formTitle: "", formIntro: "",
     extraFields: [],
+  },
+  page_giftcards: {
+    eyebrow: "Give a getaway",
+    title: "TutCasa Gift Cards",
+    intro: "The Riviera Maya, wrapped up with a bow — a unique code delivered by email, good for any home in our collection, whenever they're ready to escape.",
+    steps: [
+      { icon: "💳", title: "1 · Pay securely", text: "Pick an amount from $25 to $5,000 and pay by card through Stripe — takes a minute." },
+      { icon: "📬", title: "2 · The code arrives", text: "A unique gift code lands by email — in your inbox to keep or print, or straight in your favorite person's inbox with your message." },
+      { icon: "🏝️", title: "3 · They book & enjoy", text: "At checkout they enter the code and its value comes straight off the bill. Anything left stays on the card for next time." },
+    ],
+    paidTitle: "Your gift card is on its way!",
+    paidText: "Payment received — the gift card code has just been emailed (check spam the first time). If you sent it to someone special, they have it too, and you got a copy for your records. The card shows up at checkout the moment the code is entered.",
   },
   page_family: {
     eyebrow: "", title: "", intro: "",
