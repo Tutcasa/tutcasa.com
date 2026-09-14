@@ -1,53 +1,53 @@
 /* Gift cards page — hand-written in the demo design language (tokens from base.css). */
-body:has([class^="pg-gift"]) .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
-body:has([class^="pg-gift"]) .page-hero{text-align:center;padding:34px 0 8px;position:relative;overflow:hidden}
-body:has([class^="pg-gift"]) .page-hero .sun{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,var(--sol),#F7C86B 55%,transparent 70%);opacity:.26}
-body:has([class^="pg-gift"]) .page-hero .eyebrow{position:relative;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;color:var(--terra)}
-body:has([class^="pg-gift"]) .page-hero h1{position:relative;font-size:clamp(30px,4.6vw,46px);font-weight:800;margin-top:4px}
-body:has([class^="pg-gift"]) .page-hero p{position:relative;color:var(--grey);font-size:16.5px;max-width:640px;margin:12px auto 0}
+body:has(.page-gift) .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+body:has(.page-gift) .page-hero{text-align:center;padding:34px 0 8px;position:relative;overflow:hidden}
+body:has(.page-gift) .page-hero .sun{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,var(--sol),#F7C86B 55%,transparent 70%);opacity:.26}
+body:has(.page-gift) .page-hero .eyebrow{position:relative;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:12.5px;color:var(--terra)}
+body:has(.page-gift) .page-hero h1{position:relative;font-size:clamp(30px,4.6vw,46px);font-weight:800;margin-top:4px}
+body:has(.page-gift) .page-hero p{position:relative;color:var(--grey);font-size:16.5px;max-width:640px;margin:12px auto 0}
 
-body:has([class^="pg-gift"]) .gift-grid{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start;margin:34px auto 20px;max-width:1000px;padding:0 24px}
-@media (max-width:880px){body:has([class^="pg-gift"]) .gift-grid{grid-template-columns:1fr}}
+body:has(.page-gift) .gift-grid{display:grid;grid-template-columns:1fr 1fr;gap:34px;align-items:start;margin:34px auto 20px;max-width:1000px;padding:0 24px}
+@media (max-width:880px){body:has(.page-gift) .gift-grid{grid-template-columns:1fr}}
 
 /* the card itself — a playful voucher */
-body:has([class^="pg-gift"]) .gift-visual{position:sticky;top:96px}
-body:has([class^="pg-gift"]) .gift-card{position:relative;border-radius:24px;padding:28px;color:#fff;overflow:hidden;
+body:has(.page-gift) .gift-visual{position:sticky;top:96px}
+body:has(.page-gift) .gift-card{position:relative;border-radius:24px;padding:28px;color:#fff;overflow:hidden;
   background:linear-gradient(135deg,var(--rosa),var(--terra) 55%,var(--sol));box-shadow:var(--shadow-lg);aspect-ratio:1.66;display:flex;flex-direction:column;justify-content:space-between}
-body:has([class^="pg-gift"]) .gift-card .palm{position:absolute;right:-24px;bottom:-30px;font-size:150px;opacity:.18;transform:rotate(-12deg)}
-body:has([class^="pg-gift"]) .gift-card .gc-brand{font-family:'Baloo 2';font-weight:800;font-size:22px}
-body:has([class^="pg-gift"]) .gift-card .gc-brand small{display:block;font-family:'Outfit';font-weight:500;font-size:10.5px;opacity:.85}
-body:has([class^="pg-gift"]) .gift-card .gc-amount{font-family:'Baloo 2';font-weight:800;font-size:clamp(38px,5vw,54px);line-height:1}
-body:has([class^="pg-gift"]) .gift-card .gc-code{font-family:monospace;letter-spacing:.14em;font-weight:700;font-size:15px;background:rgba(255,255,255,.18);border-radius:10px;padding:8px 12px;display:inline-block}
-body:has([class^="pg-gift"]) .gift-notes{margin-top:16px;display:grid;gap:9px;color:var(--grey);font-size:14px}
-body:has([class^="pg-gift"]) .gift-notes b{color:var(--ink)}
+body:has(.page-gift) .gift-card .palm{position:absolute;right:-24px;bottom:-30px;font-size:150px;opacity:.18;transform:rotate(-12deg)}
+body:has(.page-gift) .gift-card .gc-brand{font-family:'Baloo 2';font-weight:800;font-size:22px}
+body:has(.page-gift) .gift-card .gc-brand small{display:block;font-family:'Outfit';font-weight:500;font-size:10.5px;opacity:.85}
+body:has(.page-gift) .gift-card .gc-amount{font-family:'Baloo 2';font-weight:800;font-size:clamp(38px,5vw,54px);line-height:1}
+body:has(.page-gift) .gift-card .gc-code{font-family:monospace;letter-spacing:.14em;font-weight:700;font-size:15px;background:rgba(255,255,255,.18);border-radius:10px;padding:8px 12px;display:inline-block}
+body:has(.page-gift) .gift-notes{margin-top:16px;display:grid;gap:9px;color:var(--grey);font-size:14px}
+body:has(.page-gift) .gift-notes b{color:var(--ink)}
 
 /* the purchase form */
-body:has([class^="pg-gift"]) .gift-form{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
-body:has([class^="pg-gift"]) .gf-title{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:10px}
-body:has([class^="pg-gift"]) .amounts{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px}
-body:has([class^="pg-gift"]) .amt{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:10px 20px;font-weight:800;font-size:15px;cursor:pointer}
-body:has([class^="pg-gift"]) .amt.on{background:var(--rosa);border-color:var(--rosa);color:#fff}
-body:has([class^="pg-gift"]) .amt:hover{border-color:var(--rosa)}
-body:has([class^="pg-gift"]) .gift-form label{display:block;font-size:12px;font-weight:800;margin:12px 0 4px}
-body:has([class^="pg-gift"]) .gift-form label span{font-weight:500;color:var(--grey)}
-body:has([class^="pg-gift"]) .gift-form input,body:has([class^="pg-gift"]) .gift-form textarea{width:100%;border:1.5px solid var(--line);border-radius:13px;background:#fff;padding:11px 13px;font-size:14.5px;outline:none;font-family:inherit}
-body:has([class^="pg-gift"]) .gift-form input:focus,body:has([class^="pg-gift"]) .gift-form textarea:focus{border-color:var(--rosa)}
-body:has([class^="pg-gift"]) .btn-rosa{background:var(--rosa);color:#fff;border:none;border-radius:999px;padding:14px 26px;font-weight:800;font-size:15px;cursor:pointer;display:inline-block;width:100%;margin-top:16px}
-body:has([class^="pg-gift"]) .btn-rosa:hover{background:var(--rosa-deep)}
-body:has([class^="pg-gift"]) .btn-rosa:disabled{opacity:.55;cursor:default}
-body:has([class^="pg-gift"]) .gf-err{color:var(--rosa-deep);font-size:13.5px;font-weight:600;margin-top:9px}
-body:has([class^="pg-gift"]) .gf-fine{color:var(--grey);font-size:12px;margin-top:10px;line-height:1.5}
+body:has(.page-gift) .gift-form{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
+body:has(.page-gift) .gf-title{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:10px}
+body:has(.page-gift) .amounts{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:14px}
+body:has(.page-gift) .amt{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:10px 20px;font-weight:800;font-size:15px;cursor:pointer}
+body:has(.page-gift) .amt.on{background:var(--rosa);border-color:var(--rosa);color:#fff}
+body:has(.page-gift) .amt:hover{border-color:var(--rosa)}
+body:has(.page-gift) .gift-form label{display:block;font-size:12px;font-weight:800;margin:12px 0 4px}
+body:has(.page-gift) .gift-form label span{font-weight:500;color:var(--grey)}
+body:has(.page-gift) .gift-form input,body:has(.page-gift) .gift-form textarea{width:100%;border:1.5px solid var(--line);border-radius:13px;background:#fff;padding:11px 13px;font-size:14.5px;outline:none;font-family:inherit}
+body:has(.page-gift) .gift-form input:focus,body:has(.page-gift) .gift-form textarea:focus{border-color:var(--rosa)}
+body:has(.page-gift) .btn-rosa{background:var(--rosa);color:#fff;border:none;border-radius:999px;padding:14px 26px;font-weight:800;font-size:15px;cursor:pointer;display:inline-block;width:100%;margin-top:16px}
+body:has(.page-gift) .btn-rosa:hover{background:var(--rosa-deep)}
+body:has(.page-gift) .btn-rosa:disabled{opacity:.55;cursor:default}
+body:has(.page-gift) .gf-err{color:var(--rosa-deep);font-size:13.5px;font-weight:600;margin-top:9px}
+body:has(.page-gift) .gf-fine{color:var(--grey);font-size:12px;margin-top:10px;line-height:1.5}
 
 /* how it works */
-body:has([class^="pg-gift"]) .gift-how{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1000px;margin:14px auto 46px;padding:0 24px}
-@media (max-width:720px){body:has([class^="pg-gift"]) .gift-how{grid-template-columns:1fr}}
-body:has([class^="pg-gift"]) .how{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
-body:has([class^="pg-gift"]) .how .ic{font-size:26px}
-body:has([class^="pg-gift"]) .how h3{font-size:15.5px;font-weight:800;margin:7px 0 4px}
-body:has([class^="pg-gift"]) .how p{color:var(--grey);font-size:13.5px;line-height:1.55}
+body:has(.page-gift) .gift-how{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1000px;margin:14px auto 46px;padding:0 24px}
+@media (max-width:720px){body:has(.page-gift) .gift-how{grid-template-columns:1fr}}
+body:has(.page-gift) .how{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+body:has(.page-gift) .how .ic{font-size:26px}
+body:has(.page-gift) .how h3{font-size:15.5px;font-weight:800;margin:7px 0 4px}
+body:has(.page-gift) .how p{color:var(--grey);font-size:13.5px;line-height:1.55}
 
 /* success state */
-body:has([class^="pg-gift"]) .gift-paid{max-width:560px;margin:40px auto 60px;padding:0 24px;text-align:center}
-body:has([class^="pg-gift"]) .gift-paid .c{width:74px;height:74px;border-radius:50%;background:var(--cactus);color:#fff;font-size:36px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
-body:has([class^="pg-gift"]) .gift-paid h2{font-size:26px;font-weight:800;margin-bottom:8px}
-body:has([class^="pg-gift"]) .gift-paid p{color:var(--grey);font-size:15.5px;line-height:1.6}
+body:has(.page-gift) .gift-paid{max-width:560px;margin:40px auto 60px;padding:0 24px;text-align:center}
+body:has(.page-gift) .gift-paid .c{width:74px;height:74px;border-radius:50%;background:var(--cactus);color:#fff;font-size:36px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+body:has(.page-gift) .gift-paid h2{font-size:26px;font-weight:800;margin-bottom:8px}
+body:has(.page-gift) .gift-paid p{color:var(--grey);font-size:15.5px;line-height:1.6}

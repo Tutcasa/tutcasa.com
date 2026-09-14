@@ -16,7 +16,7 @@ export default async function GiftCardsPage({
   const { paid } = await searchParams;
 
   return (
-    <div className="pg-gift">
+    <div className="page-gift">
       <BackBar />
       {paid ? (
         <div className="gift-paid">
