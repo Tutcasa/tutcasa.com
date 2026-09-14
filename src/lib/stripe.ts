@@ -57,6 +57,40 @@ export async function stripeFeeForPaymentRef(ref: string): Promise<number | null
   }
 }
 
+/** Hosted checkout for a GIFT CARD purchase — the card itself is created
+    by the webhook once the payment lands (kind 'gift' in the metadata). */
+export async function createGiftCheckoutSession(input: {
+  amountUSD: number;
+  buyerEmail: string;
+  recipientEmail?: string;
+  message?: string;
+}): Promise<{ url: string } | { error: string }> {
+  if (!stripeConfigured()) return { error: "Payments aren't switched on yet." };
+  const amount = Math.round(input.amountUSD);
+  if (!(amount >= 25 && amount <= 5000)) return { error: "Pick an amount between $25 and $5,000." };
+  try {
+    const session = await stripePost("/checkout/sessions", {
+      mode: "payment",
+      "line_items[0][price_data][currency]": "usd",
+      "line_items[0][price_data][product_data][name]": `TutCasa gift card — $${amount}`,
+      "line_items[0][price_data][unit_amount]": String(amount * 100),
+      "line_items[0][quantity]": "1",
+      customer_email: input.buyerEmail,
+      success_url: `${SITE}/gift-cards?paid=1`,
+      cancel_url: `${SITE}/gift-cards`,
+      "metadata[kind]": "gift",
+      "metadata[amountUSD]": String(amount),
+      "metadata[buyerEmail]": input.buyerEmail.slice(0, 200),
+      "metadata[recipientEmail]": (input.recipientEmail ?? "").slice(0, 200),
+      "metadata[message]": (input.message ?? "").slice(0, 450),
+    });
+    return { url: String(session.url) };
+  } catch (e) {
+    console.error("stripe gift session:", e);
+    return { error: "Couldn't start the payment — try again in a moment." };
+  }
+}
+
 export interface PayableInvoice {
   kind: "stay" | "tour";
   id: string;

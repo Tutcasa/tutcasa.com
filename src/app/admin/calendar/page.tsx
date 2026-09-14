@@ -21,8 +21,8 @@ const pad = (n: number) => String(n).padStart(2, "0");
 
 export default async function AdminCalendar({
   searchParams,
-}: { searchParams: Promise<{ m?: string }> }) {
-  const { m } = await searchParams;
+}: { searchParams: Promise<{ m?: string; q?: string; city?: string; status?: string }> }) {
+  const { m, q = "", city = "", status = "" } = await searchParams;
   const now = new Date();
   const [year, month] = /^\d{4}-\d{2}$/.test(m ?? "")
     ? (m as string).split("-").map(Number)
@@ -36,7 +36,7 @@ export default async function AdminCalendar({
   const todayISO = now.toISOString().slice(0, 10);
 
   const db = getDb();
-  const [listings, bookings, blocks, rates, dayRows] = await Promise.all([
+  const [allListings, bookings, blocks, rates, dayRows] = await Promise.all([
     db.query(
       `select id, title, city, status from listings
         where status <> 'archived' order by title`),
@@ -67,9 +67,17 @@ export default async function AdminCalendar({
         where day >= $1::date and day < $2::date`, [first, nextM]),
   ]);
 
+  // filters (like the old multi-calendar): search, city, status
+  const norm = (v: string) => v.trim().toLowerCase();
+  const cities = [...new Set(allListings.rows.map((l) => String(l.city)).filter(Boolean))].sort();
+  const rows = allListings.rows.filter((l) =>
+    (!q || norm(String(l.title)).includes(norm(q)) || norm(String(l.city)).includes(norm(q)))
+    && (!city || norm(String(l.city)) === norm(city))
+    && (!status || l.status === status));
+
   // per-listing day resolution: booking → block → override price → season → base
   const grid = new Map<string, DayCell[]>();
-  for (const l of listings.rows) {
+  for (const l of rows) {
     const cells: DayCell[] = days.map((d) => {
       const bk = bookings.rows.find((b) => b.listing_id === l.id && d >= b.ci && d < b.co);
       if (bk) {
@@ -102,10 +110,10 @@ export default async function AdminCalendar({
       <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-extrabold">All-in-one calendar</h1>
         <div className="flex items-center gap-2">
-          <Link href={`/admin/calendar?m=${prevLink}`}
+          <Link href={`/admin/calendar?m=${prevLink}${q ? `&q=${encodeURIComponent(q)}` : ""}${city ? `&city=${encodeURIComponent(city)}` : ""}${status ? `&status=${status}` : ""}`}
             className="rounded-pill border-[1.5px] border-line bg-paper px-3 py-1.5 text-sm font-bold hover:border-rosa">‹</Link>
           <b className="min-w-[150px] text-center">{monthLabel}</b>
-          <Link href={`/admin/calendar?m=${nextLink}`}
+          <Link href={`/admin/calendar?m=${nextLink}${q ? `&q=${encodeURIComponent(q)}` : ""}${city ? `&city=${encodeURIComponent(city)}` : ""}${status ? `&status=${status}` : ""}`}
             className="rounded-pill border-[1.5px] border-line bg-paper px-3 py-1.5 text-sm font-bold hover:border-rosa">›</Link>
         </div>
       </div>
@@ -114,6 +122,32 @@ export default async function AdminCalendar({
         group size), blocked dates, and the nightly price on open days.
         Click a home&rsquo;s name to open its own calendar and edit it.
       </p>
+      <form method="get" className="mb-3 flex flex-wrap items-center gap-2">
+        <input type="hidden" name="m" value={`${year}-${pad(month)}`} />
+        <input name="q" defaultValue={q} placeholder="Search by listing…"
+          className="w-56 rounded-pill border-[1.5px] border-line bg-paper px-4 py-1.5 text-sm outline-none focus:border-rosa" />
+        <select name="city" defaultValue={city}
+          className="rounded-pill border-[1.5px] border-line bg-paper px-3 py-1.5 text-sm font-semibold">
+          <option value="">All cities</option>
+          {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select name="status" defaultValue={status}
+          className="rounded-pill border-[1.5px] border-line bg-paper px-3 py-1.5 text-sm font-semibold">
+          <option value="">All statuses</option>
+          <option value="published">Published</option>
+          <option value="unlisted">Unlisted</option>
+          <option value="draft">Draft</option>
+        </select>
+        <button className="rounded-pill border-[1.5px] border-line bg-paper px-4 py-1.5 text-sm font-bold hover:border-rosa hover:text-rosa">
+          Filter
+        </button>
+        {(q || city || status) && (
+          <Link href={`/admin/calendar?m=${year}-${pad(month)}`} className="text-sm font-semibold text-grey hover:text-rosa">
+            ✕ Clear
+          </Link>
+        )}
+        <span className="ml-auto text-xs font-semibold text-grey">{rows.length} of {allListings.rows.length} homes</span>
+      </form>
       <div className="mb-3 flex flex-wrap gap-4 text-xs font-semibold">
         <span><span className="mr-1 inline-block h-3 w-3 rounded-sm bg-cactus align-middle"></span>Reserved</span>
         <span><span className="mr-1 inline-block h-3 w-3 rounded-sm bg-sol align-middle"></span>Pending request</span>
@@ -139,7 +173,7 @@ export default async function AdminCalendar({
             </tr>
           </thead>
           <tbody>
-            {listings.rows.map((l) => (
+            {rows.map((l) => (
               <tr key={l.id} className="border-b border-line/60">
                 <td className="sticky left-0 z-10 border-r border-line bg-paper p-2">
                   <Link href={`/admin/listings?edit=${l.id}&tab=calendar`}
@@ -174,8 +208,8 @@ export default async function AdminCalendar({
                 })}
               </tr>
             ))}
-            {listings.rows.length === 0 && (
-              <tr><td className="p-8 text-center text-grey">No homes yet.</td></tr>
+            {rows.length === 0 && (
+              <tr><td className="p-8 text-center text-grey">No homes match these filters.</td></tr>
             )}
           </tbody>
         </table>

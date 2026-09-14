@@ -65,13 +65,29 @@ export async function POST(req: NextRequest) {
   }
 
   const s = event.data.object as { id: string; amount_total?: number; amount_received?: number;
-    payment_intent?: string; metadata?: { kind?: string; invoiceId?: string } };
+    payment_intent?: string; metadata?: { kind?: string; invoiceId?: string;
+      amountUSD?: string; buyerEmail?: string; recipientEmail?: string; message?: string } };
   const kind = s.metadata?.kind;
   const id = s.metadata?.invoiceId ?? "";
   const paidCents = Number(isSession ? (s.amount_total ?? 0) : (s.amount_received ?? 0));
   // both event shapes resolve to the SAME payment-intent id, so the
   // per-ref idempotency below also dedupes session+intent double-fires
   const ref = String(isSession ? (s.payment_intent ?? s.id) : s.id);
+
+  // gift card purchases carry everything in the session metadata — the
+  // card is minted and emailed here (payment_ref dedupes retries)
+  if (kind === "gift" && isSession && paidCents > 0 && s.metadata?.buyerEmail) {
+    const { fulfillGiftPurchase } = await import("@/modules/giftcards");
+    await fulfillGiftPurchase({
+      paymentRef: ref,
+      amountCents: paidCents,
+      buyerEmail: s.metadata.buyerEmail,
+      recipientEmail: s.metadata.recipientEmail || undefined,
+      message: s.metadata.message || undefined,
+    });
+    return NextResponse.json({ received: true });
+  }
+
   if (!/^[0-9a-f-]{36}$/i.test(id) || paidCents <= 0) {
     return NextResponse.json({ received: true });
   }
