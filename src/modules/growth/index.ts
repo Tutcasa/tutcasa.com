@@ -203,6 +203,12 @@ export async function referFriend(input: {
   const ref = await createReferral(input.name, input.email);
   if (!ref.ok || !ref.code) return { ok: false };
   const link = ref.link ?? `${SITE}/invite/${ref.code}`;
+  // self-heal: existing referral codes whose $100 coupon was deleted in
+  // admin get it recreated — the code we email must always work
+  await getDb().query(
+    `insert into coupons (code, kind, amount_cents, per_user_limit, note)
+     values ($1,'fixed',10000,1,'Referral friend coupon (restored)')
+     on conflict (code) do nothing`, [ref.code]).catch(() => {});
 
   const firstName = (n: string) => n.trim().split(" ")[0] || "there";
   const subject = `${firstName(input.name)} sent you $100 off a Riviera Maya stay 🌴`;
