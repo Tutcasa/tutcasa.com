@@ -190,6 +190,43 @@ export async function createReferral(
     : { ok: true, message: "Your invite link is ready — copy it below (the email couldn't be delivered).", code, link };
 }
 
+/** The "refer a specific friend" form: reuses the referrer's code (and
+    $100 friend coupon), emails the REFERRER their link, and sends the
+    FRIEND a personal invite with the code. Both logged for the admin. */
+export async function referFriend(input: {
+  name: string; email: string; friendName: string; friendEmail: string;
+}): Promise<{ ok: boolean }> {
+  const friendEmail = input.friendEmail.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(friendEmail)) return { ok: false };
+
+  // referrer side: get-or-create their code + coupon and email them the link
+  const ref = await createReferral(input.name, input.email);
+  if (!ref.ok || !ref.code) return { ok: false };
+  const link = ref.link ?? `${SITE}/invite/${ref.code}`;
+
+  const firstName = (n: string) => n.trim().split(" ")[0] || "there";
+  const subject = `${firstName(input.name)} sent you $100 off a Riviera Maya stay 🌴`;
+  const body = [
+    `Hola ${firstName(input.friendName)}! 👋`,
+    "",
+    `${input.name.trim()} thinks you need a getaway — and sent you $100 off your first TutCasa stay on the Riviera Maya.`,
+    "",
+    `- Your $100 coupon code: ${ref.code}`,
+    `- Browse the homes: ${link}`,
+    "",
+    "Enter the code at checkout on any home — beachfront condos with private pools in Playa del Carmen, all-in pricing, no hidden fees.",
+    "",
+    "— The TutCasa family",
+  ].join("\n");
+  const sent = await sendBranded(friendEmail, subject, body);
+  await getDb().query(
+    `insert into notifications_log (kind, channel, recipient, subject, body, status)
+     values ('referral_friend_email','email',$1,$2,$3,$4)`,
+    [friendEmail, subject, body.slice(0, 4000), sent ? "sent" : "failed"],
+  ).catch(() => {});
+  return { ok: true };
+}
+
 export async function getReferralByCode(code: string) {
   const res = await getDb().query(
     "select code, referrer_name from referrals where code=$1", [code.toUpperCase()]);

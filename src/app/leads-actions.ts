@@ -42,7 +42,9 @@ export async function submitReferralLead(input: {
   friendName: string; friendEmail: string; friendPhone?: string;
 }): Promise<{ ok: boolean }> {
   if (!input.name?.trim() || !input.friendEmail?.trim()) return { ok: false };
-  return createLead({
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`refer:${ip}`, 5, 10 * 60 * 1000)) return { ok: false };
+  const lead = await createLead({
     kind: "loyalty_referral",
     name: input.name, email: input.email, phone: input.phone,
     payload: {
@@ -50,6 +52,14 @@ export async function submitReferralLead(input: {
       friendPhone: input.friendPhone ?? "",
     },
   });
+  // emails: the referrer gets their invite link + the friend gets a
+  // personal $100 invite with the coupon code (never blocks the lead)
+  const { referFriend } = await import("@/modules/growth");
+  await referFriend({
+    name: input.name, email: input.email,
+    friendName: input.friendName, friendEmail: input.friendEmail,
+  }).catch(() => {});
+  return lead;
 }
 
 /** Build-your-own-plan request from the tours page — lands in admin →
