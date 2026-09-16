@@ -138,6 +138,11 @@ export interface InvestorsContent {
   finalTitle: string; finalText: string; disclaimer: string;
 }
 
+/** /management calendar access — admin-settable password (env fallback). */
+export interface ManagerAccessSettings {
+  password: string;
+}
+
 /** Guest gift-cards shop page — every guest-visible string. */
 export interface GiftCardsContent {
   eyebrow: string;
@@ -169,6 +174,7 @@ const DEFAULTS: {
   page_list_property: ListPropertyContent;
   page_family: FamilyContent;
   page_giftcards: GiftCardsContent;
+  manager_access: ManagerAccessSettings;
 } = {
   // empty strings mean "keep the built-in three-language text"
   page_list_property: {
@@ -181,6 +187,7 @@ const DEFAULTS: {
     formTitle: "", formIntro: "",
     extraFields: [],
   },
+  manager_access: { password: "" },
   page_giftcards: {
     eyebrow: "Give a getaway",
     title: "TutCasa Gift Cards",

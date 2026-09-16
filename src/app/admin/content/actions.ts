@@ -389,3 +389,17 @@ export async function saveGiftCardsAction(
   revalidatePath("/admin/content");
   return { ok: true, message: "Gift cards page saved." };
 }
+
+export async function saveManagerAccessAction(
+  _prev: ContentFormState,
+  formData: FormData,
+): Promise<ContentFormState> {
+  await requireAdmin();
+  const password = String(formData.get("password") ?? "").trim();
+  if (password.length < 8) {
+    return { ok: false, message: "Use at least 8 characters." };
+  }
+  await setSetting("manager_access", { password });
+  revalidatePath("/management");
+  return { ok: true, message: "Management password changed — everyone logged in with the old one is now logged out." };
+}

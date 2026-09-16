@@ -11,6 +11,7 @@ import type {
   WhyBookContent,
 } from "@/modules/settings";
 import {
+  saveManagerAccessAction,
   saveGiftCardsAction,
   saveInvestorsAction,
   savePoliciesAction,
@@ -177,6 +178,27 @@ export function FaqForm({ content }: { content: FaqContent }) {
           defaultValue={content.items.map((f) => `${f.q} :: ${f.a}`).join("\n")} />
       </label>
       <SaveRow state={state} pending={pending} />
+    </form>
+  );
+}
+
+export function ManagerAccessForm({ password }: { password: string }) {
+  const [state, action, pending] = useActionState(saveManagerAccessAction, initial);
+  return (
+    <form action={action} className="grid gap-3">
+      <p className="text-sm text-grey">
+        The password for <b>tutcasa.com/management</b> — the read-only
+        all-in-one calendar for property managers. Change it here any time
+        (e.g. when a manager leaves): the old password stops working
+        instantly and everyone is logged out.
+      </p>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs font-bold">MANAGEMENT PASSWORD <span className="font-normal text-grey">(min 8 characters)</span>
+          <input name="password" defaultValue={password} required minLength={8}
+            autoComplete="off" className={`${inputCls} w-72`} />
+        </label>
+        <SaveRow state={state} pending={pending} />
+      </div>
     </form>
   );
 }

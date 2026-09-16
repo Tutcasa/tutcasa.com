@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { overLimit } from "@/lib/rate-limit";
+import { getSetting } from "@/modules/settings";
 
 /**
  * Property-manager access: ONE password (MANAGER_PASSWORD env var,
@@ -11,8 +12,16 @@ import { overLimit } from "@/lib/rate-limit";
  * at /management — nothing else. Same hashed-cookie scheme as the admin.
  */
 
+/** The password set in Admin → Content & info wins; the env var is the
+    fallback until the admin sets one. Changing it instantly logs every
+    manager out (the cookie hash no longer matches). */
+async function managerPassword(): Promise<string | null> {
+  const saved = (await getSetting("manager_access")).password?.trim();
+  return saved || process.env.MANAGER_PASSWORD || null;
+}
+
 export const managerCookieValue = async (): Promise<string | null> => {
-  const pw = process.env.MANAGER_PASSWORD;
+  const pw = await managerPassword();
   if (!pw) return null;
   return createHash("sha256").update(`tutcasa-manager:${pw}`).digest("hex");
 };
@@ -33,7 +42,7 @@ export async function managerLoginAction(
   if (overLimit(`manager-login:${ip}`, 8, 10 * 60 * 1000)) {
     return { ok: false, message: "Too many attempts — try again in a few minutes." };
   }
-  const pw = process.env.MANAGER_PASSWORD;
+  const pw = await managerPassword();
   if (!pw) return { ok: false, message: "Management access isn't switched on yet." };
   if (String(formData.get("password") ?? "") !== pw) {
     return { ok: false, message: "Wrong password." };
