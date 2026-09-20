@@ -173,6 +173,63 @@ export async function sendAutomationForBooking(
   }
 }
 
+/** Tour-booking counterpart of sendAutomationForBooking (guest audience
+    only; Amanah owns guest comms for THEIR tours). Returns true when a
+    fresh send happened. */
+async function sendTourAutomation(key: string, tourBookingId: string): Promise<boolean> {
+  const a = await getAutomation(key);
+  if (!a || !a.enabled || a.audience !== "guest") return false;
+  const db = getDb();
+  const r = (await db.query(
+    `select tb.guest_name, tb.guest_email, tb.group_size, tb.total_cents, tb.currency,
+            to_char(tb.tour_date,'YYYY-MM-DD') as tour_date, t.title, t.source
+       from tour_bookings tb join tours t on t.id = tb.tour_id where tb.id = $1`,
+    [tourBookingId])).rows[0];
+  if (!r || !r.guest_email || r.source === "amanah") return false;
+  const vars = {
+    guest_name: (r.guest_name ?? "").split(" ")[0] || "there",
+    guest_email: r.guest_email,
+    tour: r.title,
+    tour_date: r.tour_date,
+    guests: String(r.group_size),
+    total: `$${Math.round(r.total_cents / 100).toLocaleString("en-US")} ${r.currency}`,
+    tours_link: `${SITE}/tours`,
+    booking_kind: "tour",
+  };
+  const subject = fillVars(a.subject, vars);
+  const html = renderEmailHtml({ subject: a.subject, body: a.body, vars });
+  const text = fillVars(a.body, vars);
+  // same claim-then-send dedupe as stays, keyed on tour_booking_id
+  const claim = await db.query<{ id: string }>(
+    `insert into notifications_log (kind, channel, recipient, subject, body, tour_booking_id, status)
+     values ($1,'email',$2,$3,$4,$5,'sending')
+     on conflict (kind, tour_booking_id, recipient) where tour_booking_id is not null
+     do update set status='sending', error=null
+       where notifications_log.status = 'failed'
+          or (notifications_log.status = 'sending'
+              and notifications_log.created_at < now() - interval '15 minutes')
+     returning id`,
+    [key, r.guest_email, subject, text.slice(0, 4000), tourBookingId],
+  );
+  if (!claim.rows[0]) return false;
+  const apiKey = process.env.RESEND_API_KEY;
+  let status = "manual", error: string | null = null;
+  if (apiKey) {
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>", to: [r.guest_email], subject, html, text }),
+        signal: AbortSignal.timeout(15_000),
+      });
+      status = res.ok ? "sent" : "failed";
+      if (!res.ok) error = (await res.text()).slice(0, 200);
+    } catch (e) { status = "failed"; error = (e as Error).message.slice(0, 200); }
+  }
+  await db.query("update notifications_log set status=$2, error=$3 where id=$1", [claim.rows[0].id, status, error]);
+  return status === "sent";
+}
+
 /**
  * Fire-and-forget wrapper for booking-flow hooks (never blocks a booking).
  * Uses next/server `after()` so the serverless runtime keeps the function
@@ -278,6 +335,19 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
                     and to_char(current_date + ($1 || ' days')::interval, 'YYYY-MM-DD')`,
         [String(a.offset_days)],
       )).rows;
+    } else if (a.trigger_event === "before_tour") {
+      // tours live in their own table — handled below, not in the stay loop
+      const tours = (await db.query(
+        `select id from tour_bookings
+          where status in ('paid','partner_confirmed')
+            and tour_date between current_date and current_date + ($1 || ' days')::interval`,
+        [String(a.offset_days)],
+      )).rows;
+      for (const t of tours) {
+        checked++;
+        if (await sendTourAutomation(a.key, t.id)) sent++;
+      }
+      continue;
     } else {
       continue;
     }

@@ -40,7 +40,7 @@ export const TEMPLATE_VARS = [
   "guest_name", "guest_email", "listing", "check_in", "check_out", "guests",
   "total", "balance", "balance_due_date", "amount_paid", "invoice_link",
   "checkin_message", "checkout_message", "checkin_from", "checkout_until",
-  "booking_kind", "source", "tours_link",
+  "booking_kind", "source", "tours_link", "tour", "tour_date",
 ] as const;
 
 export async function listAutomations(): Promise<EmailAutomation[]> {
@@ -65,6 +65,8 @@ export async function getAutomation(key: string): Promise<EmailAutomation | null
 /* ---------------- rendering ---------------- */
 
 const SAMPLE: Record<string, string> = {
+  tour: "Cenotes, Coral & Sea Turtles",
+  tour_date: "2026-10-08",
   guest_name: "Sarah",
   guest_email: "sarah@example.com",
   listing: "Casa Selva — Tulum",

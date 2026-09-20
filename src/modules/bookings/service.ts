@@ -55,7 +55,15 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
   if (!quoted.ok) {
     return { ok: false, error: quoted.error === "LISTING_NOT_FOUND" ? "LISTING_NOT_FOUND" : quoted.error };
   }
-  const q = quoted.quote;
+  let q = quoted.quote;
+
+  // a coupon is the ONLY discount: re-price with early-bird / weekly /
+  // monthly switched off, so the coupon never stacks on a sale price
+  if (req.couponCode?.trim()) {
+    const plain = await resolveStayQuote(req.listingSlug, req.checkIn, req.checkOut, req.guests,
+      undefined, { commissionPct: req.marketingCommissionPct, addonIds: req.addonIds, noSaleDiscounts: true });
+    if (plain.ok) q = plain.quote;
+  }
 
   // coupon: validated server-side with the FINAL guest email. An invalid
   // coupon REJECTS the booking — never silently books at full price while

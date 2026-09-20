@@ -163,8 +163,8 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
                 <Link href="/tours" onClick={() => setAcctOpen(false)}>Tours &amp; Transfers</Link>
                 <a href={waHref} target="_blank" rel="noopener">Concierge on WhatsApp</a>
                 <Link href="/why-book-with-us" onClick={() => setAcctOpen(false)}>Why book with us</Link>
-                <Link href="/loyalty" onClick={() => setAcctOpen(false)}>Loyalty program</Link>
                 <Link href="/gift-cards" onClick={() => setAcctOpen(false)}>Gift cards</Link>
+                <Link href="/loyalty" onClick={() => setAcctOpen(false)}>Loyalty program</Link>
                 <hr />
                 <Link href="/list-my-property" onClick={() => setAcctOpen(false)}>List your property</Link>
                 <Link href="/policies" onClick={() => setAcctOpen(false)}>Help &amp; policies</Link>
@@ -192,8 +192,8 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
         <hr />
         <nav className="tcnav-links secondary">
           <Link href="/tours" onClick={closeDrawer}>Tours &amp; Transfers</Link>
-          <Link href="/loyalty" onClick={closeDrawer}>Loyalty program</Link>
           <Link href="/gift-cards" onClick={closeDrawer}>Gift cards 🎁</Link>
+          <Link href="/loyalty" onClick={closeDrawer}>Loyalty program</Link>
           <Link href="/why-book-with-us" onClick={closeDrawer}>Why book with us</Link>
           <Link href="/policies" onClick={closeDrawer}>Help &amp; policies</Link>
           <a href={waHref} target="_blank" rel="noopener">Concierge on WhatsApp</a>

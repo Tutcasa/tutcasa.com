@@ -55,6 +55,8 @@ export interface TourBookingRequest {
 
 export interface TourBooking {
   id: string;
+  /** invoice number shared with the invoices page ("" when unassigned) */
+  invoiceNo: string;
   tourId: string;
   tourTitle: string;
   tourDate: string;

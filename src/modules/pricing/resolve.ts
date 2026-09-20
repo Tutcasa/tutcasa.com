@@ -40,7 +40,12 @@ export async function resolveStayQuote(
   checkOut: string,
   guests: number,
   bookedAt?: Date,
-  opts?: { skipAvailability?: boolean; applyCommission?: boolean; commissionPct?: number; addonIds?: string[] },
+  opts?: {
+    skipAvailability?: boolean; applyCommission?: boolean; commissionPct?: number; addonIds?: string[];
+    /** coupon in play: the coupon is the ONLY discount — early-bird and
+        weekly/monthly pricing are switched off (owner's rule: never stack) */
+    noSaleDiscounts?: boolean;
+  },
 ): Promise<StayQuoteResult> {
   if (!YMD.test(checkIn) || !YMD.test(checkOut) || checkOut <= checkIn) {
     return { ok: false, error: "INVALID_DATES" };
@@ -157,17 +162,17 @@ export async function resolveStayQuote(
       currency: base.currency,
       weekendPct: Number(L.weekend_pct ?? 0),
       weekendCents: L.weekend_cents ?? 0,
-      weeklyNightlyCents: L.weekly_nightly_cents ?? 0,
-      monthlyNightlyCents: L.monthly_nightly_cents ?? 0,
+      weeklyNightlyCents: opts?.noSaleDiscounts ? 0 : (L.weekly_nightly_cents ?? 0),
+      monthlyNightlyCents: opts?.noSaleDiscounts ? 0 : (L.monthly_nightly_cents ?? 0),
       extraGuestCents: L.extra_guest_cents ?? 0,
       extraGuestAfter: L.extra_guest_after ?? 0,
       cleaningFeeMode: (L.cleaning_fee_mode ?? "single") as FeeMode,
       cityFeeCents: L.city_fee_cents ?? 0,
       cityFeeMode: (L.city_fee_mode ?? "single") as FeeMode,
       securityDepositCents: L.security_deposit_cents ?? 0,
-      weeklyDiscountPct: Number(L.weekly_discount_pct ?? 0),
-      monthlyDiscountPct: Number(L.monthly_discount_pct ?? 0),
-      earlyBirdPct: Number(L.early_bird_pct ?? 0),
+      weeklyDiscountPct: opts?.noSaleDiscounts ? 0 : Number(L.weekly_discount_pct ?? 0),
+      monthlyDiscountPct: opts?.noSaleDiscounts ? 0 : Number(L.monthly_discount_pct ?? 0),
+      earlyBirdPct: opts?.noSaleDiscounts ? 0 : Number(L.early_bird_pct ?? 0),
       earlyBirdMinDays: L.early_bird_min_days ?? 0,
       depositPct: Number(L.deposit_pct ?? 100),
       secondPaymentDays: L.second_payment_days ?? 0,

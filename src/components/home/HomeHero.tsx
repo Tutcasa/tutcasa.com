@@ -28,10 +28,8 @@ export type WizardMatch = {
 const WIZ_DESTS = [
   { v: "Playa del Carmen", ic: "\u{1F3DD}\uFE0F", label: "Playa del Carmen", small: "beachfront", kw: "mexico riviera maya playa" },
   { v: "Tulum", ic: "\u{1F6DB}", label: "Tulum", small: "jungle & villas", kw: "mexico riviera maya" },
-  { v: "Cancún", ic: "\u{1F3D6}\uFE0F", label: "Cancún", small: "resorts", kw: "mexico cancun" },
   { v: "Nuba, Egypt", ic: "\u{1F3DC}\uFE0F", label: "Nuba, Egypt", small: "Nile-side", kw: "egypt nubia nile aswan" },
   { v: "Orlando", ic: "\u{1F3A2}", label: "Orlando", small: "parks & pools", kw: "usa united states america florida disney" },
-  { v: "Surprise me", ic: "\u{1F3B2}", label: "Surprise me", small: "show the best", kw: "" },
 ];
 
 const WIZ_VIBES = [
@@ -289,7 +287,7 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
                     <div className="chip-group">
                       <h5>Mexico &#127474;&#127475;</h5>
                       <div className="chips">
-                        {["Playa del Carmen", "Tulum", "Cancún"].map((c) => (
+                        {["Playa del Carmen", "Tulum"].map((c) => (
                           <span key={c} className="chip" style={chipVisible(c) ? undefined : { display: "none" }} onClick={() => pickWhere(c)}>{c}</span>
                         ))}
                       </div>

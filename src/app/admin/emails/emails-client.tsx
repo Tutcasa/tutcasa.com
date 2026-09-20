@@ -29,6 +29,7 @@ const TRIGGERS: [string, string][] = [
   ["before_checkin", "N days before check-in"],
   ["before_checkout", "N days before check-out"],
   ["after_checkout", "N days after check-out (review request)"],
+  ["before_tour", "N days before a tour (tour bookings)"],
   ["custom", "Manual — only sent when you send it yourself"],
 ];
 
@@ -37,11 +38,12 @@ const DAYS_LABEL: Record<string, string> = {
   before_checkin: "days before check-in",
   before_checkout: "days before check-out",
   after_checkout: "days after check-out",
+  before_tour: "days before the tour",
   second_payment_due: "days before the balance due date",
   deposit_unpaid: "days after booking (still unpaid)",
 };
 
-const VARS = "{{guest_name}} {{guest_email}} {{listing}} {{check_in}} {{check_out}} {{guests}} {{total}} {{balance}} {{balance_due_date}} {{amount_paid}} {{invoice_link}} {{tours_link}} {{checkin_message}} {{checkout_message}} {{checkin_from}} {{checkout_until}} {{booking_kind}} {{source}}";
+const VARS = "{{guest_name}} {{guest_email}} {{listing}} {{tour}} {{tour_date}} {{check_in}} {{check_out}} {{guests}} {{total}} {{balance}} {{balance_due_date}} {{amount_paid}} {{invoice_link}} {{tours_link}} {{checkin_message}} {{checkout_message}} {{checkin_from}} {{checkout_until}} {{booking_kind}} {{source}}";
 
 function AutomationCard({ a }: { a: EmailAutomation }) {
   const [open, setOpen] = useState(false);

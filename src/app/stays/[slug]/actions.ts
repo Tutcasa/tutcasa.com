@@ -52,7 +52,7 @@ export async function reserveAction(input: {
 }
 
 export type CouponResult =
-  | { ok: true; code: string; discount: number } // discount in display units
+  | { ok: true; code: string; discount: number; saleRemoved?: number } // display units; saleRemoved = sale discount the coupon displaces
   | { ok: false; message: string };
 
 /** Validate a coupon against a live stay quote (server-side, always). */
@@ -68,15 +68,22 @@ export async function validateCouponAction(
   if (overLimit(`coupon:${ip}`, 15, 10 * 60 * 1000)) {
     return { ok: false, message: "Too many coupon attempts — try again in a few minutes." };
   }
-  const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined,
-    { commissionPct: (await (await import("@/modules/partners")).visitorCommission())?.pct });
-  if (!res.ok) return { ok: false, message: "Add valid dates first." };
+  const pct = (await (await import("@/modules/partners")).visitorCommission())?.pct;
+  // the coupon replaces any sale discount, so validate against the plain
+  // (undiscounted) price and tell the checkout how much sale discount it
+  // must add back to its running total
+  const [res, withSale] = await Promise.all([
+    resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined, { commissionPct: pct, noSaleDiscounts: true }),
+    resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined, { commissionPct: pct }),
+  ]);
+  if (!res.ok || !withSale.ok) return { ok: false, message: "Add valid dates first." };
+  const saleRemovedCents = Math.max(0, res.quote.totalCents - withSale.quote.totalCents);
   const cp = await checkCoupon(code, {
     nights: res.quote.nights,
     totalCents: res.quote.totalCents,
     listingId: res.listing.id,
     guestEmail,
-    saleDiscountCents: res.quote.lengthDiscountCents + res.quote.earlyBirdDiscountCents,
+    saleDiscountCents: 0,
   });
   if (!cp.ok) {
     const msg =
@@ -91,7 +98,10 @@ export async function validateCouponAction(
       : "We don't recognize that coupon code.";
     return { ok: false, message: msg };
   }
-  return { ok: true, code: cp.code, discount: Math.round(cp.discountCents / 100) };
+  return {
+    ok: true, code: cp.code, discount: Math.round(cp.discountCents / 100),
+    saleRemoved: Math.round(saleRemovedCents / 100),
+  };
 }
 
 /** Checkout: validate a gift card code and report its balance. */
