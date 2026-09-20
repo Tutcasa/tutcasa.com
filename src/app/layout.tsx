@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     template: "%s · TutCasa",
   },
   description:
-    "Book beachfront villas & condos in Playa del Carmen, Tulum, Cancún, Egypt & Florida. All-in prices, no hidden fees, our team on WhatsApp. Book direct & save.",
+    "Book beachfront villas & condos in Playa del Carmen & the Riviera Maya. All-in prices, no hidden fees, our team on WhatsApp. Book direct & save.",
   openGraph: {
     siteName: "TutCasa",
     type: "website",
