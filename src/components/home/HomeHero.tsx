@@ -358,7 +358,8 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
                       value={wizFilter}
                       onChange={(e) => setWizFilter(e.target.value)}
                     />
-                    <div className="opts">
+                    {/* 4 destinations → a centered 2×2, not 3+1 with a hole */}
+                    <div className={`opts${WIZ_DESTS.length === 4 ? " opts-2" : ""}`}>
                       {WIZ_DESTS.map((d) => (
                         <div
                           key={d.v}

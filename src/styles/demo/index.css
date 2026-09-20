@@ -90,6 +90,7 @@ body:has([class^="pg-index"]) .wz-body{padding:20px 18px 22px;min-height:230px}
 body:has([class^="pg-index"]) .wz-q{font-family:'Baloo 2';font-weight:700;font-size:19px;margin-bottom:14px}
 body:has([class^="pg-index"]) .wz-q .em{color:var(--rosa)}
 body:has([class^="pg-index"]) .opts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+body:has([class^="pg-index"]) .opts.opts-2{grid-template-columns:repeat(2,1fr);max-width:400px;margin:0 auto}
 body:has([class^="pg-index"]) .opts.two{grid-template-columns:repeat(2,1fr)}
 body:has([class^="pg-index"]) .opt{background:var(--crema);border:2px solid var(--line);border-radius:15px;padding:14px 10px;text-align:center;transition:.15s;font-weight:600;font-size:13.5px}
 body:has([class^="pg-index"]) .opt:hover{transform:translateY(-3px);border-color:var(--rosa);box-shadow:var(--shadow)}
