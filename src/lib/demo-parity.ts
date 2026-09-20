@@ -57,7 +57,9 @@ export function deriveTokens(l: Listing): string[] {
   // "Oceanview Penthouse" is beachview but NOT beachfront.
   const blob = (l.title + " " + l.headline + " " + l.amenities.join(" ")).toLowerCase();
   if (/beach\s?front|ocean\s?front/.test(blob)) toks.push("beachfront");
-  if (/private pool|plunge pool|walkout pool/.test(blob) || l.amenities.some((a) => /pool/i.test(a))) toks.push("private pool");
+  // "Pool view" / "Communal swimming pool" must NOT count — only an actual
+  // private pool (title, headline or an amenity line saying so)
+  if (/private pool|plunge pool|walkout (private )?pool|own pool/.test(blob)) toks.push("private pool");
   if (/beach\s?view|ocean\s?view|sea\s?view/.test(blob)) toks.push("beachview");
   if (blob.includes("parking")) toks.push("free parking");
   if (blob.includes("washer") || blob.includes("dryer") || blob.includes("laundry")) toks.push("washer & dryer");

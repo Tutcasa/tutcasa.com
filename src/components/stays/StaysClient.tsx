@@ -62,7 +62,7 @@ const VIBE_TOK: Record<string, string> = {
 /* keyword sets for the amenity checkboxes — matched against each card's
    free-text amenities/description haystack */
 const AMENS: { k: string; words: string[] }[] = [
-  { k: "st_am_pool", words: ["pool", "alberca", "piscina"] },
+  { k: "st_am_pool", words: ["private pool", "plunge pool", "walkout pool", "walkout private pool", "alberca privada", "piscina privada"] },
   { k: "st_am_jacuzzi", words: ["jacuzzi", "hot tub"] },
   { k: "st_am_gym", words: ["gym", "fitness"] },
   { k: "st_am_beach", words: ["beach", "ocean", "oceanfront"] },

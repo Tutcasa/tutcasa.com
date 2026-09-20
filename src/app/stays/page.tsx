@@ -22,7 +22,9 @@ function toCard(l: Listing): StayCard {
     type: l.propertyType,
     guests: l.maxGuests,
     // haystack for keyword amenity filters (amenities are free text)
-    hay: [l.amenities.join(" "), l.headline, l.description].join(" ").toLowerCase(),
+    // amenities + headline only: the description is marketing prose that
+    // mentions pools, beaches and kitchens for every home
+    hay: [l.title, l.amenities.join(" "), l.headline].join(" ").toLowerCase(),
     instant: l.instantBook,
     selfCi: l.selfCheckIn,
     pets: l.allowPets,
