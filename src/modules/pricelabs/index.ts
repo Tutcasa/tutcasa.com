@@ -89,18 +89,26 @@ export async function syncPriceLabs(): Promise<{ synced: number; days: number; e
     const params: unknown[] = [m.listing_id];
     for (const d of p.data) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || !(d.price > 0)) continue;
-      params.push(d.date, Math.round(d.price * 100), d.min_stay ?? null);
+      // PriceLabs sends -1 (or 0) for "no min-stay rule" — store as null
+      const minStay = d.min_stay != null && d.min_stay >= 1 ? Math.round(d.min_stay) : null;
+      params.push(d.date, Math.round(d.price * 100), minStay);
       const i = params.length;
       values.push(`($1, $${i - 2}::date, $${i - 1}::int, $${i}::int)`);
     }
     if (!values.length) continue;
-    await db.query(
-      `insert into listing_price_days (listing_id, day, nightly_cents, min_stay)
-       values ${values.join(",")}
-       on conflict (listing_id, day) do update
-         set nightly_cents = excluded.nightly_cents,
-             min_stay = excluded.min_stay`,
-    params);
+    try {
+      await db.query(
+        `insert into listing_price_days (listing_id, day, nightly_cents, min_stay)
+         values ${values.join(",")}
+         on conflict (listing_id, day) do update
+           set nightly_cents = excluded.nightly_cents,
+               min_stay = excluded.min_stay`,
+      params);
+    } catch (e) {
+      // one home's bad data must never stop the others
+      errors.push(`${m.title}: ${(e as Error).message.slice(0, 120)}`);
+      continue;
+    }
     await db.query(
       `update listing_pricing set pricelabs_synced_at = now(), pricelabs_synced_days = $2,
               dynamic_pricing = true where listing_id = $1`,
