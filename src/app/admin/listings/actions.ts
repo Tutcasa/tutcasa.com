@@ -418,8 +418,9 @@ export async function savePricingAction(
        city_fee_mode, security_deposit_cents, weekly_discount_pct,
        weekly_nightly_cents, monthly_discount_pct, monthly_nightly_cents,
        early_bird_pct, early_bird_min_days, deposit_pct, second_payment_days,
-       dynamic_pricing, third_party_commission_pct, pricelabs_id, pricelabs_pms)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
+       dynamic_pricing, third_party_commission_pct, pricelabs_id, pricelabs_pms,
+       early_checkin_cents, late_checkout_cents)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
      on conflict (listing_id) do update set
        weekend_pct=$2, weekend_cents=$3, extra_guest_cents=$4,
        extra_guest_after=$5, cleaning_fee_mode=$6, city_fee_cents=$7,
@@ -427,7 +428,8 @@ export async function savePricingAction(
        weekly_nightly_cents=$11, monthly_discount_pct=$12,
        monthly_nightly_cents=$13, early_bird_pct=$14, early_bird_min_days=$15,
        deposit_pct=$16, second_payment_days=$17, dynamic_pricing=$18,
-       third_party_commission_pct=$19, pricelabs_id=$20, pricelabs_pms=$21`,
+       third_party_commission_pct=$19, pricelabs_id=$20, pricelabs_pms=$21,
+       early_checkin_cents=$22, late_checkout_cents=$23`,
     [
       id,
       weekend.pct, weekend.cents,
@@ -448,6 +450,8 @@ export async function savePricingAction(
       // "plId|pms" from the PriceLabs select; empty = manual pricing
       String(formData.get("pricelabs") ?? "").split("|")[0] || null,
       String(formData.get("pricelabs") ?? "").split("|")[1] || null,
+      usd(formData.get("earlyCheckinUSD")),
+      usd(formData.get("lateCheckoutUSD")),
     ],
   );
 

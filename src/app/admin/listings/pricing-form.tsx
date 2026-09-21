@@ -24,6 +24,8 @@ export interface AdminPricing {
   cityFeeCents: number;
   cityFeeMode: string;
   securityDepositCents: number;
+  earlyCheckinCents: number;
+  lateCheckoutCents: number;
   weeklyDiscountPct: number;
   monthlyDiscountPct: number;
   earlyBirdPct: number;
@@ -200,6 +202,21 @@ export function PricingForm({
                      defaultValue={pricing.securityDepositCents / 100} className={inputCls} />
             </label>
           </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="text-xs font-bold">EARLY CHECK-IN FEE (USD) <span className="font-normal text-grey">(0 = not offered)</span>
+              <input name="earlyCheckinUSD" type="number" min="0" step="1"
+                     defaultValue={pricing.earlyCheckinCents / 100} className={inputCls} />
+            </label>
+            <label className="text-xs font-bold">LATE CHECK-OUT FEE (USD) <span className="font-normal text-grey">(0 = not offered)</span>
+              <input name="lateCheckoutUSD" type="number" min="0" step="1"
+                     defaultValue={pricing.lateCheckoutCents / 100} className={inputCls} />
+            </label>
+          </div>
+          <p className="mt-1 text-[11px] leading-4 text-grey">
+            Guests see these options in the booking box only when the home is
+            vacant the night before check-in (early) or the night of check-out
+            day (late) — the system checks the calendar automatically.
+          </p>
         </div>
 
         <div>

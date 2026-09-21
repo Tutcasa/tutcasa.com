@@ -100,6 +100,8 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
       cityFeeCents: c.city_fee_cents ?? 0,
       cityFeeMode: c.city_fee_mode ?? "single",
       securityDepositCents: c.security_deposit_cents ?? 0,
+      earlyCheckinCents: c.early_checkin_cents ?? 0,
+      lateCheckoutCents: c.late_checkout_cents ?? 0,
       weeklyDiscountPct: Number(c.weekly_discount_pct ?? 0),
       monthlyDiscountPct: Number(c.monthly_discount_pct ?? 0),
       earlyBirdPct: Number(c.early_bird_pct ?? 0),

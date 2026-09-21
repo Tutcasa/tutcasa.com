@@ -54,6 +54,9 @@ export interface PdData {
   guestReviews: { n: string; d: string; t: string; r: number }[];
   /** active extra options guests can add to the booking */
   addons: { id: string; name: string; priceCents: number; mode: string }[];
+  /** flat fees, 0 = not offered; shown only when the adjacent night is free */
+  earlyCheckinCents: number;
+  lateCheckoutCents: number;
   whatsapp: string;
   /** dates carried over from the stays search — prefill the booking box */
   initialCi?: string;
@@ -154,7 +157,16 @@ export function PdGrid({ p }: { p: PdData }) {
   /* every option is shown with its own label & price — the guest picks.
      The two group-size variants (up to 4 / more than 4) are exclusive:
      ticking one unticks the other */
-  const visibleAddons = p.addons;
+  // early check-in needs the night BEFORE check-in free; late check-out
+  // needs the night OF check-out day free (someone arriving that day
+  // makes it impossible). Server re-checks before charging.
+  const earlyOk = !!ci && p.earlyCheckinCents > 0 && !blocked(addDaysISO(ci, -1));
+  const lateOk = !!co && p.lateCheckoutCents > 0 && !blocked(co);
+  const timeAddons = [
+    ...(earlyOk ? [{ id: "early_checkin", name: "Early check-in", priceCents: p.earlyCheckinCents, mode: "flat" }] : []),
+    ...(lateOk ? [{ id: "late_checkout", name: "Late check-out", priceCents: p.lateCheckoutCents, mode: "flat" }] : []),
+  ];
+  const visibleAddons = [...p.addons, ...timeAddons];
   const GROUP_MODES = ["for_4", "over_4"];
   function toggleAddon(id: string, on: boolean) {
     const mode = p.addons.find((a) => a.id === id)?.mode ?? "";
@@ -178,6 +190,8 @@ export function PdGrid({ p }: { p: PdData }) {
   }
 
   function setDates(nci: string | null, nco: string | null) {
+    // date change: the adjacency rules are re-evaluated, drop stale picks
+    setSelAddons((s) => s.filter((id) => id !== "early_checkin" && id !== "late_checkout"));
     setCi(nci ?? "");
     let next = nco && nci && nco <= nci ? "" : nco ?? "";
     // picking a check-in with no (valid) check-out pre-fills the minimum

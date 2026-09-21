@@ -60,7 +60,8 @@ export async function resolveStayQuote(
             p.cleaning_fee_mode, p.city_fee_cents, p.city_fee_mode,
             p.security_deposit_cents, p.weekly_discount_pct,
             p.monthly_discount_pct, p.early_bird_pct, p.early_bird_min_days,
-            p.deposit_pct, p.second_payment_days, p.third_party_commission_pct
+            p.deposit_pct, p.second_payment_days, p.third_party_commission_pct,
+            p.early_checkin_cents, p.late_checkout_cents
        from listings l
        left join listing_pricing p on p.listing_id = l.id
       where l.slug = $1 and l.status in ('published','unlisted')`,
@@ -136,7 +137,7 @@ export async function resolveStayQuote(
 
   // guest-selected extra options — priced server-side from the listing's
   // own add-on rows (ids from the client are never trusted for prices)
-  let addons;
+  let addons: { name: string; priceCents: number; mode: import("./engine").AddonMode }[] | undefined;
   if (opts?.addonIds?.length) {
     const ar = await db.query(
       `select name, price_cents, mode from listing_addons
@@ -148,6 +149,18 @@ export async function resolveStayQuote(
       priceCents: r.price_cents as number,
       mode: r.mode as import("./engine").AddonMode,
     }));
+
+    // early check-in / late check-out: flat fees, only when the ADJACENT
+    // night is vacant (someone checking out that morning / arriving that
+    // evening makes it impossible) — re-checked here, never trusted from
+    // the client
+    const wantEarly = opts.addonIds.includes("early_checkin") && Number(L.early_checkin_cents) > 0;
+    const wantLate = opts.addonIds.includes("late_checkout") && Number(L.late_checkout_cents) > 0;
+    if (wantEarly || wantLate) {
+      const adj = await adjacentNightsFree(L.id, checkIn, checkOut);
+      if (wantEarly && adj.before) addons.push({ name: "Early check-in", priceCents: Number(L.early_checkin_cents), mode: "flat" });
+      if (wantLate && adj.after) addons.push({ name: "Late check-out", priceCents: Number(L.late_checkout_cents), mode: "flat" });
+    }
   }
 
   const quote = computeQuote({
@@ -198,6 +211,22 @@ export async function resolveStayQuote(
     quote,
     listing: { id: L.id, slug: L.slug, title: L.title, city: L.city, maxGuests: L.max_guests, instantBook: L.instant_book },
   };
+}
+
+/** Is the night before check-in / the night of check-out day free of
+    other bookings and blocks? (unavailable ranges are [from, to) nights) */
+export async function adjacentNightsFree(
+  listingId: string, checkIn: string, checkOut: string,
+): Promise<{ before: boolean; after: boolean }> {
+  const r = await getDb().query<{ before_busy: boolean; after_busy: boolean }>(
+    `select
+       exists(select 1 from listing_unavailable_ranges($1) u
+               where daterange(u.from_date, u.to_date) @> ($2::date - 1)) as before_busy,
+       exists(select 1 from listing_unavailable_ranges($1) u
+               where daterange(u.from_date, u.to_date) @> $3::date) as after_busy`,
+    [listingId, checkIn, checkOut],
+  );
+  return { before: !r.rows[0].before_busy, after: !r.rows[0].after_busy };
 }
 
 export interface AdvertisedNightly {

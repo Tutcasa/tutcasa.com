@@ -70,13 +70,17 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const [unavailable, all, contact, adv, addonRows, reviewRows] = await Promise.all([
+  const [unavailable, all, contact, adv, addonRows, feeRows, reviewRows] = await Promise.all([
     getUnavailableRanges(listing.id),
     repo.listPublished(),
     getSetting("contact"),
     advertisedNightly(listing.id).catch(() => null),
     (await import("@/lib/db")).getDb().query(
       "select id, name, price_cents, mode from listing_addons where listing_id=$1 and active order by sort",
+      [listing.id],
+    ),
+    (await import("@/lib/db")).getDb().query(
+      "select coalesce(early_checkin_cents,0) as early, coalesce(late_checkout_cents,0) as late from listing_pricing where listing_id=$1",
       [listing.id],
     ),
     (await import("@/lib/db")).getDb().query(
@@ -165,6 +169,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
       id: a.id as string, name: a.name as string,
       priceCents: a.price_cents as number, mode: a.mode as string,
     })),
+    earlyCheckinCents: Number(feeRows.rows[0]?.early ?? 0),
+    lateCheckoutCents: Number(feeRows.rows[0]?.late ?? 0),
     whatsapp: contact.whatsapp,
     initialCi,
     initialCo,
