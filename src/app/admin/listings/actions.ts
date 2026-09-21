@@ -445,7 +445,8 @@ export async function savePricingAction(
       num(formData.get("earlyBirdMinDays")),
       depositPct,
       num(formData.get("secondPaymentDays")),
-      on(formData.get("dynamicPricing")),
+      // dynamic pricing = a PriceLabs listing is mapped
+      !!String(formData.get("pricelabs") ?? "").split("|")[0],
       num(formData.get("thirdPartyCommissionPct")),
       // "plId|pms" from the PriceLabs select; empty = manual pricing
       String(formData.get("pricelabs") ?? "").split("|")[0] || null,

@@ -40,9 +40,11 @@ async function allListings(includeArchived: boolean): Promise<AdminListing[]> {
             coalesce(l.allow_party,false) as allow_party,
             coalesce(l.allow_pets,false) as allow_pets,
             l.rating_cached, l.review_count_cached,
-            coalesce(r.nightly_cents,0) as nightly_cents
+            coalesce(r.nightly_cents,0) as nightly_cents,
+            (p.pricelabs_id is not null and p.pricelabs_id <> '') as dynamic
        from listings l
        left join listing_rates r on r.listing_id = l.id and r.season is null
+       left join listing_pricing p on p.listing_id = l.id
       ${includeArchived ? "" : "where l.status <> 'archived'"}
       order by l.title`,
   );
@@ -64,6 +66,7 @@ async function allListings(includeArchived: boolean): Promise<AdminListing[]> {
     allowSmoking: r.allow_smoking, allowParty: r.allow_party,
     allowPets: r.allow_pets, rating: Number(r.rating_cached),
     reviewCount: r.review_count_cached, nightlyCents: r.nightly_cents,
+    dynamic: !!r.dynamic,
   }));
 }
 
@@ -111,6 +114,8 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
       dynamicPricing: c.dynamic_pricing ?? false,
       thirdPartyCommissionPct: Number(c.third_party_commission_pct ?? 0),
       pricelabsKey: c.pricelabs_id ? `${c.pricelabs_id}|${c.pricelabs_pms ?? "hostaway"}` : "",
+      pricelabsSyncedAt: c.pricelabs_synced_at ? new Date(c.pricelabs_synced_at).toISOString() : null,
+      pricelabsSyncedDays: c.pricelabs_synced_days ?? 0,
     },
     seasons: seasonRes.rows.map((s) => ({
       id: s.id, label: s.label, nightlyCents: s.nightly_cents,
@@ -300,8 +305,11 @@ export default async function AdminListings({
                   {l.city} · {l.bedrooms} BR · {l.maxGuests} guests
                 </div>
               </div>
-              <div className="whitespace-nowrap text-sm font-bold text-rosa">
+              <div className="whitespace-nowrap text-right text-sm font-bold text-rosa">
                 ${Math.round(l.nightlyCents / 100)}/n
+                {l.dynamic && (
+                  <div className="text-[10px] font-bold uppercase text-cactus">⟳ PriceLabs</div>
+                )}
               </div>
             </a>
           ))}

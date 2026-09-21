@@ -36,6 +36,8 @@ export interface AdminPricing {
   thirdPartyCommissionPct: number;
   /** "plListingId|pms" when mapped to PriceLabs, "" = manual pricing */
   pricelabsKey: string;
+  pricelabsSyncedAt: string | null;
+  pricelabsSyncedDays: number;
 }
 
 export interface PlOption { id: string; pms: string; name: string; base: number | null }
@@ -264,6 +266,20 @@ export function PricingForm({
             </label>
           </div>
           <div className="mt-3 grid gap-1">
+            {pricing.pricelabsKey ? (
+              <div className="rounded-xl border-[1.5px] border-cactus/40 bg-cactus/10 px-3 py-2 text-sm font-bold text-cactus">
+                ● Dynamic pricing is ON — this home follows PriceLabs.
+                <span className="ml-1 font-normal text-ink">
+                  {pricing.pricelabsSyncedAt
+                    ? `Last sync ${new Date(pricing.pricelabsSyncedAt).toLocaleString()} · ${pricing.pricelabsSyncedDays} nightly prices loaded.`
+                    : "Not synced yet — use the button below or wait for the morning sync."}
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-xl border-[1.5px] border-line bg-crema px-3 py-2 text-sm font-bold text-grey">
+                ○ Dynamic pricing is OFF — you set this home&rsquo;s prices manually.
+              </div>
+            )}
             <label className="text-xs font-bold">DYNAMIC PRICING (PriceLabs)
               <select name="pricelabs" defaultValue={pricing.pricelabsKey} className={inputCls}>
                 <option value="">Off — I set prices manually</option>

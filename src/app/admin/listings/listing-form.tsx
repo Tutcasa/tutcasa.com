@@ -50,6 +50,8 @@ export interface AdminListing {
   rating: number;
   reviewCount: number;
   nightlyCents: number;
+  /** a PriceLabs listing is mapped — prices come from the daily sync */
+  dynamic: boolean;
 }
 
 const initial: ListingFormState = { ok: true, message: "" };

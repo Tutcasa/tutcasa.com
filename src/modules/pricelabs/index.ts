@@ -101,6 +101,10 @@ export async function syncPriceLabs(): Promise<{ synced: number; days: number; e
          set nightly_cents = excluded.nightly_cents,
              min_stay = excluded.min_stay`,
     params);
+    await db.query(
+      `update listing_pricing set pricelabs_synced_at = now(), pricelabs_synced_days = $2,
+              dynamic_pricing = true where listing_id = $1`,
+      [m.listing_id, values.length]).catch(() => {});
     synced++;
     days += values.length;
   }
