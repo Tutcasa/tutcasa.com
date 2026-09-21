@@ -51,25 +51,21 @@ export function deriveTokens(l: Listing): string[] {
   if (l.country === "US") toks.push("florida");
   if (l.propertyType === "villa") toks.push("villas");
   if (l.propertyType === "penthouse") toks.push("penthouses");
-  // filter chips derive from the TITLE, HEADLINE and AMENITIES only — the
-  // description is marketing prose ("in Mareazul's beachfront community…")
-  // that made EVERY home match every chip. Precise phrases, so an
-  // "Oceanview Penthouse" is beachview but NOT beachfront.
-  const blob = (l.title + " " + l.headline + " " + l.amenities.join(" ")).toLowerCase();
-  if (/beach\s?front|ocean\s?front/.test(blob)) toks.push("beachfront");
-  // "Pool view" / "Communal swimming pool" must NOT count — only an actual
-  // private pool (title, headline or an amenity line saying so)
-  if (/private pool|plunge pool|walkout (private )?pool|own pool/.test(blob)) toks.push("private pool");
-  if (/beach\s?view|ocean\s?view|sea\s?view/.test(blob)) toks.push("beachview");
-  if (blob.includes("parking")) toks.push("free parking");
-  if (blob.includes("washer") || blob.includes("dryer") || blob.includes("laundry")) toks.push("washer & dryer");
+  // filter chips come from the admin's explicit "Filters & features"
+  // checkboxes — never guessed from amenity text
+  const f = new Set(l.features ?? []);
+  if (f.has("beachfront")) toks.push("beachfront");
+  if (f.has("private_pool")) toks.push("private pool");
+  if (f.has("ocean_view")) toks.push("beachview");
+  if (f.has("parking")) toks.push("free parking");
+  if (f.has("washer_dryer")) toks.push("washer & dryer");
   if (l.rating >= 4.8 && l.reviewCount > 0) toks.push("guest favorite");
   if (l.maxGuests >= 6) toks.push("family");
   return toks;
 }
 
 export function stayTokens(l: Listing): string[] {
-  return DEMO_STAY[l.slug]?.tokens ?? deriveTokens(l);
+  return deriveTokens(l);
 }
 
 /**

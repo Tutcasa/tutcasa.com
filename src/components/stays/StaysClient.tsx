@@ -21,7 +21,7 @@ export interface StayCard {
   tokens: string[];
   type: string; // property_type: condo, villa, …
   guests: number; // max guests
-  hay: string; // lowercase amenities+headline+description for keyword filters
+  features: string[]; // admin-set feature keys (src/lib/features.ts)
   instant: boolean;
   selfCi: boolean;
   pets: boolean;
@@ -61,17 +61,20 @@ const VIBE_TOK: Record<string, string> = {
 
 /* keyword sets for the amenity checkboxes — matched against each card's
    free-text amenities/description haystack */
-const AMENS: { k: string; words: string[] }[] = [
-  { k: "st_am_pool", words: ["private pool", "plunge pool", "walkout pool", "walkout private pool", "alberca privada", "piscina privada"] },
-  { k: "st_am_jacuzzi", words: ["jacuzzi", "hot tub"] },
-  { k: "st_am_gym", words: ["gym", "fitness"] },
-  { k: "st_am_beach", words: ["beach", "ocean", "oceanfront"] },
-  { k: "st_am_tennis", words: ["tennis", "pickleball"] },
-  { k: "st_am_kitchen", words: ["kitchen", "cocina"] },
-  { k: "st_am_washer", words: ["washer", "dryer", "laundry", "lavadora"] },
-  { k: "st_am_parking", words: ["parking"] },
-  { k: "st_am_wifi", words: ["wifi", "wi-fi", "internet"] },
-  { k: "st_am_ac", words: ["air cond", "a/c", "aircon", "climate control", "aire acond"] },
+/* drawer amenity checkboxes — each maps to ONE admin feature key */
+const AMENS: { k: string; feat: string }[] = [
+  { k: "st_am_pool", feat: "private_pool" },
+  { k: "st_am_jacuzzi", feat: "jacuzzi" },
+  { k: "st_am_gym", feat: "gym" },
+  { k: "st_am_beachfront", feat: "beachfront" },
+  { k: "st_am_view", feat: "ocean_view" },
+  { k: "st_am_beachaccess", feat: "beach_access" },
+  { k: "st_am_tennis", feat: "tennis" },
+  { k: "st_am_kitchen", feat: "kitchen" },
+  { k: "st_am_washer", feat: "washer_dryer" },
+  { k: "st_am_parking", feat: "parking" },
+  { k: "st_am_wifi", feat: "wifi" },
+  { k: "st_am_ac", feat: "ac" },
 ];
 const HOME_TYPES = ["condo", "villa", "house", "apartment", "penthouse"];
 const GUEST_STEPS = [0, 2, 4, 6, 8, 12];
@@ -99,7 +102,7 @@ function matchProp(p: StayCard, activeFilter: string, f: Filters): boolean {
   if (f.city !== "any" && p.city !== f.city) return false;
   for (const a of f.amens) {
     const set = AMENS.find((x) => x.k === a);
-    if (set && !set.words.some((w) => p.hay.includes(w))) return false;
+    if (set && !p.features.includes(set.feat)) return false;
   }
   if (f.opts.includes("instant") && !p.instant) return false;
   if (f.opts.includes("selfci") && !p.selfCi) return false;

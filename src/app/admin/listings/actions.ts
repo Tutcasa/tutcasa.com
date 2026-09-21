@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { FEATURE_KEYS } from "@/lib/features";
 import { redirect } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
@@ -296,7 +297,8 @@ export async function saveListingAction(
        faqs=$28, checkin_message=$29, checkout_message=$30,
        private_notes=$31, allow_children=$32, allow_smoking=$33,
        allow_party=$34, allow_pets=$35, featured=$36,
-       rating_cached=$37, review_count_cached=$38
+       rating_cached=$37, review_count_cached=$38,
+       features=$42
      where id=$1`,
     [
       id, title,
@@ -338,6 +340,8 @@ export async function saveListingAction(
       address,
       on(formData.get("selfCheckIn")),
       slug,
+      // explicit filter features — only known keys, from the checkboxes
+      formData.getAll("features").map(String).filter((k) => FEATURE_KEYS.includes(k)),
     ],
   );
 

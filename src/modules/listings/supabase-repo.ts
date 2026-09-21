@@ -19,6 +19,7 @@ interface ListingRow {
   headline: string | null;
   description: string | null;
   amenities: string[];
+  features: string[] | null;
   min_stay: number;
   featured: boolean | null;
   instant_book: boolean | null;
@@ -50,7 +51,7 @@ interface ListingRow {
 
 const SELECT = `
   id, slug, title, city, country, region, lat, lng, property_type,
-  max_guests, bedrooms, bathrooms, headline, description, amenities,
+  max_guests, bedrooms, bathrooms, headline, description, amenities, features,
   min_stay, featured, instant_book, self_check_in, keep_calendar_clean, allow_pets,
   allow_children, allow_smoking, allow_party,
   checkin_from, checkout_until, house_rules, cancellation_policy,
@@ -86,6 +87,7 @@ function toListing(row: ListingRow): Listing {
     headline: row.headline ?? "",
     description: row.description ?? "",
     amenities: row.amenities ?? [],
+    features: row.features ?? [],
     minStay: row.min_stay,
     featured: row.featured ?? false,
     instantBook: row.instant_book ?? false,

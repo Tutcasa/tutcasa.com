@@ -32,6 +32,7 @@ const RAW: RawListing[] = [
     description:
       "A bright oceanfront walkout in the gated Mareazul community, steps from a white-sand beach and three lagoon-style pools. Floor-to-ceiling windows open onto a private terrace with direct garden-to-beach access.",
     amenities: ["Beachfront access", "Lagoon pools", "Full kitchen", "Air conditioning", "Fast Wi-Fi", "Washer", "Free parking", "WhatsApp concierge"],
+    features: [],
     minStay: 3,
     rating: 4.94,
     reviewCount: 128,
@@ -59,6 +60,7 @@ const RAW: RawListing[] = [
     description:
       "A rooftop penthouse with a private plunge pool and sweeping Caribbean views, two blocks from Quinta Avenida's restaurants and nightlife.",
     amenities: ["Rooftop pool", "Ocean view", "Full kitchen", "Air conditioning", "Fast Wi-Fi", "Elevator", "WhatsApp concierge"],
+    features: [],
     minStay: 3,
     rating: 4.87,
     reviewCount: 96,
@@ -86,6 +88,7 @@ const RAW: RawListing[] = [
     description:
       "A private jungle villa in Aldea Zamá with a 12-metre pool, outdoor kitchen and palapa lounge — five minutes from Tulum beach.",
     amenities: ["Private pool", "Garden", "Outdoor kitchen", "Air conditioning", "Fast Wi-Fi", "Free parking", "Family friendly", "WhatsApp concierge"],
+    features: [],
     minStay: 4,
     rating: 4.91,
     reviewCount: 74,
@@ -113,6 +116,7 @@ const RAW: RawListing[] = [
     description:
       "A Nubian guesthouse on the banks of the Nile with a shaded roof terrace, home-cooked breakfast and felucca trips at sunset.",
     amenities: ["Nile view", "Roof terrace", "Breakfast included", "Air conditioning", "Wi-Fi", "Family friendly", "WhatsApp concierge"],
+    features: [],
     minStay: 2,
     rating: 4.96,
     reviewCount: 63,
@@ -140,6 +144,7 @@ const RAW: RawListing[] = [
     description:
       "A calm garden condo with its own plunge pool in a palm-shaded residencial, a short bike ride from the beach clubs.",
     amenities: ["Private pool", "Garden", "Full kitchen", "Air conditioning", "Fast Wi-Fi", "Family friendly", "WhatsApp concierge"],
+    features: [],
     minStay: 2,
     rating: 4.9,
     reviewCount: 58,
@@ -167,6 +172,7 @@ const RAW: RawListing[] = [
     description:
       "A cosy beachfront suite for couples — wake to the sound of the waves, coffee on the balcony, toes in the sand in sixty seconds.",
     amenities: ["Beachfront access", "Balcony", "Kitchenette", "Air conditioning", "Fast Wi-Fi", "WhatsApp concierge"],
+    features: [],
     minStay: 2,
     rating: 4.85,
     reviewCount: 87,
@@ -194,6 +200,7 @@ const RAW: RawListing[] = [
     description:
       "Our flagship five-bedroom estate: chef's kitchen, heated pool, cinema room and staff quarters — built for celebrations and big family escapes.",
     amenities: ["Private pool", "Chef's kitchen", "Cinema room", "Garden", "Air conditioning", "Fast Wi-Fi", "Free parking", "WhatsApp concierge"],
+    features: [],
     minStay: 4,
     rating: 4.98,
     reviewCount: 41,
@@ -221,6 +228,7 @@ const RAW: RawListing[] = [
     description:
       "A sunny four-bedroom home ten minutes from the Disney gates, with a screened pool, game room and space for the whole crew.",
     amenities: ["Private pool", "Game room", "Full kitchen", "Air conditioning", "Fast Wi-Fi", "Free parking", "Family friendly", "WhatsApp concierge"],
+    features: [],
     minStay: 3,
     rating: 4.88,
     reviewCount: 69,
@@ -248,6 +256,7 @@ const RAW: RawListing[] = [
     description:
       "A leafy three-bedroom condo built around a green courtyard and pool, a short stroll from the beach and Fifth Avenue. Bright, spacious and quiet \u2014 a comfortable home base for families and groups.",
     amenities: ["Courtyard pool", "Garden", "Full kitchen", "Air conditioning", "Wi-Fi", "Free parking", "Washer", "Smart TV", "Walk to beach", "24/7 concierge"],
+    features: [],
     minStay: 2,
     rating: 4.83,
     reviewCount: 71,

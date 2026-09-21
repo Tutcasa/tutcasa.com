@@ -1,5 +1,7 @@
 "use client";
 
+import { FEATURES } from "@/lib/features";
+
 import { useActionState, useEffect, useRef } from "react";
 import { saveListingAction, type ListingFormState } from "./actions";
 import { BedTypesEditor } from "./bed-types-editor";
@@ -27,6 +29,7 @@ export interface AdminListing {
   lng: number | null;
   address: string | null;
   amenities: string[];
+  features: string[];
   houseRules: string;
   featured: boolean;
   instantBook: boolean;
@@ -145,6 +148,7 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
             <option value="villa">Villa</option>
             <option value="house">House</option>
             <option value="apartment">Apartment</option>
+            <option value="penthouse">Penthouse</option>
           </select>
         </label>
       </div>
@@ -183,6 +187,18 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
           <textarea name="amenities" rows={5} className={inputCls}
             defaultValue={listing.amenities.join("\n")} />
         </label>
+      </div>
+      <div>
+        <div className="text-xs font-bold">FILTERS &amp; FEATURES <span className="font-normal text-grey">(these — and ONLY these — decide which filters this home appears under on the Stays page. Tick what the home truly has.)</span></div>
+        <div className="mt-2 grid gap-1.5 rounded-xl border-[1.5px] border-line bg-white p-3 sm:grid-cols-3">
+          {FEATURES.map((f) => (
+            <label key={f.key} className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="features" value={f.key}
+                defaultChecked={listing.features.includes(f.key)} className="h-4 w-4 accent-rosa" />
+              <span>{f.icon} {f.label}</span>
+            </label>
+          ))}
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         <label className="text-xs font-bold">CHECK-IN FROM

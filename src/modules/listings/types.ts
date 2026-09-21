@@ -16,6 +16,8 @@ export interface Listing {
   headline: string; // short card tag, e.g. "Oceanfront"
   description: string;
   amenities: string[];
+  /** explicit admin-set filter features (keys from FEATURE_KEYS) */
+  features: string[];
   minStay: number;
   /** admin toggle: appears in the homepage "Popular casas" strip */
   featured: boolean;
