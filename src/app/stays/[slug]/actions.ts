@@ -39,6 +39,7 @@ export async function reserveAction(input: {
   guestPhone?: string;
   couponCode?: string;
   giftCardCode?: string;
+  extras?: string[];
   addonIds?: string[];
 }): Promise<ReserveResult> {
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";

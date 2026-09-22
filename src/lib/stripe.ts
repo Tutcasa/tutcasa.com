@@ -205,3 +205,32 @@ export async function createInvoicePaymentIntent(
     return { error: "Couldn't start the payment — try again in a moment." };
   }
 }
+
+/** Hosted checkout for a CONFIRMED early check-in / late check-out. */
+export async function createExtraCheckoutSession(
+  extraId: string,
+): Promise<{ url: string } | { error: string }> {
+  if (!stripeConfigured()) return { error: "Payments aren't switched on yet." };
+  const { getExtra, EXTRA_LABEL } = await import("@/modules/extras");
+  const e = await getExtra(extraId);
+  if (!e || e.status !== "confirmed") return { error: "This option isn't payable (or is already paid)." };
+  try {
+    const session = await stripePost("/checkout/sessions", {
+      mode: "payment",
+      "line_items[0][price_data][currency]": String(e.currency ?? "USD").toLowerCase(),
+      "line_items[0][price_data][product_data][name]":
+        `${EXTRA_LABEL[e.kind as "early_checkin" | "late_checkout"]} — ${e.title}`,
+      "line_items[0][price_data][unit_amount]": String(e.fee_cents),
+      "line_items[0][quantity]": "1",
+      customer_email: e.guest_email,
+      success_url: `${SITE}/extra/${extraId}?paid=1`,
+      cancel_url: `${SITE}/extra/${extraId}`,
+      "metadata[kind]": "extra",
+      "metadata[extraId]": extraId,
+    });
+    return { url: String(session.url) };
+  } catch (err) {
+    console.error("stripe extra session:", err);
+    return { error: "Couldn't start the payment — try again in a moment." };
+  }
+}

@@ -17,5 +17,7 @@ export async function GET(req: Request) {
   const res = await runScheduledEmails();
   const { runDueBroadcasts } = await import("@/modules/emails/broadcast");
   const broadcasts = await runDueBroadcasts();
-  return NextResponse.json({ ...res, broadcasts }, { headers: { "Cache-Control": "no-store" } });
+  const { runDueExtras } = await import("@/modules/extras");
+  const extras = await runDueExtras();
+  return NextResponse.json({ ...res, broadcasts, extras }, { headers: { "Cache-Control": "no-store" } });
 }

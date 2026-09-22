@@ -195,6 +195,16 @@ export async function createBookingHold(req: BookingRequest): Promise<ReserveRes
     // confused by it, so they only get the payment receipt / confirmation once
     // they pay (the deposit-reminder automation nudges an abandoned hold). The
     // team is notified either way.
+    // early check-in / late check-out requests — no charge now; the
+    // 48h sweep decides them and sends a payment link if available
+    if (req.extras?.length) {
+      const { requestExtras } = await import("@/modules/extras");
+      await requestExtras(
+        res.rows[0].id, listing.id,
+        req.extras.filter((k): k is "early_checkin" | "late_checkout" =>
+          k === "early_checkin" || k === "late_checkout"),
+      ).catch(() => {});
+    }
     fireAutomations(
       isRequest
         ? ["guest_booking_request", "admin_new_booking"]

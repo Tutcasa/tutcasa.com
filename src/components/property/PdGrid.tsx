@@ -157,16 +157,17 @@ export function PdGrid({ p }: { p: PdData }) {
   /* every option is shown with its own label & price — the guest picks.
      The two group-size variants (up to 4 / more than 4) are exclusive:
      ticking one unticks the other */
-  // early check-in needs the night BEFORE check-in free; late check-out
-  // needs the night OF check-out day free (someone arriving that day
-  // makes it impossible). Server re-checks before charging.
-  const earlyOk = !!ci && p.earlyCheckinCents > 0 && !blocked(addDaysISO(ci, -1));
-  const lateOk = !!co && p.lateCheckoutCents > 0 && !blocked(co);
-  const timeAddons = [
-    ...(earlyOk ? [{ id: "early_checkin", name: "Early check-in", priceCents: p.earlyCheckinCents, mode: "flat" }] : []),
-    ...(lateOk ? [{ id: "late_checkout", name: "Late check-out", priceCents: p.lateCheckoutCents, mode: "flat" }] : []),
+  const visibleAddons = p.addons;
+  /* early check-in / late check-out are REQUESTS, never charged now: the
+     calendar is checked 48h before and the guest pays only if confirmed.
+     Hidden when the adjacent night is already taken (impossible today). */
+  const [reqExtras, setReqExtras] = useState<string[]>([]);
+  const timeExtras = [
+    ...(p.earlyCheckinCents > 0 && (!ci || !blocked(addDaysISO(ci, -1)))
+      ? [{ id: "early_checkin", name: "Early check-in", priceCents: p.earlyCheckinCents }] : []),
+    ...(p.lateCheckoutCents > 0 && (!co || !blocked(co))
+      ? [{ id: "late_checkout", name: "Late check-out", priceCents: p.lateCheckoutCents }] : []),
   ];
-  const visibleAddons = [...p.addons, ...timeAddons];
   const GROUP_MODES = ["for_4", "over_4"];
   function toggleAddon(id: string, on: boolean) {
     const mode = p.addons.find((a) => a.id === id)?.mode ?? "";
@@ -191,7 +192,7 @@ export function PdGrid({ p }: { p: PdData }) {
 
   function setDates(nci: string | null, nco: string | null) {
     // date change: the adjacency rules are re-evaluated, drop stale picks
-    setSelAddons((s) => s.filter((id) => id !== "early_checkin" && id !== "late_checkout"));
+    setReqExtras([]);
     setCi(nci ?? "");
     let next = nco && nci && nco <= nci ? "" : nco ?? "";
     // picking a check-in with no (valid) check-out pre-fills the minimum
@@ -213,7 +214,8 @@ export function PdGrid({ p }: { p: PdData }) {
     if (!nights) { setCalOpen("ci"); return; }
     if (nights < p.minStay) { alert("This home has a minimum stay of " + p.minStay + " nights."); return; }
     if (overlaps(ci, co)) { alert("Some of those nights are already booked — pick different dates."); return; }
-    const extra = selAddons.length ? `&addons=${selAddons.join(",")}` : "";
+    const extra = (selAddons.length ? `&addons=${selAddons.join(",")}` : "")
+      + (reqExtras.length ? `&extras=${reqExtras.join(",")}` : "");
     router.push(`/booking?stay=${p.slug}&ci=${ci}&co=${co}&guests=${guests}${extra}`);
   }
 
@@ -597,15 +599,32 @@ export function PdGrid({ p }: { p: PdData }) {
             <button type="button" onClick={() => pdG(1)}>+</button>
           </div>
         </div>
-        {visibleAddons.length > 0 && (
+        {(visibleAddons.length + timeExtras.length) > 0 && (
           <div style={{ margin: "10px 0 4px" }}>
             {/* collapsed by default so the booking box stays short — the
                 button shows how many extras exist and how many are picked */}
             <button type="button" onClick={() => setAddonsOpen((v) => !v)}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", background: "none", border: "1.5px solid var(--line)", borderRadius: 12, padding: "8px 12px", cursor: "pointer", fontSize: 12, fontWeight: 800, letterSpacing: ".04em", textTransform: "uppercase", color: "var(--grey)" }}>
-              <span>Extra options ({visibleAddons.length}){selAddons.length > 0 ? ` · ${selAddons.length} selected` : ""}</span>
+              <span>Extra options ({visibleAddons.length + timeExtras.length}){selAddons.length + reqExtras.length > 0 ? ` · ${selAddons.length + reqExtras.length} selected` : ""}</span>
               <span style={{ fontSize: 14, transform: addonsOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }}>▾</span>
             </button>
+            {addonsOpen && timeExtras.map((x) => (
+              <label key={x.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13.5, padding: "4px 0", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={reqExtras.includes(x.id)}
+                  onChange={(e) => setReqExtras((s) => e.target.checked ? [...s, x.id] : s.filter((v) => v !== x.id))}
+                  style={{ width: 16, height: 16, marginTop: 2, accentColor: "var(--rosa, #E4326B)" }}
+                />
+                <span style={{ flex: 1 }}>
+                  Request {x.name.toLowerCase()}
+                  <span style={{ display: "block", fontSize: 11.5, color: "var(--grey)" }}>
+                    Confirmed 48h before — you only pay if we can offer it
+                  </span>
+                </span>
+                <b>{fromUSD(Math.round(x.priceCents / 100))}</b>
+              </label>
+            ))}
             {addonsOpen && visibleAddons.map((a) => (
               <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, padding: "4px 0", cursor: "pointer" }}>
                 <input

@@ -150,17 +150,6 @@ export async function resolveStayQuote(
       mode: r.mode as import("./engine").AddonMode,
     }));
 
-    // early check-in / late check-out: flat fees, only when the ADJACENT
-    // night is vacant (someone checking out that morning / arriving that
-    // evening makes it impossible) — re-checked here, never trusted from
-    // the client
-    const wantEarly = opts.addonIds.includes("early_checkin") && Number(L.early_checkin_cents) > 0;
-    const wantLate = opts.addonIds.includes("late_checkout") && Number(L.late_checkout_cents) > 0;
-    if (wantEarly || wantLate) {
-      const adj = await adjacentNightsFree(L.id, checkIn, checkOut);
-      if (wantEarly && adj.before) addons.push({ name: "Early check-in", priceCents: Number(L.early_checkin_cents), mode: "flat" });
-      if (wantLate && adj.after) addons.push({ name: "Late check-out", priceCents: Number(L.late_checkout_cents), mode: "flat" });
-    }
   }
 
   const quote = computeQuote({

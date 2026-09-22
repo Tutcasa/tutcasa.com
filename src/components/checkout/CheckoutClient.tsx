@@ -25,7 +25,7 @@ export interface CheckoutLine {
 }
 
 export type CheckoutPayload =
-  | { kind: "stay"; slug: string; ci: string; co: string; guests: number; addonIds?: string[] }
+  | { kind: "stay"; slug: string; ci: string; co: string; guests: number; addonIds?: string[]; extras?: string[] }
   | { kind: "tour"; slug: string; date: string; groupSize: number; addons?: string[]; notes?: string }
   | { kind: "plan"; acts: string[]; people: number; dates?: string } // build-your-own request
   | { kind: "none" }; // demo-style preview confirm
@@ -192,6 +192,7 @@ export function CheckoutClient({
               couponCode: coupon?.code,
               giftCardCode: gift?.code,
               addonIds: payload.addonIds,
+              extras: payload.extras,
             })
           : await reserveTourAction({
               tourSlug: payload.slug, tourDate: payload.date, groupSize: payload.groupSize,
@@ -266,6 +267,15 @@ export function CheckoutClient({
               <input placeholder="Coupon code" value={promo} onChange={(e) => setPromo(e.target.value)} />
               <button onClick={applyCoupon} disabled={checkingCoupon}>{checkingCoupon ? "Checking…" : "Apply"}</button>
             </div>
+            {payload.kind === "stay" && (payload.extras?.length ?? 0) > 0 && (
+              <div className="co-row" style={{ color: "var(--grey)", fontSize: "12.5px" }}>
+                <span>
+                  Requested: {payload.extras!.map((k) => k === "early_checkin" ? "early check-in" : "late check-out").join(" + ")}
+                  {" "}— confirmed 48h before, paid only if available
+                </span>
+                <span>—</span>
+              </div>
+            )}
             {payload.kind === "stay" && (
               <>
                 <div className="co-promo">

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
   }
 
   const s = event.data.object as { id: string; amount_total?: number; amount_received?: number;
-    payment_intent?: string; metadata?: { kind?: string; invoiceId?: string;
+    payment_intent?: string; metadata?: { kind?: string; invoiceId?: string; extraId?: string;
       amountUSD?: string; buyerEmail?: string; recipientEmail?: string; message?: string } };
   const kind = s.metadata?.kind;
   const id = s.metadata?.invoiceId ?? "";
@@ -85,6 +85,14 @@ export async function POST(req: NextRequest) {
       recipientEmail: s.metadata.recipientEmail || undefined,
       message: s.metadata.message || undefined,
     });
+    return NextResponse.json({ received: true });
+  }
+
+  // early check-in / late check-out: no invoiceId — the extra's own id
+  // travels in the metadata. Marks it paid and blocks the adjacent night.
+  if (kind === "extra" && paidCents > 0 && s.metadata?.extraId) {
+    const { fulfillExtraPayment } = await import("@/modules/extras");
+    await fulfillExtraPayment(s.metadata.extraId, ref);
     return NextResponse.json({ received: true });
   }
 

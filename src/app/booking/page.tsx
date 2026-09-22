@@ -17,6 +17,7 @@ interface Params {
   co?: string;
   guests?: string;
   addons?: string; // comma-separated listing_addons ids (re-priced server-side)
+  extras?: string; // early_checkin / late_checkout REQUESTS (never charged now)
   items?: string; // demo cart contract (gift cards)
 }
 
@@ -41,6 +42,7 @@ export default async function BookingCheckoutPage({
     const { visitorCommission } = await import("@/modules/partners");
     const via = await visitorCommission();
     const addonIds = q.addons ? q.addons.split(",").filter(Boolean) : undefined;
+    const extras = (q.extras ?? "").split(",").filter((k) => k === "early_checkin" || k === "late_checkout");
     const res = await resolveStayQuote(q.stay, q.ci, q.co, guests, undefined, { commissionPct: via?.pct, addonIds });
     // guard the same rules createBookingHold enforces, so a tampered URL
     // (past dates, over-capacity) can't render a payable summary that would
@@ -79,7 +81,7 @@ export default async function BookingCheckoutPage({
       }
       currency = "USD";
       dates = `${q.ci} → ${q.co}`;
-      payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests, addonIds };
+      payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests, addonIds, extras };
       // request-to-book homes take a request — no payment step at checkout
       requestToBook = !res.listing.instantBook;
       // the deposit splits 50/50 between the first payment and the balance

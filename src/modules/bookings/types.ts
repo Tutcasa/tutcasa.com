@@ -13,6 +13,8 @@ export interface BookingRequest {
   addonIds?: string[];
   /** gift card code to redeem against the charge (stored value) */
   giftCardCode?: string;
+  /** early_checkin / late_checkout REQUESTS — decided + paid 48h before */
+  extras?: string[];
   /** ?via=CODE tracked-link attribution (server-verified, never trusted raw) */
   marketingRef?: string;
   marketingCommissionPct?: number;

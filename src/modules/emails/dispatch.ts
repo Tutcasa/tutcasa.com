@@ -300,21 +300,28 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
                from availability_blocks ab
               where ab.listing_id = b.listing_id and ab.span && b.stay
              union all
-             -- EARLY CHECK-IN was sold but the night before is now taken
-             select 'EARLY CHECK-IN sold, but the night before ('
-                    || to_char(lower(b.stay) - 1, 'YYYY-MM-DD') || ') is now booked/blocked — '
-                    || 'contact the guest to cancel the early check-in and refund the fee'
-              where b.price_breakdown::text ilike '%"Early check-in"%'
-                and exists (select 1 from listing_unavailable_ranges(b.listing_id) u
-                             where daterange(u.from_date, u.to_date) @> (lower(b.stay) - 1))
-             union all
-             -- LATE CHECK-OUT was sold but someone now arrives that day
-             select 'LATE CHECK-OUT sold, but check-out day ('
-                    || to_char(upper(b.stay), 'YYYY-MM-DD') || ') now has an arrival — '
-                    || 'contact the guest to cancel the late check-out and refund the fee'
-              where b.price_breakdown::text ilike '%"Late check-out"%'
-                and exists (select 1 from listing_unavailable_ranges(b.listing_id) u
-                             where daterange(u.from_date, u.to_date) @> upper(b.stay))
+             -- an early check-in / late check-out that was CONFIRMED or PAID
+             -- but whose night has since been taken (should be impossible
+             -- once paid — this is the safety net)
+             select upper(x.kind) || ' (' || x.status || ') is at risk: the '
+                    || case when x.kind = 'early_checkin'
+                            then 'night before check-in (' || to_char(lower(b.stay) - 1, 'YYYY-MM-DD') || ')'
+                            else 'check-out day (' || to_char(upper(b.stay), 'YYYY-MM-DD') || ')'
+                       end
+                    || ' is now taken — contact the guest'
+                    || case when x.status = 'paid' then ' and refund the fee' else '' end
+               from booking_extras x
+              where x.booking_id = b.id and x.status in ('confirmed','paid')
+                and exists (
+                  select 1 from listing_unavailable_ranges(b.listing_id) u
+                   where daterange(u.from_date, u.to_date) &&
+                         case when x.kind = 'early_checkin'
+                              then daterange(lower(b.stay) - 1, lower(b.stay))
+                              else daterange(upper(b.stay), upper(b.stay) + 1)
+                         end
+                     and not (u.from_date = case when x.kind='early_checkin' then lower(b.stay) - 1 else upper(b.stay) end
+                              and u.to_date = case when x.kind='early_checkin' then lower(b.stay) else upper(b.stay) + 1 end)
+                )
            ) c on true
           where b.status = 'confirmed' and not b.no_block
             and upper(b.stay) >= current_date
