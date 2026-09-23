@@ -38,3 +38,13 @@ body header .wrap.nav .nav-right { flex: 0 0 auto; gap: 8px; }
   body header .wrap.nav .nav-links a { padding: 8px 7px; gap: 5px; }
   body header .wrap.nav .nav-links .ni { font-size: 15px; }
 }
+
+/* Hand over to the burger menu a little earlier than the demo's 880px:
+   with six links the bar would otherwise overflow horizontally between
+   ~880 and ~1000px. Tablets get the drawer instead of a cramped bar. */
+@media (max-width: 1000px) {
+  body header .wrap.nav .nav-links { display: none; }
+  body header .wrap.nav .nav-right .tcnav-burger { display: flex; }
+  body header .wrap.nav .nav-right .lang-wrap,
+  body header .wrap.nav .nav-right .acct-wrap { display: none; }
+}
