@@ -57,7 +57,7 @@ const ERRORS: Record<string, string> = {
 };
 
 export function CheckoutClient({
-  lines,
+  lines: baseLines,
   currency,
   dates,
   payload,
@@ -77,7 +77,7 @@ export function CheckoutClient({
   const [phone, setPhone] = useState("");
   const [promo, setPromo] = useState("");
   const [promoMsg, setPromoMsg] = useState(false);
-  const [coupon, setCoupon] = useState<{ code: string; discount: number; saleRemoved: number } | null>(null);
+  const [coupon, setCoupon] = useState<{ code: string; discount: number; lines?: CheckoutLine[] } | null>(null);
   const [couponErr, setCouponErr] = useState<string | null>(null);
   const [checkingCoupon, setCheckingCoupon] = useState(false);
   const [giftInput, setGiftInput] = useState("");
@@ -107,9 +107,10 @@ export function CheckoutClient({
       the picker switches it); the charge stays in the cart's native
       currency and is shown once, honestly, under the total */
   const show = (a: number) => (cur === "MXN" ? fromMXN(a) : fromUSD(a));
-  // a coupon REPLACES sale discounts (early-bird / weekly / monthly): the
-  // displaced sale amount comes back onto the bill, then the coupon applies
-  const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0) + (coupon?.saleRemoved ?? 0);
+  // a coupon REPLACES sale discounts (early-bird / weekly / monthly): when
+  // one is applied the server sends back the bill without them
+  const lines = coupon?.lines ?? baseLines;
+  const totalBefore = lines.reduce((a, l) => a + (Number(l.a) || 0), 0);
   const discount = Math.min(coupon?.discount ?? 0, totalBefore);
   // the gift card is stored value: it covers up to the remaining charge,
   // the rest stays on the card (server re-checks everything)
@@ -138,11 +139,13 @@ export function CheckoutClient({
     setCheckingCoupon(true);
     try {
       const res = payload.kind === "stay"
-        ? await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests, email.trim() || undefined)
+        ? await validateCouponAction(promo, payload.slug, payload.ci, payload.co, payload.guests, email.trim() || undefined, payload.addonIds)
         : await validateTourCouponAction(promo, payload.slug, payload.groupSize, payload.addons, email.trim() || undefined);
       if (res.ok && res.code != null) {
-        const saleRemoved = "saleRemoved" in res ? (res.saleRemoved ?? 0) : 0;
-        setCoupon({ code: res.code, discount: res.discount ?? 0, saleRemoved }); setPromoMsg(false);
+        // the coupon REPLACES any sale discount: redraw the bill from the
+        // server's coupon-only quote, so no discount line lingers on screen
+        setCoupon({ code: res.code, discount: res.discount ?? 0, lines: "lines" in res ? res.lines : undefined });
+        setPromoMsg(false);
       }
       else { setCoupon(null); setCouponErr((res as { message?: string }).message ?? "That coupon can\u2019t be used here."); }
     } finally {
@@ -297,11 +300,6 @@ export function CheckoutClient({
             </div>
             {couponErr && (
               <div style={{ fontSize: "12.5px", color: "var(--rosa)", fontWeight: 700, marginBottom: 8 }}>{couponErr}</div>
-            )}
-            {coupon && coupon.saleRemoved > 0 && (
-              <div className="co-row" style={{ color: "var(--grey)", fontSize: "12.5px" }}>
-                <span>Stay discount (replaced by your coupon)</span><span>+{show(coupon.saleRemoved)}</span>
-              </div>
             )}
             {coupon && (
               <div className="co-row" style={{ color: "var(--cactus)", fontWeight: 700 }}>

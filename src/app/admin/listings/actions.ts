@@ -456,8 +456,18 @@ export async function savePricingAction(
     ],
   );
 
+  // switching back to manual pricing must also REMOVE the prices PriceLabs
+  // wrote — otherwise the per-date rows keep driving every quote
+  const plKey = String(formData.get("pricelabs") ?? "").split("|")[0];
+  let extra = "";
+  if (!plKey) {
+    const { clearPriceLabsDays } = await import("@/modules/pricelabs");
+    const cleared = await clearPriceLabsDays(id).catch(() => 0);
+    if (cleared > 0) extra = ` Dynamic pricing is off — ${cleared} PriceLabs nightly prices removed, this home now uses your base and seasonal rates.`;
+  }
+
   revalidatePublic();
-  return { ok: true, message: "Pricing updated." };
+  return { ok: true, message: "Pricing updated." + extra };
 }
 
 /** Add a seasonal rate ("from" and "to" are both inclusive nights). */
@@ -831,9 +841,27 @@ export async function uploadTourPhotoAction(formData: FormData): Promise<Listing
 /** Pull PriceLabs prices for every mapped home right now. */
 export async function syncPriceLabsNowAction(
   _prev: ListingFormState,
-  _formData: FormData,
+  formData: FormData,
 ): Promise<ListingFormState> {
   await requireAdmin();
+  // this button lives inside the pricing form, so it must persist the
+  // dropdown choice first — otherwise picking a listing and hitting Sync
+  // would throw the selection away and the home would stay "off"
+  const id = String(formData.get("id") ?? "");
+  const [plId, plPms] = String(formData.get("pricelabs") ?? "").split("|");
+  if (/^[0-9a-f-]{36}$/i.test(id)) {
+    await getDb().query(
+      `insert into listing_pricing (listing_id, pricelabs_id, pricelabs_pms, dynamic_pricing)
+       values ($1,$2,$3,$4)
+       on conflict (listing_id) do update
+         set pricelabs_id = $2, pricelabs_pms = $3, dynamic_pricing = $4`,
+      [id, plId || null, plPms || null, !!plId],
+    ).catch(() => {});
+    if (!plId) {
+      const { clearPriceLabsDays } = await import("@/modules/pricelabs");
+      await clearPriceLabsDays(id).catch(() => {});
+    }
+  }
   const { syncPriceLabs } = await import("@/modules/pricelabs");
   const res = await syncPriceLabs();
   revalidatePublic();

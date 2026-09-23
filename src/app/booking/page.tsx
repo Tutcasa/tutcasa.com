@@ -1,6 +1,7 @@
 import "@/styles/demo/checkout.css";
 import type { Metadata } from "next";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
+import { stayCheckoutLines } from "@/modules/pricing/checkout-lines";
 import { todayLocal } from "@/lib/local-date";
 import { CheckoutClient, type CheckoutLine, type CheckoutPayload, type CheckoutSchedule } from "@/components/checkout/CheckoutClient";
 
@@ -55,30 +56,7 @@ export default async function BookingCheckoutPage({
     if (validStay && res.ok) {
       const qt = res.quote;
       const d = (c: number) => Math.round(c / 100);
-      lines = [{
-        n: `${res.listing.title} — ${res.listing.city}`,
-        m: `${qt.nights} nights · ${guests} guests · ${q.ci} → ${q.co}${qt.weekendUpliftCents > 0 || qt.nightlyCents * qt.nights !== qt.accommodationCents ? " · custom nightly rates" : ""}`,
-        // weekend/seasonal uplifts fold into the nightly total — the guest
-        // sees custom nightly rates, not the % mechanics
-        a: d(qt.accommodationCents),
-      }];
-      if (qt.lengthDiscountCents > 0) lines.push({
-        n: qt.lengthDiscountKind === "monthly" ? "Monthly stay discount" : "Weekly stay discount",
-        m: "", a: -d(qt.lengthDiscountCents),
-      });
-      if (qt.earlyBirdDiscountCents > 0) lines.push({ n: "Early-bird discount", m: "", a: -d(qt.earlyBirdDiscountCents) });
-      if (qt.extraGuestFeeCents > 0) lines.push({ n: "Extra guests", m: "", a: d(qt.extraGuestFeeCents) });
-      if (qt.cleaningCents > 0) lines.push({ n: "Cleaning fee", m: "", a: d(qt.cleaningCents) });
-      if (qt.cityFeeCents > 0) lines.push({ n: "City fee", m: "", a: d(qt.cityFeeCents) });
-      for (const a of qt.addonLines) {
-        lines.push({ n: a.name, m: "extra option", a: d(a.totalCents) });
-      }
-      // tax as the closing line, sized so the lines sum exactly to the total
-      const soFar = lines.reduce((a, l) => a + l.a, 0);
-      lines.push({ n: "Taxes", m: "", a: d(qt.totalCents) - soFar });
-      if (qt.securityDepositCents > 0) {
-        lines.push({ n: "Security deposit", m: "", a: d(qt.securityDepositCents) });
-      }
+      lines = stayCheckoutLines(qt, { guests, checkIn: q.ci, checkOut: q.co });
       currency = "USD";
       dates = `${q.ci} → ${q.co}`;
       payload = { kind: "stay", slug: res.listing.slug, ci: q.ci, co: q.co, guests, addonIds, extras };

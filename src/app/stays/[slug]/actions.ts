@@ -53,7 +53,9 @@ export async function reserveAction(input: {
 }
 
 export type CouponResult =
-  | { ok: true; code: string; discount: number; saleRemoved?: number } // display units; saleRemoved = sale discount the coupon displaces
+  | { ok: true; code: string; discount: number;
+      /** the stay's lines WITHOUT the sale discounts the coupon replaces */
+      lines?: { n: string; m: string; a: number }[] }
   | { ok: false; message: string };
 
 /** Validate a coupon against a live stay quote (server-side, always). */
@@ -64,6 +66,7 @@ export async function validateCouponAction(
   checkOut: string,
   guests: number,
   guestEmail?: string,
+  addonIds?: string[],
 ): Promise<CouponResult> {
   const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (overLimit(`coupon:${ip}`, 15, 10 * 60 * 1000)) {
@@ -73,12 +76,10 @@ export async function validateCouponAction(
   // the coupon replaces any sale discount, so validate against the plain
   // (undiscounted) price and tell the checkout how much sale discount it
   // must add back to its running total
-  const [res, withSale] = await Promise.all([
-    resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined, { commissionPct: pct, noSaleDiscounts: true }),
-    resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined, { commissionPct: pct }),
-  ]);
-  if (!res.ok || !withSale.ok) return { ok: false, message: "Add valid dates first." };
-  const saleRemovedCents = Math.max(0, res.quote.totalCents - withSale.quote.totalCents);
+  const res = await resolveStayQuote(slug, checkIn, checkOut, Math.max(1, guests), undefined,
+    { commissionPct: pct, noSaleDiscounts: true, addonIds });
+  if (!res.ok) return { ok: false, message: "Add valid dates first." };
+
   const cp = await checkCoupon(code, {
     nights: res.quote.nights,
     totalCents: res.quote.totalCents,
@@ -99,9 +100,10 @@ export async function validateCouponAction(
       : "We don't recognize that coupon code.";
     return { ok: false, message: msg };
   }
+  const { stayCheckoutLines } = await import("@/modules/pricing/checkout-lines");
   return {
     ok: true, code: cp.code, discount: Math.round(cp.discountCents / 100),
-    saleRemoved: Math.round(saleRemovedCents / 100),
+    lines: stayCheckoutLines(res.quote, { guests: Math.max(1, guests), checkIn, checkOut }),
   };
 }
 

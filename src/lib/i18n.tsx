@@ -20,7 +20,7 @@ export type Lang = "en" | "fr" | "es";
 
 export const I18N: Record<Lang, Record<string, string>> = {
   en: {
-    nav_stays: `Stays`, nav_concierge: `Concierge`, nav_tours: `Tours &amp; Parks`, nav_family: `Our Family`, nav_loyalty: `Loyalty program`,
+    nav_stays: `Stays`, nav_concierge: `Concierge`, nav_tours: `Tours &amp; Parks`, nav_family: `Our Family`, nav_gift: `Gift cards`, nav_loyalty: `Loyalty program`,
     foot_blurb: `Where every stay tells a story.`,
     foot_explore: `Explore`, foot_popular: `Popular homes`, foot_experiences: `Experiences`, foot_company: `Company`,
     foot_investors: `Investors`, foot_loyalty: `Loyalty program`, foot_gift: `Gift cards`, foot_list: `List my property`,
@@ -113,7 +113,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     byo_hint: `Priced activities can be booked now &mdash; on-request ones we&rsquo;ll quote you personally.`,
   },
   fr: {
-    nav_stays: `Séjours`, nav_concierge: `Conciergerie`, nav_tours: `Excursions &amp; Parcs`, nav_family: `Notre famille`, nav_loyalty: `Programme fidélité`,
+    nav_stays: `Séjours`, nav_concierge: `Conciergerie`, nav_tours: `Excursions &amp; Parcs`, nav_family: `Notre famille`, nav_gift: `Cartes-cadeaux`, nav_loyalty: `Programme fidélité`,
     foot_blurb: `Là où chaque séjour raconte une histoire.`,
     foot_explore: `Explorer`, foot_popular: `Casas populaires`, foot_experiences: `Expériences`, foot_company: `Entreprise`,
     foot_investors: `Investisseurs`, foot_loyalty: `Programme de fidélité`, foot_gift: `Cartes-cadeaux`, foot_list: `Proposer mon bien`,
@@ -203,7 +203,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     byo_hint: `Les activités avec prix peuvent être réservées maintenant — pour les autres, nous vous ferons un devis.`,
   },
   es: {
-    nav_stays: `Estancias`, nav_concierge: `Conserjería`, nav_tours: `Tours y Parques`, nav_family: `Nuestra familia`, nav_loyalty: `Programa de lealtad`,
+    nav_stays: `Estancias`, nav_concierge: `Conserjería`, nav_tours: `Tours y Parques`, nav_family: `Nuestra familia`, nav_gift: `Tarjetas regalo`, nav_loyalty: `Programa de lealtad`,
     foot_blurb: `Donde cada estancia cuenta una historia.`,
     foot_explore: `Explorar`, foot_popular: `Casas populares`, foot_experiences: `Experiencias`, foot_company: `Empresa`,
     foot_investors: `Inversores`, foot_loyalty: `Programa de lealtad`, foot_gift: `Tarjetas de regalo`, foot_list: `Publicar mi propiedad`,

@@ -95,7 +95,8 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
             <Link href="/concierge" className={pathname.startsWith("/concierge") ? "active" : undefined}><span className="ni">&#128736;&#65039;</span><T k="nav_concierge" /></Link>
             <Link href="/tours" className={pathname.startsWith("/tours") || pathname.startsWith("/experiences") ? "active" : undefined}><span className="ni">&#127905;</span><T k="nav_tours" /></Link>
             <Link href="/our-family" className={pathname.startsWith("/our-family") ? "active" : undefined}><span className="ni">&#128149;</span><T k="nav_family" /></Link>
-            <Link href="/loyalty" className={pathname.startsWith("/loyalty") ? "active" : undefined}><span className="ni">&#127873;</span><T k="nav_loyalty" /></Link>
+            <Link href="/gift-cards" className={pathname.startsWith("/gift-cards") ? "active" : undefined}><span className="ni">&#127873;</span><T k="nav_gift" /></Link>
+            <Link href="/loyalty" className={pathname.startsWith("/loyalty") ? "active" : undefined}><span className="ni">&#11088;</span><T k="nav_loyalty" /></Link>
           </nav>
           <div className="nav-right">
             <button className="tcnav-burger" aria-label="Open menu" onClick={openDrawer}>
@@ -186,13 +187,13 @@ export function SiteHeader({ whatsapp }: { whatsapp: string }) {
           <Link href="/concierge" onClick={closeDrawer}><span className="ni">&#128736;&#65039;</span><T k="nav_concierge" /></Link>
           <Link href="/tours" onClick={closeDrawer}><span className="ni">&#127905;</span><T k="nav_tours" /></Link>
           <Link href="/our-family" onClick={closeDrawer}><span className="ni">&#128149;</span><T k="nav_family" /></Link>
-          <Link href="/loyalty" onClick={closeDrawer}><span className="ni">&#127873;</span><T k="nav_loyalty" /></Link>
+          <Link href="/gift-cards" onClick={closeDrawer}><span className="ni">&#127873;</span><T k="nav_gift" /></Link>
+          <Link href="/loyalty" onClick={closeDrawer}><span className="ni">&#11088;</span><T k="nav_loyalty" /></Link>
           <Link href="/wishlist" onClick={closeDrawer}><span className="ni">&#10084;&#65039;</span>Wishlist <span className="wcount">{wishCount}</span></Link>
         </nav>
         <hr />
         <nav className="tcnav-links secondary">
           <Link href="/tours" onClick={closeDrawer}>Tours &amp; Transfers</Link>
-          <Link href="/gift-cards" onClick={closeDrawer}>Gift cards 🎁</Link>
           <Link href="/loyalty" onClick={closeDrawer}>Loyalty program</Link>
           <Link href="/why-book-with-us" onClick={closeDrawer}>Why book with us</Link>
           <Link href="/policies" onClick={closeDrawer}>Help &amp; policies</Link>

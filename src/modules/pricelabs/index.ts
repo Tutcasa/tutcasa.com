@@ -51,6 +51,29 @@ export async function listPlListings(): Promise<PlListing[]> {
   }));
 }
 
+/**
+ * Switch a home back to manual pricing: remove exactly the per-date prices
+ * PriceLabs wrote (today onward). Blocked days, notes and the admin's own
+ * per-day overrides survive — the home falls back to its base/seasonal rates.
+ */
+export async function clearPriceLabsDays(listingId: string): Promise<number> {
+  const db = getDb();
+  const upd = await db.query(
+    `update listing_price_days
+        set nightly_cents = null, min_stay = null, pricelabs = false
+      where listing_id = $1 and pricelabs and day >= current_date
+      returning day`, [listingId]);
+  // rows that now carry nothing at all are pure noise
+  await db.query(
+    `delete from listing_price_days
+      where listing_id = $1 and nightly_cents is null and min_stay is null
+        and not coalesce(is_blocked,false) and coalesce(note,'') = ''`, [listingId]);
+  await db.query(
+    `update listing_pricing set dynamic_pricing = false, pricelabs_synced_at = null,
+            pricelabs_synced_days = null where listing_id = $1`, [listingId]);
+  return upd.rowCount ?? 0;
+}
+
 /** Pull prices for every mapped home into listing_price_days. */
 export async function syncPriceLabs(): Promise<{ synced: number; days: number; errors: string[] }> {
   if (!pricelabsConfigured()) return { synced: 0, days: 0, errors: ["PRICELABS_API_KEY not set"] };
@@ -93,16 +116,17 @@ export async function syncPriceLabs(): Promise<{ synced: number; days: number; e
       const minStay = d.min_stay != null && d.min_stay >= 1 ? Math.round(d.min_stay) : null;
       params.push(d.date, Math.round(d.price * 100), minStay);
       const i = params.length;
-      values.push(`($1, $${i - 2}::date, $${i - 1}::int, $${i}::int)`);
+      values.push(`($1, $${i - 2}::date, $${i - 1}::int, $${i}::int, true)`);
     }
     if (!values.length) continue;
     try {
       await db.query(
-        `insert into listing_price_days (listing_id, day, nightly_cents, min_stay)
+        `insert into listing_price_days (listing_id, day, nightly_cents, min_stay, pricelabs)
          values ${values.join(",")}
          on conflict (listing_id, day) do update
            set nightly_cents = excluded.nightly_cents,
-               min_stay = excluded.min_stay`,
+               min_stay = excluded.min_stay,
+               pricelabs = true`,
       params);
     } catch (e) {
       // one home's bad data must never stop the others
