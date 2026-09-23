@@ -1,0 +1,40 @@
+/* Header fit — NOT generated. Six nav links no longer fit the demo's
+   1180px container, so the bar wrapped onto two lines. The header (and
+   only the header) gets a wider container: the logo sits further left,
+   the language / currency / account controls further right, and the
+   links tighten slightly. Selectors carry one more class than the
+   generated per-page rules so they win regardless of import order. */
+
+body header .wrap.nav {
+  max-width: 1340px;
+  padding: 0 20px;
+  gap: 10px;
+}
+
+body header .wrap.nav .logo {
+  margin-right: 0;
+  flex: 0 0 auto;
+}
+
+body header .wrap.nav .nav-links {
+  gap: 1px;
+  font-size: 14.5px;
+  flex-wrap: nowrap;        /* never break onto a second line */
+  white-space: nowrap;
+}
+
+body header .wrap.nav .nav-links a {
+  padding: 8px 10px;
+  gap: 6px;
+}
+
+body header .wrap.nav .nav-links .ni { font-size: 16px; }
+
+body header .wrap.nav .nav-right { flex: 0 0 auto; gap: 8px; }
+
+/* a little tighter again where the bar is most crowded */
+@media (max-width: 1250px) {
+  body header .wrap.nav .nav-links { font-size: 13.5px; }
+  body header .wrap.nav .nav-links a { padding: 8px 7px; gap: 5px; }
+  body header .wrap.nav .nav-links .ni { font-size: 15px; }
+}

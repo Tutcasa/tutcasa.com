@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "@/styles/demo/base.css";
 import "@/styles/demo/chrome-fallback.css";
+import "@/styles/header-fit.css";
 import { LangProvider } from "@/lib/i18n";
 import { CurrencyProvider } from "@/lib/currency";
 import { SiteHeader } from "@/components/site/SiteHeader";
