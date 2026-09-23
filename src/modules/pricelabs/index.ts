@@ -39,16 +39,26 @@ export interface PlListing {
   currency: string;
 }
 
-/** All listings on the client's PriceLabs account. */
+/**
+ * Listings on the client's PriceLabs account, cleaned for the admin
+ * dropdown: PriceLabs also returns one row per sales CHANNEL (airbnb /
+ * vrbo mirrors of the same unit). Those can be mapped but return no
+ * prices, so only real PMS rows are offered, named and sorted.
+ */
+const CHANNEL_PMS = new Set(["airbnb", "vrbo", "homeaway", "booking", "bookingcom"]);
+
 export async function listPlListings(): Promise<PlListing[]> {
   const data = (await pl("/listings")) as { listings?: Record<string, unknown>[] };
-  return (data.listings ?? []).map((l) => ({
-    id: String(l.id),
-    pms: String(l.pms ?? ""),
-    name: String(l.name ?? l.id),
-    base: l.base != null ? Number(l.base) : null,
-    currency: String(l.currency ?? "USD"),
-  }));
+  return (data.listings ?? [])
+    .filter((l) => String(l.name ?? "").trim() && !CHANNEL_PMS.has(String(l.pms ?? "").toLowerCase()))
+    .map((l) => ({
+      id: String(l.id),
+      pms: String(l.pms ?? ""),
+      name: String(l.name ?? l.id),
+      base: l.base != null ? Number(l.base) : null,
+      currency: String(l.currency ?? "USD"),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -104,7 +114,10 @@ export async function syncPriceLabs(): Promise<{ synced: number; days: number; e
   for (const m of mapped.rows) {
     const p = priced.find((x) => String(x.id) === String(m.pricelabs_id));
     if (!p?.data?.length) {
-      errors.push(`${m.title}: no prices returned${p?.error ? ` (${p.error})` : ""}`);
+      const why = `PriceLabs returned no prices for the chosen listing${p?.error ? ` (${p.error})` : ""}`;
+      errors.push(`${m.title}: ${why}`);
+      await db.query("update listing_pricing set pricelabs_error = $2 where listing_id = $1",
+        [m.listing_id, why.slice(0, 300)]).catch(() => {});
       continue;
     }
     // batched upsert; nightly + min-stay only — is_blocked and notes stay
@@ -135,7 +148,7 @@ export async function syncPriceLabs(): Promise<{ synced: number; days: number; e
     }
     await db.query(
       `update listing_pricing set pricelabs_synced_at = now(), pricelabs_synced_days = $2,
-              dynamic_pricing = true where listing_id = $1`,
+              dynamic_pricing = true, pricelabs_error = null where listing_id = $1`,
       [m.listing_id, values.length]).catch(() => {});
     synced++;
     days += values.length;

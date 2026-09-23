@@ -116,6 +116,7 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
       pricelabsKey: c.pricelabs_id ? `${c.pricelabs_id}|${c.pricelabs_pms ?? "hostaway"}` : "",
       pricelabsSyncedAt: c.pricelabs_synced_at ? new Date(c.pricelabs_synced_at).toISOString() : null,
       pricelabsSyncedDays: c.pricelabs_synced_days ?? 0,
+      pricelabsError: c.pricelabs_error ?? null,
     },
     seasons: seasonRes.rows.map((s) => ({
       id: s.id, label: s.label, nightlyCents: s.nightly_cents,

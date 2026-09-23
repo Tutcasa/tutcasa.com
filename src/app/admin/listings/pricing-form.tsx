@@ -38,6 +38,7 @@ export interface AdminPricing {
   pricelabsKey: string;
   pricelabsSyncedAt: string | null;
   pricelabsSyncedDays: number;
+  pricelabsError: string | null;
 }
 
 export interface PlOption { id: string; pms: string; name: string; base: number | null }
@@ -266,7 +267,13 @@ export function PricingForm({
             </label>
           </div>
           <div className="mt-3 grid gap-1">
-            {pricing.pricelabsKey ? (
+            {pricing.pricelabsKey && pricing.pricelabsError ? (
+              <div className="rounded-xl border-[1.5px] border-rosa/50 bg-rosa/10 px-3 py-2 text-sm font-bold text-rosa-deep">
+                ⚠ Mapped, but no prices came back — pick a different PriceLabs
+                listing below and sync again.
+                <span className="ml-1 block font-normal text-ink">{pricing.pricelabsError}</span>
+              </div>
+            ) : pricing.pricelabsKey ? (
               <div className="rounded-xl border-[1.5px] border-cactus/40 bg-cactus/10 px-3 py-2 text-sm font-bold text-cactus">
                 ● Dynamic pricing is ON — this home follows PriceLabs.
                 <span className="ml-1 font-normal text-ink">
