@@ -1,6 +1,7 @@
 import "@/styles/demo/checkout.css";
 import type { Metadata } from "next";
 import { tourBySlug, priceForActivity, tierTotalMXN } from "@/modules/tours";
+import { paypalConfigured } from "@/lib/paypal";
 import { CheckoutClient, type CheckoutLine, type CheckoutPayload } from "@/components/checkout/CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -99,7 +100,7 @@ export default async function TourCheckoutPage({
 
   return (
     <div className="pg-checkout">
-      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} />
+      <CheckoutClient paypal={paypalConfigured()} lines={lines} currency={currency} dates={dates} payload={payload} />
     </div>
   );
 }

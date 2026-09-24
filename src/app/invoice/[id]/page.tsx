@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/admin-auth";
 import { fmtMoney } from "@/modules/pricing";
 import { InvoiceActions } from "./invoice-actions";
 import { PayNow } from "./pay-now";
+import { paypalConfigured } from "@/lib/paypal";
 
 export const dynamic = "force-dynamic";
 
@@ -234,7 +235,7 @@ export default async function InvoicePage({
             <div className="flex justify-between font-extrabold text-rosa">
               <span>Amount due</span><span>{money(inv.totalCents - inv.amountPaidCents)} {inv.currency}</span>
             </div>
-            <PayNow invoiceId={id} />
+            <PayNow invoiceId={id} paypal={paypalConfigured()} />
           </div>
         )}
         {inv.status !== "cancelled" && inv.amountPaidCents >= inv.totalCents && inv.totalCents > 0 && (
@@ -249,7 +250,7 @@ export default async function InvoicePage({
           const exact = inv.stripeFeeCents > 0;
           const fee = exact
             ? inv.stripeFeeCents
-            : inv.provider === "stripe" && inv.amountPaidCents > 0
+            : (inv.provider === "stripe" || inv.provider === "paypal") && inv.amountPaidCents > 0
               ? Math.round(inv.amountPaidCents * 0.029) + 30 // standard 2.9% + 30¢, estimate
               : 0;
           const net = inv.amountPaidCents - fee - inv.commissionCents;
@@ -266,7 +267,7 @@ export default async function InvoicePage({
               )}
               {fee > 0 && (
                 <div className="flex justify-between">
-                  <span>Stripe fee {exact ? "(exact)" : <>(est. 2.9% + 30&cent;)</>}</span>
+                  <span>{inv.provider === "paypal" ? "PayPal" : "Stripe"} fee {exact ? "(exact)" : <>(est. 2.9% + 30&cent;)</>}</span>
                   <span>−{money(fee)}</span>
                 </div>
               )}

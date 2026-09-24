@@ -143,15 +143,16 @@ export default async function AdminOrders({
                     <div className="flex justify-between text-xs">
                       <span>Collected so far</span><span>{fmtMoney(o.amountPaidCents)}</span>
                     </div>
-                    {o.provider === "stripe" && (() => {
-                      // exact fee from the webhook when we have it, else
+                    {(o.provider === "stripe" || o.provider === "paypal") && (() => {
+                      // exact fee when the processor reported it; otherwise
                       // Stripe's standard 2.9% + 30¢ per charge as estimate
+                      const who = o.provider === "paypal" ? "PayPal" : "Stripe";
                       const exact = o.stripeFeeCents > 0;
                       const fee = exact ? o.stripeFeeCents : Math.round(o.amountPaidCents * 0.029) + 30;
                       return (
                         <>
                           <div className="flex justify-between text-xs text-terra">
-                            <span>Stripe fee {exact ? "(exact)" : <>(est. 2.9% + 30&cent;)</>}</span><span>−{fmtMoney(fee)}</span>
+                            <span>{who} fee {exact ? "(exact)" : <>(est. 2.9% + 30&cent;)</>}</span><span>−{fmtMoney(fee)}</span>
                           </div>
                           <div className="flex justify-between text-xs font-bold">
                             <span>Net collected{exact ? "" : " (est.)"}</span><span>{fmtMoney(o.amountPaidCents - fee)}</span>

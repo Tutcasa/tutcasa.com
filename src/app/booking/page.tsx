@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { resolveStayQuote } from "@/modules/pricing/resolve";
 import { stayCheckoutLines } from "@/modules/pricing/checkout-lines";
 import { todayLocal } from "@/lib/local-date";
+import { paypalConfigured } from "@/lib/paypal";
 import { CheckoutClient, type CheckoutLine, type CheckoutPayload, type CheckoutSchedule } from "@/components/checkout/CheckoutClient";
 
 export const dynamic = "force-dynamic";
@@ -90,7 +91,7 @@ export default async function BookingCheckoutPage({
 
   return (
     <div className="pg-checkout">
-      <CheckoutClient lines={lines} currency={currency} dates={dates} payload={payload} schedule={schedule} requestToBook={requestToBook} />
+      <CheckoutClient paypal={paypalConfigured()} lines={lines} currency={currency} dates={dates} payload={payload} schedule={schedule} requestToBook={requestToBook} />
     </div>
   );
 }

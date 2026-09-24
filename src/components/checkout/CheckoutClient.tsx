@@ -15,6 +15,7 @@ import { reserveAction, validateCouponAction } from "@/app/stays/[slug]/actions"
 import { startPaymentAction, createPaymentIntentAction } from "@/app/invoice/[id]/pay-actions";
 import { StripePayForm, publishableKeyMode, type PayIntent } from "./StripePayForm";
 import { submitPlanRequest } from "@/app/leads-actions";
+import { PayPalButton } from "@/app/invoice/[id]/pay-now";
 import { reserveTourAction, validateTourCouponAction } from "@/app/tours/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
 
@@ -63,6 +64,7 @@ export function CheckoutClient({
   payload,
   schedule,
   requestToBook = false,
+  paypal = false,
 }: {
   lines: CheckoutLine[];
   currency: "USD" | "MXN";
@@ -71,6 +73,8 @@ export function CheckoutClient({
   schedule?: CheckoutSchedule;
   /** request-to-book home: collect a request, show NO payment step */
   requestToBook?: boolean;
+  /** PayPal credentials configured — offer it beside the card form */
+  paypal?: boolean;
 }) {
   const [guestName, setGuestName] = useState("");
   const [email, setEmail] = useState("");
@@ -334,7 +338,15 @@ export function CheckoutClient({
                   : "Card details are handled by Stripe. TutCasa never sees your card number."}
             </div>
             {intent ? (
-              <StripePayForm intent={intent} onPaid={() => { setPaidNow(true); setPaid(true); window.scrollTo(0, 0); }} />
+              <>
+                <StripePayForm intent={intent} onPaid={() => { setPaidNow(true); setPaid(true); window.scrollTo(0, 0); }} />
+                {paypal && (
+                  <>
+                    <div style={{ textAlign: "center", fontSize: 12, color: "var(--grey)", margin: "10px 0 2px" }}>or</div>
+                    <PayPalButton invoiceId={intent.invoiceId} />
+                  </>
+                )}
+              </>
             ) : (<>
             <div className="co-fld"><label>Guest full name</label><input placeholder="Maria Lopez" value={guestName} onChange={(e) => setGuestName(e.target.value)} /></div>
             <div className="co-fld"><label>Email for confirmation</label><input type="email" placeholder="you@email.com" value={email} onChange={(e) => setEmail(e.target.value)} /></div>

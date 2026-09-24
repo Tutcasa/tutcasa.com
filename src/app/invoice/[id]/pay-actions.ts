@@ -37,3 +37,15 @@ export async function createPaymentIntentAction(invoiceId: string): Promise<Inte
   const res = await createInvoicePaymentIntent(invoiceId);
   return "clientSecret" in res ? res : { error: res.error };
 }
+
+/** Start PayPal for this invoice's amount due (redirect to approve). */
+export async function startPayPalAction(invoiceId: string): Promise<PayState> {
+  const { paypalConfigured, createPayPalOrder } = await import("@/lib/paypal");
+  if (!paypalConfigured()) return { offline: true };
+  const ip = (await headers()).get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (overLimit(`pay:${ip}`, 10, 10 * 60 * 1000)) {
+    return { error: "Too many attempts — try again in a few minutes." };
+  }
+  const res = await createPayPalOrder(invoiceId);
+  return "url" in res ? { url: res.url } : { error: res.error };
+}
