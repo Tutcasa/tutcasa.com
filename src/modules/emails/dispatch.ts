@@ -155,6 +155,10 @@ export async function sendAutomationForBooking(
   if (!ctx) return;
   // Amanah owns guest communication for partner bookings
   if (a.audience === "guest" && ctx.source === "amanah") return;
+  // bookings imported from the previous website: the OLD site keeps
+  // emailing those guests until cutover — flip LEGACY_GUEST_EMAILS=on at
+  // launch and their reminders (balance, check-in…) continue from here
+  if (a.audience === "guest" && ctx.source === "legacy" && process.env.LEGACY_GUEST_EMAILS !== "on") return;
   // dedupe happens PER RECIPIENT inside deliver() (unique-index claim) —
   // so a partially-delivered team email still reaches the missing inboxes
 
@@ -299,6 +303,7 @@ export async function runScheduledEmails(): Promise<{ ok: boolean; sent: number;
                     || to_char(upper(ab.span), 'YYYY-MM-DD') || ')'
                from availability_blocks ab
               where ab.listing_id = b.listing_id and ab.span && b.stay
+                and ab.span <> b.stay  -- identical dates = this booking's own mirror
              union all
              -- an early check-in / late check-out that was CONFIRMED or PAID
              -- but whose night has since been taken (should be impossible

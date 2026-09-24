@@ -63,7 +63,9 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     const b = stay.rows[0];
     const p = b.price_breakdown ?? {};
     const lines: { label: string; cents: number }[] = [
-      { label: `Accommodation — ${p.nights ?? "?"} nights`,
+      { label: p.legacy
+          ? `Stay — ${p.nights ?? "?"} nights (booking #${p.legacyBookingNo}, previous website)`
+          : `Accommodation — ${p.nights ?? "?"} nights`,
         cents: (p.accommodationCents ?? 0) - (p.weekendUpliftCents ?? 0) },
     ];
     if (p.weekendUpliftCents > 0) lines.push({ label: "Weekend rates (Sat & Sun)", cents: p.weekendUpliftCents });
