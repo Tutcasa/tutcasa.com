@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BackBar } from "@/components/site/BackBar";
 import { getSetting } from "@/modules/settings";
 import { GiftShop } from "./gift-shop";
+import { paypalConfigured } from "@/lib/paypal";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function GiftCardsPage({
             <h1>{c.title}</h1>
             <p>{c.intro}</p>
           </section>
-          <GiftShop />
+          <GiftShop paypal={paypalConfigured()} />
           <div className="gift-how">
             {c.steps.map((st, i) => (
               <div className="how" key={i}>

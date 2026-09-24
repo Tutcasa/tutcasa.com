@@ -6,3 +6,9 @@ import { createExtraCheckoutSession } from "@/lib/stripe";
 export async function payExtraAction(extraId: string): Promise<{ url?: string; error?: string }> {
   return createExtraCheckoutSession(extraId);
 }
+
+/** Same, with PayPal. */
+export async function payExtraPayPalAction(extraId: string): Promise<{ url?: string; error?: string }> {
+  const { createPayPalExtraOrder } = await import("@/lib/paypal");
+  return createPayPalExtraOrder(extraId);
+}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getExtra, EXTRA_LABEL, type ExtraKind } from "@/modules/extras";
 import { PayExtra } from "./pay-extra";
+import { paypalConfigured } from "@/lib/paypal";
 
 export const dynamic = "force-dynamic";
 
@@ -56,7 +57,7 @@ export default async function ExtraPage({
               Good news — this is available for your dates. Pay to lock it in;
               we then hold the time so it can&rsquo;t be given away.
             </p>
-            <PayExtra id={id} label={label} />
+            <PayExtra id={id} label={label} paypal={paypalConfigured()} />
           </>
         ) : e.status === "requested" ? (
           <div className="mt-5 rounded-xl bg-sol/15 p-4 text-sm font-semibold text-terra">

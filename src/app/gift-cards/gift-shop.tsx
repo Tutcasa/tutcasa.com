@@ -5,7 +5,7 @@ import { startGiftCheckoutAction } from "./actions";
 
 const PRESETS = [50, 100, 200, 500];
 
-export function GiftShop() {
+export function GiftShop({ paypal = false }: { paypal?: boolean }) {
   const [amount, setAmount] = useState(100);
   const [custom, setCustom] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -16,7 +16,7 @@ export function GiftShop() {
 
   const effective = custom ? Math.round(Number(custom)) || 0 : amount;
 
-  async function buy() {
+  async function buy(via: "stripe" | "paypal" = "stripe") {
     setErr(null);
     if (!(effective >= 25 && effective <= 5000)) { setErr("Pick an amount between $25 and $5,000."); return; }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(buyerEmail.trim())) { setErr("Add your email — the gift card code is delivered there."); return; }
@@ -27,7 +27,7 @@ export function GiftShop() {
         buyerEmail: buyerEmail.trim(),
         recipientEmail: recipientEmail.trim() || undefined,
         message: message.trim() || undefined,
-      });
+      }, via);
       if (res.url) { window.location.href = res.url; return; }
       setErr(res.error ?? "Something went wrong — try again.");
     } finally {
@@ -83,12 +83,19 @@ export function GiftShop() {
           </label>
         )}
 
-        <button className="btn-rosa" onClick={buy} disabled={busy}>
+        <button className="btn-rosa" onClick={() => buy("stripe")} disabled={busy}>
           {busy ? "Taking you to secure payment…" : `Buy the $${effective >= 25 ? effective.toLocaleString("en-US") : "—"} gift card`}
         </button>
+        {paypal && (
+          <button type="button" onClick={() => buy("paypal")} disabled={busy}
+            style={{ marginTop: 8, width: "100%", border: "1.5px solid #FFC439", background: "#FFC439", color: "#003087",
+                     borderRadius: 999, padding: "12px 20px", fontWeight: 800, fontSize: 15, cursor: "pointer", opacity: busy ? 0.5 : 1 }}>
+            Pay with PayPal
+          </button>
+        )}
         {err && <div className="gf-err">{err}</div>}
         <div className="gf-fine">
-          Secure card payment by Stripe. The code arrives by email right after
+          Secure payment by card (Stripe){paypal ? " or PayPal" : ""}. The code arrives by email right after
           payment — keep or forward that email; for security the code is never
           shown anywhere else.
         </div>
