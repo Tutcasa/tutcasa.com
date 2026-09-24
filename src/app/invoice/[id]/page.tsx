@@ -64,7 +64,9 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     const p = b.price_breakdown ?? {};
     const lines: { label: string; cents: number }[] = [
       { label: p.legacy
-          ? `Stay — ${p.nights ?? "?"} nights (booking #${p.legacyBookingNo}, previous website)`
+          ? String(p.legacyStatus ?? "").includes("dates not recorded")
+            ? `Stay — dates not recorded (booking #${p.legacyBookingNo}, previous website)`
+            : `Stay — ${p.nights ?? "?"} nights (booking #${p.legacyBookingNo}, previous website)`
           : `Accommodation — ${p.nights ?? "?"} nights`,
         cents: (p.accommodationCents ?? 0) - (p.weekendUpliftCents ?? 0) },
     ];
