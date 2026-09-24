@@ -18,7 +18,7 @@ export async function GET() {
             l.rating_cached, l.review_count_cached,
             to_char(l.checkin_from,'HH24:MI') as checkin_from,
             to_char(l.checkout_until,'HH24:MI') as checkout_until,
-            r.nightly_cents, r.cleaning_cents, r.tax_pct, r.currency,
+            coalesce(from_cents(l), r.nightly_cents) as nightly_cents, r.cleaning_cents, r.tax_pct, r.currency,
             coalesce(p.photos, '[]'::json) as photos
        from listings l
        left join listing_rates r on r.listing_id = l.id and r.season is null

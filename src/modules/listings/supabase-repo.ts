@@ -39,6 +39,8 @@ interface ListingRow {
   address: string | null;
   rating_cached: number;
   review_count_cached: number;
+  /** computed column (migration 0052): cheapest effective nightly ahead */
+  from_cents: number | null;
   listing_rates: {
     nightly_cents: number;
     cleaning_cents: number;
@@ -56,7 +58,7 @@ const SELECT = `
   allow_children, allow_smoking, allow_party,
   checkin_from, checkout_until, house_rules, cancellation_policy,
   other_rules, bed_types, faqs, address,
-  rating_cached, review_count_cached,
+  rating_cached, review_count_cached, from_cents,
   listing_rates ( nightly_cents, cleaning_cents, tax_pct, currency, season ),
   listing_photos ( url, alt, sort )
 `;
@@ -110,7 +112,9 @@ function toListing(row: ListingRow): Listing {
     gradient: gradientFor(row.slug),
     photos: [...(row.listing_photos ?? [])].sort((a, b) => a.sort - b.sort)
       .map((p) => ({ url: p.url, alt: p.alt })),
-    nightlyCents: base?.nightly_cents ?? 0,
+    // the effective "from" price — PriceLabs per-date prices, seasons and
+    // base all considered — so every card matches the listing page
+    nightlyCents: row.from_cents ?? base?.nightly_cents ?? 0,
     cleaningCents: base?.cleaning_cents ?? 0,
     taxPct: Number(base?.tax_pct ?? 0),
     currency: (base?.currency as Listing["currency"]) ?? "USD",

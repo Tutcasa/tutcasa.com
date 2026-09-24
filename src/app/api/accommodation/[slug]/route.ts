@@ -27,7 +27,7 @@ export async function GET(
             coalesce(l.faqs,'[]'::jsonb) as faqs,
             coalesce(l.cancellation_policy,'') as cancellation_policy,
             coalesce(l.house_rules,'') as house_rules,
-            r.nightly_cents, r.cleaning_cents, r.tax_pct, r.currency,
+            coalesce(from_cents(l), r.nightly_cents) as nightly_cents, r.cleaning_cents, r.tax_pct, r.currency,
             coalesce(p.photos, '[]'::json) as photos
        from listings l
        left join listing_rates r on r.listing_id = l.id and r.season is null
