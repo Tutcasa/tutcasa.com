@@ -23,7 +23,13 @@ export interface Tour {
   status: "draft" | "published" | "archived";
   /** local tours only: guest pays at checkout (Amanah tours always do) */
   instantBook: boolean;
+  /** third-party commission % — copied onto each new booking */
+  commissionPct: number;
 }
+
+/** TutCasa's cut on Amanah tours — same rule as Amanah's admin
+    (commissions/shared.ts there): 5% for groups up to 2, 10% for 3+. */
+export const amanahTutcasaPct = (people: number) => (people >= 3 ? 10 : 5);
 
 /** Total group price in MXN for `pax` people from the tier map, clamping to
     the nearest offered tier (below-minimum pays the minimum-group price).
@@ -76,6 +82,10 @@ export interface TourBooking {
   /** where the tour itself comes from — 'amanah' (synced) or 'local' */
   tourSource: string;
   tourCity: string;
+  /** third-party commission % on this booking */
+  commissionPct: number;
+  /** Amanah tours: TutCasa's % override (null = amanahTutcasaPct rule) */
+  partnerPct: number | null;
 }
 
 export type TourReserveResult =

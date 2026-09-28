@@ -64,23 +64,18 @@ export async function setBookingStatusAction(
 }
 
 /**
- * Permanently delete a stay booking (and its invoice/order — they are the
- * same row). Child records go with it: emails log, review, transfer,
- * referral reward; gift-card ledger lines are kept for accounting but
- * unlinked. An unused coupon redemption is given back.
+ * Delete a stay booking (and its invoice/order — they are the same row):
+ * it moves to Admin → Trash with its child records for 30 days. An unused
+ * coupon redemption and gift-card value are given back (restore re-takes them).
  */
 export async function deleteBookingAction(id: string): Promise<void> {
   await requireAdmin();
-  const db = getDb();
-  const res = await db.query<{ coupon_code: string | null; status: string; gift_card_id: string | null; gift_card_cents: number }>(
-    `with n as (delete from notifications_log where booking_id = $1),
-          g as (update gift_card_ledger set booking_id = null where booking_id = $1),
-          r as (delete from reviews where booking_id = $1)
-     delete from bookings where id = $1
-     returning coupon_code, status, gift_card_id, coalesce(gift_card_cents,0) as gift_card_cents`,
-    [id],
-  );
-  const row = res.rows[0];
+  const { moveToTrash } = await import("@/modules/trash");
+  const t = await moveToTrash("stay", id);
+  const row = t && {
+    coupon_code: t.coupon_code as string | null, status: String(t.status),
+    gift_card_id: t.gift_card_id as string | null, gift_card_cents: Number(t.gift_card_cents ?? 0),
+  };
   if (row?.coupon_code && row.status !== "cancelled") {
     const { unredeemCoupon } = await import("@/modules/coupons");
     await unredeemCoupon(row.coupon_code).catch(() => {});
@@ -92,6 +87,7 @@ export async function deleteBookingAction(id: string): Promise<void> {
   revalidate();
   revalidatePath("/admin/invoices");
   revalidatePath("/admin/orders");
+  revalidatePath("/admin/trash");
 }
 
 /**

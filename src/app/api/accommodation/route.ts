@@ -27,7 +27,7 @@ export async function GET() {
            from listing_photos where listing_id = l.id
        ) p on true
       where l.status = 'published'
-      order by l.featured desc, l.title`,
+      order by l.display_order nulls last, l.featured desc, l.title`,
   );
 
   const listings = res.rows.map((r) => ({

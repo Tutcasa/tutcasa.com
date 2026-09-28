@@ -1,7 +1,7 @@
 import "@/styles/demo/index.css";
 import { getListingsRepo, type Listing } from "@/modules/listings";
 import { listTours } from "@/modules/tours";
-import { HomeHero, type WizardMatch } from "@/components/home/HomeHero";
+import { HomeHero, type HeroHome } from "@/components/home/HomeHero";
 import { NewsletterBand } from "@/components/home/NewsletterBand";
 import { getSetting } from "@/modules/settings";
 import {
@@ -81,27 +81,18 @@ export default async function HomePage() {
     }
   }
 
-  // the guided-wizard result cards are REAL published homes (was hardcoded to
-  // 8 demo names whose "View details" 404'd). The client adds homes → they
-  // appear here automatically.
-  const wizardMatches: WizardMatch[] = listings.map((l) => {
-    const fromListing = l.gradient.replace(/^ph-/, "");
-    return {
-      slug: l.slug,
-      name: l.title,
-      meta: `${l.bedrooms} beds · ${CARD_STYLE[l.slug]?.feature ?? l.headline ?? `sleeps ${l.maxGuests}`} · ★ ${l.rating.toFixed(2)}`,
-      price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100),
-      city: displayCity(l),
-      country: l.country,
-      region: l.region ?? "",
-      photos: l.photos.map((ph) => ph.url),
-      g: /^g[1-6]$/.test(fromListing) ? fromListing : "g1",
-    };
-  });
+  // the hero's four pinned homes = the first four in the admin's Display order
+  const heroHomes: HeroHome[] = listings.slice(0, 4).map((l) => ({
+    slug: l.slug,
+    name: l.title,
+    price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100),
+    city: displayCity(l),
+    photo: l.photos[0]?.url ?? null,
+  }));
 
   return (
     <div className="pg-index">
-      <HomeHero matches={wizardMatches} />
+      <HomeHero homes={heroHomes} />
 
       <PopularCasas casas={featured} />
       <PopularExperiences items={expItems} />

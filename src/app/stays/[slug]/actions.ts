@@ -10,7 +10,7 @@ import { checkCoupon } from "@/modules/coupons";
 
 export type QuoteResult =
   | { ok: true; quote: Quote }
-  | { ok: false; error: StayQuoteError };
+  | { ok: false; error: StayQuoteError; minStay?: number };
 
 /**
  * Live price quote — always recomputed server-side from the stored

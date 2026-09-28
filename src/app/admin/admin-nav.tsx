@@ -22,6 +22,7 @@ const NAV = [
   { href: "/admin/emails", label: "Email automations", icon: "\u{1F4E8}" },
   { href: "/admin/reviews", label: "Guest reviews", icon: "\u{2B50}" },
   { href: "/admin/notifications", label: "Notifications log", icon: "\u{2709}\u{FE0F}" },
+  { href: "/admin/trash", label: "Trash", icon: "\u{1F5D1}\u{FE0F}" },
 ];
 
 function isActive(pathname: string, href: string) {

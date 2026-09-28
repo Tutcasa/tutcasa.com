@@ -93,6 +93,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     list_am_tennis: `Tennis courts`, list_am_spa: `Spa`, list_am_kids: `Kids playground`,
     list_f_photos: `Photos of your property (up to 20)`, list_photos_hint: `Drag &amp; drop or tap to add &mdash; JPG or PNG`,
     /* stays page (demo adds these at runtime) */
+    st_sort: `Sort by`, st_sort_rec: `Recommended`, st_sort_low: `Price: low to high`, st_sort_high: `Price: high to low`,
     st_filters: `Filters`, st_seeall: `See all properties`, st_fil_price: `Max price per night`, st_allin_s: `all-in`,
     st_fil_beds: `Beds`, st_fil_baths: `Bathrooms`, st_fil_any: `Any`, st_fil_type: `Type &amp; amenities`, st_fil_clear: `Clear all`,
     st_fil_show: `Show`, st_fil_homes: `homes`, st_match_your: `Your matches`, st_match_in: `in`,
@@ -185,6 +186,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     byo_ok_h: `Votre demande est envoyée ! &#127881;`, byo_ok_p: `Nous concevrons votre itinéraire et devis sur mesure et vous recontacterons sous 24 heures.`,
     list_am_tennis: `Courts de tennis`, list_am_spa: `Spa`, list_am_kids: `Aire de jeux`,
     list_f_photos: `Photos de votre bien (jusqu’à 20)`, list_photos_hint: `Glissez-déposez ou touchez pour ajouter — JPG ou PNG`,
+    st_sort: `Trier par`, st_sort_rec: `Recommandés`, st_sort_low: `Prix : croissant`, st_sort_high: `Prix : décroissant`,
     st_filters: `Filtres`, st_seeall: `Voir toutes les propriétés`, st_fil_price: `Prix max par nuit`, st_allin_s: `tout compris`,
     st_fil_beds: `Lits`, st_fil_baths: `Salles de bain`, st_fil_any: `Toutes`, st_fil_type: `Type &amp; équipements`, st_fil_clear: `Tout effacer`,
     st_fil_htype: `Type de logement`, st_fil_guests: `Voyageurs`, st_fil_city: `Emplacement`, st_fil_amen: `Équipements`,
@@ -275,6 +277,7 @@ export const I18N: Record<Lang, Record<string, string>> = {
     byo_ok_h: `¡Tu solicitud está lista! &#127881;`, byo_ok_p: `Diseñaremos tu itinerario y cotización a medida y te contactaremos en 24 horas.`,
     list_am_tennis: `Canchas de tenis`, list_am_spa: `Spa`, list_am_kids: `Juegos para niños`,
     list_f_photos: `Fotos de tu propiedad (hasta 20)`, list_photos_hint: `Arrastra y suelta o toca para añadir — JPG o PNG`,
+    st_sort: `Ordenar por`, st_sort_rec: `Recomendados`, st_sort_low: `Precio: de menor a mayor`, st_sort_high: `Precio: de mayor a menor`,
     st_filters: `Filtros`, st_seeall: `Ver todas las propiedades`, st_fil_price: `Precio máx por noche`, st_allin_s: `todo incluido`,
     st_fil_beds: `Camas`, st_fil_baths: `Baños`, st_fil_any: `Todas`, st_fil_type: `Tipo y comodidades`, st_fil_clear: `Borrar todo`,
     st_fil_htype: `Tipo de casa`, st_fil_guests: `Huéspedes`, st_fil_city: `Ubicación`, st_fil_amen: `Comodidades`,

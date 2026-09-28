@@ -294,7 +294,7 @@ export function PdGrid({ p }: { p: PdData }) {
         quote.error === "DATES_TAKEN"
           ? "Some of those nights are already booked — pick different dates."
           : quote.error === "MIN_STAY_NOT_MET"
-            ? `Minimum stay is ${p.minStay} nights.`
+            ? `Minimum stay for these dates is ${quote.minStay ?? p.minStay} nights.`
             : "We couldn't price those dates — try different ones.";
       return (
         <>

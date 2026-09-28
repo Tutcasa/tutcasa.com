@@ -9,13 +9,21 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface Msg {
   me: boolean;
   text: string;
 }
 
+/** Guest-facing only — never over the admin or management screens. */
 export function ChatMay({ whatsapp }: { whatsapp: string }) {
+  const pathname = usePathname() ?? "";
+  if (pathname.startsWith("/admin") || pathname.startsWith("/management")) return null;
+  return <ChatWidget whatsapp={whatsapp} />;
+}
+
+function ChatWidget({ whatsapp }: { whatsapp: string }) {
   const [open, setOpen] = useState(false);
   const [log, setLog] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");

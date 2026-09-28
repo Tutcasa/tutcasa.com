@@ -115,7 +115,9 @@ export default async function AdminTourBookings({
             <TourEditForm b={{
               id: b.id, guestName: b.guestName, guestEmail: b.guestEmail,
               guestPhone: b.guestPhone, tourDate: b.tourDate,
-              groupSize: b.groupSize, totalCents: b.totalCents,
+              groupSize: b.groupSize, totalCents: b.totalCents, currency: b.currency,
+              commissionPct: b.commissionPct, partnerPct: b.partnerPct,
+              amanah: b.tourSource === "amanah",
             }} />
           </div>
         ))}

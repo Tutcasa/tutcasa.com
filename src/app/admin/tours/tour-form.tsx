@@ -97,6 +97,12 @@ export function TourForm({ tour }: { tour?: Tour }) {
             <option value="1">Instant booking (guest pays at checkout)</option>
           </select>
         </label>
+        <label className="text-xs font-bold"
+          title="Paid to a third party (agent, concierge…) on every booking of this tour. Shows on the invoice's internal box.">
+          3RD-PARTY COMMISSION %
+          <input name="commissionPct" type="number" min="0" max="100" step="0.5"
+                 defaultValue={tour?.commissionPct ?? 0} className={inputCls} />
+        </label>
       </div>
       {state.message && (
         <p className={`text-sm font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</p>

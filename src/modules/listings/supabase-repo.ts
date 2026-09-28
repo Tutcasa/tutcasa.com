@@ -129,7 +129,10 @@ export class SupabaseListingsRepo implements ListingsRepo {
       .from("listings")
       .select(SELECT)
       .eq("status", "published")
-      .order("rating_cached", { ascending: false });
+      // admin "Display order" (1 = first); unnumbered homes follow, best-rated first
+      .order("display_order", { ascending: true, nullsFirst: false })
+      .order("rating_cached", { ascending: false })
+      .order("title");
     if (filter?.city) q = q.ilike("city", filter.city);
     switch (filter?.tag) {
       case "beachfront":   q = q.contains("amenities", ["Beachfront access"]); break;

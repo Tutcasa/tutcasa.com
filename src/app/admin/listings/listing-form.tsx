@@ -20,6 +20,8 @@ export interface AdminListing {
   bedrooms: number;
   bathrooms: number;
   minStay: number;
+  /** position on the site (1 = first); null = after the numbered homes */
+  displayOrder: number | null;
   status: string;
   sizeSqft: number | null;
   bedTypes: { count: number; type: string }[];
@@ -231,6 +233,10 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
               <option value="draft">Draft (hidden)</option>
               <option value="archived">Archived</option>
             </select>
+          </label>
+          <label className="text-xs font-bold" title="Order on the Stays page, home page and partner sites. 1 = shown first. Leave blank to list after the numbered homes.">
+            DISPLAY ORDER <span className="font-normal text-grey">(1 = first)</span>
+            <input name="displayOrder" type="number" min="1" step="1" defaultValue={listing.displayOrder ?? ""} placeholder="—" className={inputCls} />
           </label>
           <label className="text-xs font-bold">MIN STAY (nights)
             <input name="minStay" type="number" min="1" defaultValue={listing.minStay} className={inputCls} />

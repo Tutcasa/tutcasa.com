@@ -298,7 +298,7 @@ export async function saveListingAction(
        private_notes=$31, allow_children=$32, allow_smoking=$33,
        allow_party=$34, allow_pets=$35, featured=$36,
        rating_cached=$37, review_count_cached=$38,
-       features=$42
+       features=$42, display_order=$43
      where id=$1`,
     [
       id, title,
@@ -342,6 +342,9 @@ export async function saveListingAction(
       slug,
       // explicit filter features — only known keys, from the checkboxes
       formData.getAll("features").map(String).filter((k) => FEATURE_KEYS.includes(k)),
+      // blank = no fixed position
+      Number.isInteger(Number(formData.get("displayOrder"))) && Number(formData.get("displayOrder")) >= 1
+        ? Number(formData.get("displayOrder")) : null,
     ],
   );
 
@@ -470,6 +473,14 @@ export async function savePricingAction(
   return { ok: true, message: "Pricing updated." + extra };
 }
 
+/** optional "Min nights" field of a season: blank = none, else a whole number ≥ 1 */
+function seasonMinStay(formData: FormData): number | null | "bad" {
+  const raw = String(formData.get("minStay") ?? "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n >= 1 && n <= 365 ? n : "bad";
+}
+
 /** Add a seasonal rate ("from" and "to" are both inclusive nights). */
 export async function addSeasonAction(
   _prev: ListingFormState,
@@ -485,6 +496,8 @@ export async function addSeasonAction(
     return { ok: false, message: "Dates and a nightly price are required." };
   }
   if (to < from) return { ok: false, message: "End date must be after start date." };
+  const minStay = seasonMinStay(formData);
+  if (minStay === "bad") return { ok: false, message: "Min nights must be a whole number (or leave it blank)." };
 
   const base = await getDb().query<{ cleaning_cents: number; tax_pct: string }>(
     "select cleaning_cents, tax_pct from listing_rates where listing_id=$1 and season is null",
@@ -493,11 +506,11 @@ export async function addSeasonAction(
   try {
     await getDb().query(
       `insert into listing_rates
-         (listing_id, nightly_cents, cleaning_cents, tax_pct, currency, season, label)
-       values ($1,$2,$3,$4,'USD', daterange($5::date, ($6::date + 1), '[)'), $7)`,
+         (listing_id, nightly_cents, cleaning_cents, tax_pct, currency, season, label, min_stay)
+       values ($1,$2,$3,$4,'USD', daterange($5::date, ($6::date + 1), '[)'), $7, $8)`,
       [id, usd(formData.get("nightlyUSD")),
        base.rows[0]?.cleaning_cents ?? 0, Number(base.rows[0]?.tax_pct ?? 0),
-       from, to, label || null],
+       from, to, label || null, minStay],
     );
   } catch (e) {
     if (isOverlap(e)) return { ok: false, message: "That season overlaps an existing one." };
@@ -521,13 +534,15 @@ export async function updateSeasonAction(
     return { ok: false, message: "Dates and a nightly price are required." };
   }
   if (to < from) return { ok: false, message: "End date must be after start date." };
+  const minStay = seasonMinStay(formData);
+  if (minStay === "bad") return { ok: false, message: "Min nights must be a whole number (or leave it blank)." };
   try {
     await getDb().query(
       `update listing_rates
-          set nightly_cents=$2, label=$3,
+          set nightly_cents=$2, label=$3, min_stay=$6,
               season = daterange($4::date, ($5::date + 1), '[)')
         where id=$1 and season is not null`,
-      [seasonId, usd(formData.get("nightlyUSD")), label || null, from, to],
+      [seasonId, usd(formData.get("nightlyUSD")), label || null, from, to, minStay],
     );
   } catch (e) {
     if (isOverlap(e)) return { ok: false, message: "Those dates overlap another season." };

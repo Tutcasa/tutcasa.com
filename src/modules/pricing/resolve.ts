@@ -29,7 +29,8 @@ export type StayQuoteResult =
       quote: Quote;
       listing: { id: string; slug: string; title: string; city: string; maxGuests: number; instantBook: boolean };
     }
-  | { ok: false; error: StayQuoteError };
+  /** minStay: the minimum that applies to THESE dates (season / PriceLabs / home) */
+  | { ok: false; error: StayQuoteError; minStay?: number };
 
 const DAY_MS = 86_400_000;
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
@@ -72,7 +73,7 @@ export async function resolveStayQuote(
 
   const [ratesRes, daysRes] = await Promise.all([
     db.query(
-      `select nightly_cents, cleaning_cents, tax_pct, currency,
+      `select nightly_cents, cleaning_cents, tax_pct, currency, min_stay,
               season is null as is_base,
               to_char(lower(season),'YYYY-MM-DD') as from_day,
               to_char(upper(season),'YYYY-MM-DD') as to_day
@@ -107,21 +108,27 @@ export async function resolveStayQuote(
 
   // night-by-night rates: per-date override → seasonal rate → base rate
   const nights: NightRate[] = [];
-  let minStay: number = L.min_stay;
+  // the stay needs the highest per-night minimum (each night: its season's
+  // minimum if the admin set one — that overrides the home's and PriceLabs' —
+  // otherwise the home's minimum or PriceLabs' for that date, whichever is higher)
+  let minStay = 0;
   const start = new Date(`${checkIn}T00:00:00Z`).getTime();
   const end = new Date(`${checkOut}T00:00:00Z`).getTime();
   for (let t = start; t < end; t += DAY_MS) {
     const day = new Date(t).toISOString().slice(0, 10);
     const o = byDay.get(day);
     if (o?.is_blocked) return { ok: false, error: "DATES_TAKEN" };
-    if (o?.min_stay != null) minStay = Math.max(minStay, o.min_stay);
     const season = seasons.find((s) => day >= s.from_day && day < s.to_day);
+    const nightMin = season?.min_stay != null
+      ? season.min_stay
+      : Math.max(L.min_stay ?? 1, o?.min_stay ?? 0);
+    minStay = Math.max(minStay, nightMin);
     const hostRate = o?.nightly_cents ?? season?.nightly_cents ?? base.nightly_cents;
     const guestRate = withCommission(hostRate);
     commissionCents += guestRate - hostRate;
     nights.push({ date: day, nightlyCents: guestRate });
   }
-  if (nights.length < minStay) return { ok: false, error: "MIN_STAY_NOT_MET" };
+  if (nights.length < minStay) return { ok: false, error: "MIN_STAY_NOT_MET", minStay };
 
   // blocked ranges & existing bookings: a quote must never price dates a
   // guest cannot actually book (admins may skip to quote over own blocks)

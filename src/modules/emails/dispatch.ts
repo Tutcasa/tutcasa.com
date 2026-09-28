@@ -44,8 +44,11 @@ async function bookingCtx(bookingId: string): Promise<BookingCtx | null> {
   );
   const b = res.rows[0];
   if (!b) return null;
-  const money = (cents: number) =>
-    `$${new Intl.NumberFormat("en-US").format(Math.round(cents / 100))} ${b.currency}`;
+  // whole dollars, unless the amount has cents (imported old-site bookings)
+  const money = (cents: number) => {
+    const c = Math.round(cents), d = c % 100 ? 2 : 0;
+    return `$${new Intl.NumberFormat("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }).format(c / 100)} ${b.currency}`;
+  };
   const p = b.price_breakdown ?? {};
   return {
     id: b.id,

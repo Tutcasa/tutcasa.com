@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import { fmtMoney } from "@/modules/pricing";
+import { amanahTutcasaPct } from "@/modules/tours/types";
 import { InvoiceActions } from "./invoice-actions";
 import { PayNow } from "./pay-now";
 import { paypalConfigured } from "@/lib/paypal";
@@ -41,6 +42,8 @@ interface InvoiceData {
   commissionPct: number;
   provider: string | null;
   stripeFeeCents: number; // exact, from the webhook; 0 = fall back to estimate
+  /** Amanah tours only: TutCasa's % and cut; the rest of the price is owed to Amanah */
+  amanah?: { pct: number; cutCents: number; owedCents: number };
 }
 
 async function loadInvoice(id: string): Promise<InvoiceData | null> {
@@ -77,7 +80,8 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     if (p.extraGuestFeeCents > 0) lines.push({ label: "Extra guests", cents: p.extraGuestFeeCents });
     if (p.cleaningCents > 0) lines.push({ label: "Cleaning fee", cents: p.cleaningCents });
     if (p.cityFeeCents > 0) lines.push({ label: "City fee", cents: p.cityFeeCents });
-    if (p.taxCents > 0) lines.push({ label: "Taxes", cents: p.taxCents });
+    if (p.taxCents > 0) lines.push({ label: p.taxPct ? `Tax (${p.taxPct}%)` : "Taxes", cents: p.taxCents });
+    if (p.legacyAdjustmentCents) lines.push({ label: "Adjustment on the old website", cents: p.legacyAdjustmentCents });
     if (p.depositInTotal && p.securityDepositCents > 0) {
       lines.push({ label: "Security deposit", cents: p.securityDepositCents });
     }
@@ -110,13 +114,19 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
     `select tb.invoice_no, tb.created_at, tb.status, tb.guest_name, tb.guest_email,
             tb.group_size, tb.total_cents, tb.currency, tb.payment_provider, tb.stripe_fee_cents,
             to_char(tb.tour_date,'YYYY-MM-DD') as tour_date,
-            tb.coupon_code, tb.coupon_discount_cents, tb.amount_paid_cents, t.title
+            tb.coupon_code, tb.coupon_discount_cents, tb.amount_paid_cents, t.title,
+            tb.commission_pct, tb.partner_pct, t.source
        from tour_bookings tb join tours t on t.id = tb.tour_id
       where tb.id = $1`,
     [id],
   );
   if (tour.rows[0]) {
     const b = tour.rows[0];
+    const commissionPct = Number(b.commission_pct ?? 0);
+    // Amanah is owed its full tour price (our coupon is our cost) minus TutCasa's cut
+    const priceCents = b.total_cents + (b.coupon_discount_cents ?? 0);
+    const amanahPct = b.partner_pct != null ? Number(b.partner_pct) : amanahTutcasaPct(b.group_size);
+    const amanahCut = Math.round(priceCents * amanahPct / 100);
     return {
       invoiceNo: String(b.invoice_no ?? ""), createdAt: b.created_at, status: b.status,
       guestName: b.guest_name, guestEmail: b.guest_email,
@@ -128,9 +138,12 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       dueNowCents: null, balanceCents: null, balanceDueDate: null,
       securityDepositCents: 0,
       amountPaidCents: b.amount_paid_cents ?? 0,
-      commissionCents: 0, commissionPct: 0,
+      commissionCents: Math.round(b.total_cents * commissionPct / 100), commissionPct,
       provider: b.payment_provider,
       stripeFeeCents: Number(b.stripe_fee_cents ?? 0),
+      amanah: b.source === "amanah"
+        ? { pct: amanahPct, cutCents: amanahCut, owedCents: priceCents - amanahCut }
+        : undefined,
     };
   }
   return null;
@@ -152,7 +165,11 @@ export default async function InvoicePage({
   const [inv, admin] = await Promise.all([loadInvoice(id), isAdmin()]);
   if (!inv) notFound();
 
-  const money = (c: number) => fmtMoney(Math.abs(c), inv.currency === "MXN" ? "MXN" : "USD");
+  const cur = inv.currency === "MXN" ? "MXN" : "USD";
+  // whole units, unless the amount has cents (imported old-site bookings)
+  const money = (c: number) => Math.abs(c) % 100
+    ? new Intl.NumberFormat("en-US", { style: "currency", currency: cur, minimumFractionDigits: 2 }).format(Math.abs(c) / 100)
+    : fmtMoney(Math.abs(c), cur);
 
   return (
     <div className="mx-auto max-w-[680px] px-4 py-10 print:py-2">
@@ -246,19 +263,31 @@ export default async function InvoicePage({
 
         {/* internal numbers — only when logged in as admin; never printed,
             so a printed/PDF'd invoice stays guest-safe */}
-        {admin && (inv.commissionCents > 0 || inv.amountPaidCents > 0) && (() => {
+        {admin && (inv.commissionCents > 0 || inv.amountPaidCents > 0 || inv.amanah) && (() => {
           const exact = inv.stripeFeeCents > 0;
           const fee = exact
             ? inv.stripeFeeCents
             : (inv.provider === "stripe" || inv.provider === "paypal") && inv.amountPaidCents > 0
               ? Math.round(inv.amountPaidCents * 0.029) + 30 // standard 2.9% + 30¢, estimate
               : 0;
-          const net = inv.amountPaidCents - fee - inv.commissionCents;
+          const net = inv.amountPaidCents - fee - inv.commissionCents - (inv.amanah?.owedCents ?? 0);
           return (
             <div className="mt-4 rounded-xl border-[1.5px] border-dashed border-terra/40 bg-sol/5 p-3 text-sm print:hidden">
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wider text-terra">
                 Internal — only visible to you
               </div>
+              {inv.amanah && (
+                <>
+                  <div className="flex justify-between">
+                    <span>TutCasa commission from Amanah ({inv.amanah.pct}%)</span>
+                    <span>{money(inv.amanah.cutCents)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Owed to Amanah (tour price − {inv.amanah.pct}%)</span>
+                    <span>−{money(inv.amanah.owedCents)}</span>
+                  </div>
+                </>
+              )}
               {inv.commissionCents > 0 && (
                 <div className="flex justify-between">
                   <span>Third-party commission ({inv.commissionPct}%)</span>
@@ -271,10 +300,12 @@ export default async function InvoicePage({
                   <span>−{money(fee)}</span>
                 </div>
               )}
-              <div className="flex justify-between border-t border-terra/20 pt-1 font-bold">
-                <span>Net after fees{inv.amountPaidCents < inv.totalCents ? " (on paid so far)" : ""}</span>
-                <span>{money(net)}</span>
-              </div>
+              {inv.amountPaidCents > 0 && (
+                <div className="flex justify-between border-t border-terra/20 pt-1 font-bold">
+                  <span>Net after fees{inv.amountPaidCents < inv.totalCents ? " (on paid so far)" : ""}</span>
+                  <span>{net < 0 ? "−" : ""}{money(net)}</span>
+                </div>
+              )}
             </div>
           );
         })()}

@@ -83,11 +83,13 @@ interface Filters {
   price: number; beds: number; baths: number; toks: string[];
   type: string; guests: number; city: string;
   amens: string[]; opts: string[];
+  /** rec = the admin's display order */
+  sort: "rec" | "low" | "high";
 }
 const NO_FILTERS: Filters = {
   price: 600, beds: 0, baths: 0, toks: [],
   type: "any", guests: 0, city: "any",
-  amens: [], opts: [],
+  amens: [], opts: [], sort: "rec",
 };
 const freshFilters = (toks: string[] = []): Filters => ({ ...NO_FILTERS, toks, amens: [], opts: [] });
 
@@ -250,12 +252,16 @@ export function StaysClient({
     return () => document.removeEventListener("click", onDoc);
   }, []);
 
-  const list = props.filter((p) => matchProp(p, activeFilter, moreFilters));
+  const matched = props.filter((p) => matchProp(p, activeFilter, moreFilters));
+  // price sort on the all-in "from" price shown on each card; ties keep the admin's order
+  const list = moreFilters.sort === "rec" ? matched
+    : [...matched].sort((a, b) => moreFilters.sort === "low" ? a.price - b.price : b.price - a.price);
   const draftCount = props.filter((p) => matchProp(p, activeFilter, draft)).length;
   const fcount =
     (moreFilters.price < 600 ? 1 : 0) + (moreFilters.beds ? 1 : 0) + (moreFilters.baths ? 1 : 0) + moreFilters.toks.length +
     (moreFilters.type !== "any" ? 1 : 0) + (moreFilters.guests ? 1 : 0) +
-    (moreFilters.city !== "any" ? 1 : 0) + moreFilters.amens.length + moreFilters.opts.length;
+    (moreFilters.city !== "any" ? 1 : 0) + moreFilters.amens.length + moreFilters.opts.length +
+    (moreFilters.sort !== "rec" ? 1 : 0);
   const cities = [...new Set(props.map((p) => p.city))].sort();
   const typesPresent = HOME_TYPES.filter((ty) => props.some((p) => p.type === ty));
 
@@ -425,6 +431,16 @@ export function StaysClient({
         <div className="drawer">
           <div className="drawer-head"><T as="h3" k="st_filters" /><button className="drawer-x" onClick={() => setDrawerOpen(false)}>&times;</button></div>
           <div className="drawer-body">
+            <div className="fgroup">
+              <h4><T k="st_sort" /></h4>
+              <div className="pillrow">
+                {([["rec", "st_sort_rec"], ["low", "st_sort_low"], ["high", "st_sort_high"]] as const).map(([v, k]) => (
+                  <button key={v} className={`pill${draft.sort === v ? " on" : ""}`} onClick={() => setDraft((d) => ({ ...d, sort: v }))}>
+                    <T k={k} />
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="fgroup">
               <h4><T k="st_fil_price" /></h4>
               <div style={{ marginBottom: 12 }}>

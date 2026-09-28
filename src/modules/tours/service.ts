@@ -15,6 +15,7 @@ interface TourRow {
   stops: { time: string; place: string; desc: string }[] | null;
   category: "tour" | "park"; status: Tour["status"];
   instant_book: boolean | null;
+  commission_pct: string | number | null;
 }
 
 function toTour(r: TourRow): Tour {
@@ -28,12 +29,13 @@ function toTour(r: TourRow): Tour {
     minGroup: r.min_group, maxGroup: r.max_group,
     category: r.category, status: r.status,
     instantBook: !!r.instant_book,
+    commissionPct: Number(r.commission_pct ?? 0),
   };
 }
 
 const SELECT = `id, slug, title, subtitle, partner, city, duration_label,
   description, highlights, price_cents, currency, min_group, max_group,
-  group_prices, photo_url, source, stops, category, status, instant_book`;
+  group_prices, photo_url, source, stops, category, status, instant_book, commission_pct`;
 
 export async function listTours(opts?: { category?: "tour" | "park"; includeUnpublished?: boolean }): Promise<Tour[]> {
   const wh: string[] = [];
@@ -111,6 +113,7 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
   // coupon: validated with the final guest email; invalid = booking rejected
   let couponCode: string | null = null;
   let couponDiscountCents = 0;
+  let couponCommissionPct = 0;
   if (req.couponCode?.trim()) {
     const { checkCoupon, tryRedeemCoupon } = await import("@/modules/coupons");
     const cp = await checkCoupon(req.couponCode, {
@@ -122,6 +125,7 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     if (!(await tryRedeemCoupon(cp.code))) return { ok: false, error: "COUPON_INVALID" };
     couponCode = cp.code;
     couponDiscountCents = cp.discountCents;
+    couponCommissionPct = cp.commissionPct ?? 0;
   }
   const chargeCents = total - couponDiscountCents;
 
@@ -130,11 +134,13 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     const res = await getDb().query<{ id: string }>(
       `insert into tour_bookings
          (tour_id, guest_name, guest_email, guest_phone, tour_date, group_size,
-          status, total_cents, currency, notes, coupon_code, coupon_discount_cents)
-       values ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9,$10,$11) returning id`,
+          status, total_cents, currency, notes, coupon_code, coupon_discount_cents, commission_pct)
+       values ($1,$2,$3,$4,$5,$6,'pending',$7,$8,$9,$10,$11,$12) returning id`,
       [tour.id, name, email, req.guestPhone?.trim() || null, req.tourDate,
        req.groupSize, chargeCents, tour.currency, req.notes?.trim() || null,
-       couponCode, couponDiscountCents],
+       couponCode, couponDiscountCents,
+       // the tour's own commission + a third-party coupon's, both on the charged total
+       Math.min(100, tour.commissionPct + couponCommissionPct)],
     );
     id = res.rows[0].id;
   } catch (e) {
@@ -174,6 +180,8 @@ interface TourBookingRow {
   partner_notified_at: string | null; partner_confirmed_at: string | null;
   amanah_note: string | null;
   created_at: string;
+  commission_pct: string | number | null;
+  partner_pct: string | number | null;
 }
 
 function toTourBooking(r: TourBookingRow): TourBooking {
@@ -187,13 +195,16 @@ function toTourBooking(r: TourBookingRow): TourBooking {
     amanahNote: r.amanah_note,
     partnerNotifiedAt: r.partner_notified_at,
     partnerConfirmedAt: r.partner_confirmed_at, createdAt: r.created_at,
+    commissionPct: Number(r.commission_pct ?? 0),
+    partnerPct: r.partner_pct != null ? Number(r.partner_pct) : null,
   };
 }
 
 const TB_SELECT = `tb.id, tb.invoice_no, tb.tour_id, t.title, t.source as tour_source, t.city as tour_city,
   to_char(tb.tour_date,'YYYY-MM-DD') as tour_date, tb.group_size, tb.status,
   tb.total_cents, tb.currency, tb.guest_name, tb.guest_email, tb.guest_phone,
-  tb.notes, tb.amanah_note, tb.partner_notified_at, tb.partner_confirmed_at, tb.created_at
+  tb.notes, tb.amanah_note, tb.partner_notified_at, tb.partner_confirmed_at, tb.created_at,
+  tb.commission_pct, tb.partner_pct
   from tour_bookings tb join tours t on t.id = tb.tour_id`;
 
 export async function getTourBooking(id: string): Promise<TourBooking | null> {
@@ -217,29 +228,31 @@ export async function upsertTour(input: {
   minGroup: number; maxGroup: number; category: "tour" | "park";
   status: "draft" | "published" | "archived";
   instantBook?: boolean;
+  commissionPct?: number;
 }): Promise<{ ok: boolean; id?: string; error?: string }> {
   const currency = input.currency === "USD" ? "USD" : "MXN";
   const slugBase = input.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   if (!input.title.trim() || input.priceMXN < 0) return { ok: false, error: "INVALID" };
   const db = getDb();
+  const pct = Math.min(100, Math.max(0, Number(input.commissionPct) || 0));
   if (input.id) {
     await db.query(
       `update tours set title=$2, subtitle=$3, city=$4, duration_label=$5,
          description=$6, price_cents=$7, min_group=$8, max_group=$9,
-         category=$10, status=$11, instant_book=$13,
+         category=$10, status=$11, instant_book=$13, commission_pct=$14,
          currency = case when source='amanah' then currency else $12 end
        where id=$1`,
       [input.id, input.title, input.subtitle ?? null, input.city ?? null,
        input.durationLabel ?? null, input.description ?? null,
        Math.round(input.priceMXN * 100), input.minGroup, input.maxGroup,
-       input.category, input.status, currency, !!input.instantBook],
+       input.category, input.status, currency, !!input.instantBook, pct],
     );
     return { ok: true, id: input.id };
   }
   const ins = await db.query<{ id: string }>(
     `insert into tours (slug, title, subtitle, city, duration_label,
-       description, price_cents, currency, min_group, max_group, category, status, instant_book)
-     values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11,$13)
+       description, price_cents, currency, min_group, max_group, category, status, instant_book, commission_pct)
+     values ($1,$2,$3,$4,$5,$6,$7,$12,$8,$9,$10,$11,$13,$14)
      on conflict (slug) do nothing
      returning id`,
     [slugBase, input.title, input.subtitle ?? null, input.city ?? null,

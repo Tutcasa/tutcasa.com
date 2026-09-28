@@ -49,6 +49,7 @@ export interface AdminSeason {
   from: string; // YYYY-MM-DD inclusive
   to: string;   // YYYY-MM-DD inclusive (last night)
   nightlyCents: number;
+  minStay: number | null;
 }
 
 const initial: ListingFormState = { ok: true, message: "" };
@@ -81,6 +82,40 @@ function ModalPrice({
   );
 }
 
+/** The season inputs, each with a visible label; a wrapping row, so the
+    date pickers (which can't shrink) move to a second line instead of
+    overflowing the card. Shared by the add form and the inline edit. */
+function SeasonFields({ s }: { s?: AdminSeason }) {
+  const field = "flex min-w-0 flex-col gap-1";
+  const cap = "text-[11px] font-bold uppercase tracking-wide text-grey";
+  return (
+    <>
+      <label className={`${field} flex-[2_1_170px]`}>
+        <span className={cap}>Label</span>
+        <input name="label" defaultValue={s?.label ?? ""} placeholder="e.g. High season" className={inputCls} />
+      </label>
+      <label className={`${field} flex-[1_1_150px]`}>
+        <span className={cap}>First night</span>
+        <input name="from" type="date" required defaultValue={s?.from} className={inputCls} />
+      </label>
+      <label className={`${field} flex-[1_1_150px]`}>
+        <span className={cap}>Last night</span>
+        <input name="to" type="date" required defaultValue={s?.to} className={inputCls} />
+      </label>
+      <label className={`${field} w-[110px] flex-none`}>
+        <span className={cap}>$ / night</span>
+        <input name="nightlyUSD" type="number" min="1" required
+               defaultValue={s ? Math.round(s.nightlyCents / 100) : undefined} className={inputCls} />
+      </label>
+      <label className={`${field} w-[120px] flex-none`}>
+        <span className={cap}>Min nights</span>
+        <input name="minStay" type="number" min="1" defaultValue={s?.minStay ?? ""} placeholder="Optional"
+               title="Minimum nights in this season — replaces the home's normal minimum and PriceLabs' minimum for these dates (can be lower or higher). Blank = no change." className={inputCls} />
+      </label>
+    </>
+  );
+}
+
 /** one seasonal rate — view row with an inline edit form behind "Edit" */
 function SeasonRow({
   s, deleting, startDelete,
@@ -97,21 +132,20 @@ function SeasonRow({
 
   if (editing) {
     return (
-      <form action={action} className="grid gap-2 rounded-xl border-[1.5px] border-rosa/50 bg-white px-3 py-2 sm:grid-cols-[1fr_1fr_1fr_90px_auto_auto]">
+      <form action={action} className="flex flex-wrap items-end gap-2 rounded-xl border-[1.5px] border-rosa/50 bg-white p-3">
         <input type="hidden" name="seasonId" value={s.id} />
-        <input name="label" defaultValue={s.label} placeholder="Label" className={inputCls} />
-        <input name="from" type="date" required defaultValue={s.from} className={inputCls} title="First night" />
-        <input name="to" type="date" required defaultValue={s.to} className={inputCls} title="Last night (inclusive)" />
-        <input name="nightlyUSD" type="number" min="1" required defaultValue={Math.round(s.nightlyCents / 100)} className={inputCls} />
-        <button disabled={pending} className="rounded-pill bg-rosa px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
-          {pending ? "Saving…" : "Save"}
-        </button>
-        <button type="button" onClick={() => setEditing(false)}
-          className="rounded-pill border-[1.5px] border-line px-3 py-2 text-sm font-bold text-grey">
-          Cancel
-        </button>
+        <SeasonFields s={s} />
+        <div className="flex gap-2">
+          <button disabled={pending} className="rounded-pill bg-rosa px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">
+            {pending ? "Saving…" : "Save"}
+          </button>
+          <button type="button" onClick={() => setEditing(false)}
+            className="rounded-pill border-[1.5px] border-line px-3 py-2.5 text-sm font-bold text-grey">
+            Cancel
+          </button>
+        </div>
         {state.message && (
-          <p className={`sm:col-span-6 text-xs font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</p>
+          <p className={`basis-full text-xs font-semibold ${state.ok ? "text-cactus" : "text-rosa-deep"}`}>{state.message}</p>
         )}
       </form>
     );
@@ -124,6 +158,7 @@ function SeasonRow({
       </div>
       <div className="flex items-center gap-3">
         <b className="text-rosa">${Math.round(s.nightlyCents / 100)}/n</b>
+        {s.minStay != null && <span className="text-xs font-bold text-grey">min {s.minStay} nights</span>}
         <button type="button" onClick={() => setEditing(true)}
           className="text-xs font-bold text-grey hover:text-ink">
           Edit
@@ -290,6 +325,13 @@ export function PricingForm({
             <label className="text-xs font-bold">DYNAMIC PRICING (PriceLabs)
               <select name="pricelabs" defaultValue={pricing.pricelabsKey} className={inputCls}>
                 <option value="">Off — I set prices manually</option>
+                {/* keep the current link selectable even if PriceLabs didn't
+                    answer — otherwise saving this form would silently switch it off */}
+                {pricing.pricelabsKey && !plListings.some((l) => `${l.id}|${l.pms}` === pricing.pricelabsKey) && (
+                  <option value={pricing.pricelabsKey}>
+                    Linked PriceLabs listing #{pricing.pricelabsKey.split("|")[0]} (PriceLabs list unavailable right now)
+                  </option>
+                )}
                 {plListings.map((l) => (
                   <option key={l.id} value={`${l.id}|${l.pms}`}>
                     {l.name.slice(0, 60)}{l.base != null ? ` (base $${l.base})` : ""}
@@ -328,7 +370,7 @@ export function PricingForm({
 
       {/* ------------------------------------------- seasonal rates */}
       <div className="border-t border-line pt-4">
-        <div className={sectionTitleCls}>Seasonal rates <span className="font-normal normal-case text-grey">— override the nightly price for a date range (high season, holidays…)</span></div>
+        <div className={sectionTitleCls}>Seasonal rates <span className="font-normal normal-case text-grey">— override the nightly price for a date range (high season, holidays…), optionally with its own minimum nights</span></div>
         {seasons.length > 0 && (
           <div className="mb-3 grid gap-2">
             {seasons.map((s) => (
@@ -336,15 +378,12 @@ export function PricingForm({
             ))}
           </div>
         )}
-        <form action={seasonAction} className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_100px_auto]">
+        <form action={seasonAction} className="flex flex-wrap items-end gap-2">
           <input type="hidden" name="id" value={listingId} />
-          <input name="label" placeholder="Label (e.g. High season)" className={inputCls} />
-          <input name="from" type="date" required className={inputCls} title="First night" />
-          <input name="to" type="date" required className={inputCls} title="Last night (inclusive)" />
-          <input name="nightlyUSD" type="number" min="1" placeholder="$/n" required className={inputCls} />
+          <SeasonFields />
           <button disabled={seasonPending}
-            className="rounded-pill border-[1.5px] border-rosa px-4 py-2 text-sm font-bold text-rosa hover:bg-rosa hover:text-white disabled:opacity-50">
-            {seasonPending ? "Adding…" : "+ Add"}
+            className="rounded-pill border-[1.5px] border-rosa px-4 py-2.5 text-sm font-bold text-rosa hover:bg-rosa hover:text-white disabled:opacity-50">
+            {seasonPending ? "Adding…" : "+ Add season"}
           </button>
         </form>
         {seasonState.message && (

@@ -49,6 +49,7 @@ export async function saveTourAction(
     category: formData.get("category") === "park" ? "park" : "tour",
     status: (formData.get("status") as "draft" | "published" | "archived") ?? "draft",
     instantBook: String(formData.get("instantBook") ?? "") === "1",
+    commissionPct: Number(formData.get("commissionPct") ?? 0),
   });
   if (!res.ok) {
     return { ok: false, message: "Check the fields — title and a price of 0 or more are required." };

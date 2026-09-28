@@ -19,28 +19,20 @@ export async function setStatusAction(id: string, status: TourBooking["status"])
   revalidatePath("/admin/tour-bookings");
 }
 
-/**
- * Permanently delete a tour booking (its invoice goes with it). The emails
- * log is removed; gift-card ledger lines are kept for accounting but unlinked.
- */
+/** Delete a tour booking (its invoice goes with it) — it moves to
+    Admin → Trash for 30 days; an unused coupon redemption is given back. */
 export async function deleteTourBookingAction(id: string): Promise<void> {
   await requireAdmin();
-  const { getDb } = await import("@/lib/db");
-  const cur = await getDb().query<{ coupon_code: string | null; status: string }>(
-    "select coupon_code, status from tour_bookings where id=$1", [id]);
-  if (cur.rows[0]?.coupon_code && cur.rows[0].status !== "cancelled") {
+  const { moveToTrash } = await import("@/modules/trash");
+  const row = await moveToTrash("tour", id);
+  if (row?.coupon_code && row.status !== "cancelled") {
     const { unredeemCoupon } = await import("@/modules/coupons");
-    await unredeemCoupon(cur.rows[0].coupon_code).catch(() => {});
+    await unredeemCoupon(String(row.coupon_code)).catch(() => {});
   }
-  await getDb().query(
-    `with n as (delete from notifications_log where tour_booking_id = $1),
-          g as (update gift_card_ledger set tour_booking_id = null where tour_booking_id = $1)
-     delete from tour_bookings where id = $1`,
-    [id],
-  );
   revalidatePath("/admin/tour-bookings");
   revalidatePath("/admin/invoices");
   revalidatePath("/admin");
+  revalidatePath("/admin/trash");
 }
 
 export interface TourAnswerState { ok: boolean; message: string }
@@ -69,6 +61,14 @@ export async function updateTourBookingAction(
   const tourDate = String(formData.get("tourDate") ?? "");
   const groupSize = Number(formData.get("groupSize"));
   const totalUSD = Number(formData.get("totalUSD"));
+  const commissionPct = Number(formData.get("commissionPct") ?? 0);
+  // blank = Amanah's automatic 5% / 10% rule
+  const partnerRaw = String(formData.get("partnerPct") ?? "").trim();
+  const partnerPct = partnerRaw === "" ? null : Number(partnerRaw);
+  if (!(commissionPct >= 0 && commissionPct <= 100)
+      || (partnerPct != null && !(partnerPct >= 0 && partnerPct <= 100))) {
+    return { ok: false, message: "Percentages must be between 0 and 100." };
+  }
   if (!/^[0-9a-f-]{36}$/i.test(id) || !guestName || !guestEmail
       || !/^\d{4}-\d{2}-\d{2}$/.test(tourDate)
       || !(groupSize >= 1) || !(totalUSD >= 0)) {
@@ -78,9 +78,11 @@ export async function updateTourBookingAction(
     `update tour_bookings set
        guest_name=$2, guest_email=$3,
        guest_phone=case when $4='' then guest_phone else $4 end,
-       tour_date=$5::date, group_size=$6, total_cents=$7
+       tour_date=$5::date, group_size=$6, total_cents=$7,
+       commission_pct=$8, partner_pct=$9
      where id=$1`,
-    [id, guestName, guestEmail, guestPhone, tourDate, groupSize, Math.round(totalUSD * 100)],
+    [id, guestName, guestEmail, guestPhone, tourDate, groupSize, Math.round(totalUSD * 100),
+     commissionPct, partnerPct],
   );
   revalidatePath("/admin/tour-bookings");
   revalidatePath("/admin/invoices");

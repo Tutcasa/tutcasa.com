@@ -41,18 +41,20 @@ async function allListings(includeArchived: boolean): Promise<AdminListing[]> {
             coalesce(l.allow_pets,false) as allow_pets,
             l.rating_cached, l.review_count_cached,
             coalesce(r.nightly_cents,0) as nightly_cents,
-            (p.pricelabs_id is not null and p.pricelabs_id <> '') as dynamic
+            (p.pricelabs_id is not null and p.pricelabs_id <> '') as dynamic,
+            l.display_order
        from listings l
        left join listing_rates r on r.listing_id = l.id and r.season is null
        left join listing_pricing p on p.listing_id = l.id
       ${includeArchived ? "" : "where l.status <> 'archived'"}
-      order by l.title`,
+      order by l.display_order nulls last, l.title`,
   );
   return res.rows.map((r) => ({
     id: r.id, slug: r.slug, title: r.title, headline: r.headline, city: r.city,
     country: r.country, region: r.region, propertyType: r.property_type,
     description: r.description, maxGuests: r.max_guests, bedrooms: r.bedrooms,
     bathrooms: Number(r.bathrooms), minStay: r.min_stay, status: r.status,
+    displayOrder: r.display_order ?? null,
     sizeSqft: r.size_sqft, bedTypes: r.bed_types,
     checkinFrom: r.checkin_from, checkoutUntil: r.checkout_until,
     lat: r.lat, lng: r.lng, address: r.address, amenities: r.amenities ?? [], features: r.features ?? [],
@@ -79,7 +81,7 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
     db.query(
       `select * from listing_pricing where listing_id=$1`, [listingId]),
     db.query(
-      `select id, coalesce(label,'') as label, nightly_cents,
+      `select id, coalesce(label,'') as label, nightly_cents, min_stay,
               to_char(lower(season),'YYYY-MM-DD') as from_day,
               to_char(upper(season) - 1,'YYYY-MM-DD') as to_day
          from listing_rates
@@ -120,7 +122,7 @@ async function pricingFor(listingId: string): Promise<{ pricing: AdminPricing; s
     },
     seasons: seasonRes.rows.map((s) => ({
       id: s.id, label: s.label, nightlyCents: s.nightly_cents,
-      from: s.from_day, to: s.to_day,
+      from: s.from_day, to: s.to_day, minStay: s.min_stay ?? null,
     })),
   };
 }
@@ -206,7 +208,8 @@ async function calendarFor(listingId: string): Promise<{
       from: b.from_day, to: b.to_day,
     })),
     todayYmd: today.toISOString().slice(0, 10),
-    exportUrl: `${origin}/api/ical/${tokenRes.rows[0]?.ical_token}.ics`,
+    // the permanent public address, whichever host the admin is browsing on
+    exportUrl: `${process.env.SITE_URL ?? origin}/api/ical/${tokenRes.rows[0]?.ical_token}.ics`,
     icalFeeds: feedsRes.rows.map((f) => ({
       id: f.id, url: f.url, source: f.source, active: f.active,
       lastSyncedAt: f.last_synced_at, lastStatus: f.last_status,

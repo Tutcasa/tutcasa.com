@@ -6,7 +6,7 @@ import { deleteTourBookingAction } from "./tour-bookings/actions";
 
 /**
  * Small confirm-then-delete button for admin rows. The browser confirm is
- * the safety net — deletion is permanent (there is no trash).
+ * the safety net; deleted records wait 30 days in Admin → Trash.
  */
 export function DeleteButton({
   onDelete,
@@ -22,7 +22,7 @@ export function DeleteButton({
     <button
       disabled={pending}
       onClick={() => {
-        if (!window.confirm(`Delete ${what} permanently? This cannot be undone.`)) return;
+        if (!window.confirm(`Delete ${what}? It moves to Admin → Trash, where you can restore it for 30 days.`)) return;
         start(() => onDelete());
       }}
       className={

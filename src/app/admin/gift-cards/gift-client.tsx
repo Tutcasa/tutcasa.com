@@ -2,7 +2,7 @@
 
 import { useActionState, useTransition } from "react";
 import type { GiftCardRow } from "@/modules/giftcards";
-import { createGiftCardAction, setGiftCardStatusAction, type GiftFormState } from "./actions";
+import { createGiftCardAction, setGiftCardStatusAction, deleteGiftCardAction, type GiftFormState } from "./actions";
 
 const initial: GiftFormState = { ok: true, message: "" };
 const inputCls =
@@ -61,7 +61,7 @@ export function GiftClient({ cards }: { cards: GiftCardRow[] }) {
                   </span>
                 </td>
                 <td className="p-3 text-xs text-grey">{new Date(c.createdAt).toLocaleDateString()}</td>
-                <td className="p-3">
+                <td className="whitespace-nowrap p-3">
                   {c.status !== "redeemed" && (
                     <button disabled={busy}
                       onClick={() => start(() => setGiftCardStatusAction(c.id, c.status === "active" ? "void" : "active"))}
@@ -69,6 +69,17 @@ export function GiftClient({ cards }: { cards: GiftCardRow[] }) {
                       {c.status === "active" ? "Disable" : "Re-enable"}
                     </button>
                   )}
+                  <button disabled={busy}
+                    onClick={() => {
+                      if (!window.confirm(`Delete gift card ****${c.last4}? It moves to Admin → Trash, where you can restore it for 30 days.`)) return;
+                      start(async () => {
+                        const res = await deleteGiftCardAction(c.id);
+                        if (!res.ok) window.alert(res.message);
+                      });
+                    }}
+                    className="ml-3 text-xs font-bold text-grey hover:text-rosa-deep disabled:opacity-50">
+                    Delete
+                  </button>
                 </td>
               </tr>
             ))}

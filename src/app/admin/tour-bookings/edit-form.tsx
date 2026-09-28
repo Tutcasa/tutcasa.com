@@ -2,6 +2,7 @@
 
 import { useState, useActionState } from "react";
 import { updateTourBookingAction, type TourAnswerState } from "./actions";
+import { amanahTutcasaPct } from "@/modules/tours/types";
 
 const initial: TourAnswerState = { ok: true, message: "" };
 const inputCls =
@@ -9,7 +10,8 @@ const inputCls =
 
 export function TourEditForm({ b }: {
   b: { id: string; guestName: string; guestEmail: string; guestPhone: string | null;
-       tourDate: string; groupSize: number; totalCents: number };
+       tourDate: string; groupSize: number; totalCents: number; currency: string;
+       commissionPct: number; partnerPct: number | null; amanah: boolean };
 }) {
   const [open, setOpen] = useState(false);
   const [state, action, pending] = useActionState(updateTourBookingAction, initial);
@@ -41,10 +43,23 @@ export function TourEditForm({ b }: {
         <label className="text-xs font-bold">PEOPLE
           <input name="groupSize" type="number" min="1" required defaultValue={b.groupSize} className={inputCls} />
         </label>
-        <label className="text-xs font-bold">TOTAL (USD)
+        <label className="text-xs font-bold">TOTAL ({b.currency})
           <input name="totalUSD" type="number" min="0" step="1" required
                  defaultValue={Math.round(b.totalCents / 100)} className={inputCls} />
         </label>
+        <label className="text-xs font-bold" title="Paid to a third party (agent, concierge…). Shows on the invoice's internal box.">
+          3RD-PARTY COMMISSION %
+          <input name="commissionPct" type="number" min="0" max="100" step="0.5"
+                 defaultValue={b.commissionPct} className={inputCls} />
+        </label>
+        {b.amanah && (
+          <label className="text-xs font-bold" title="What Amanah pays TutCasa on this tour. Blank = Amanah's rule: 5% up to 2 people, 10% for 3+.">
+            TUTCASA % FROM AMANAH
+            <input name="partnerPct" type="number" min="0" max="100" step="0.5"
+                   defaultValue={b.partnerPct ?? ""}
+                   placeholder={`auto: ${amanahTutcasaPct(b.groupSize)}%`} className={inputCls} />
+          </label>
+        )}
         <div className="flex items-center gap-3 sm:col-span-3">
           <button disabled={pending}
             className="rounded-pill bg-rosa px-5 py-2 text-sm font-bold text-white disabled:opacity-50">

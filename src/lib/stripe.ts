@@ -123,7 +123,9 @@ export async function payableForInvoice(id: string): Promise<PayableInvoice | nu
     // whatever remains of the total
     const remaining = Math.max(0, b.total_cents - b.paid);
     const firstDue = p.dueNowCents != null ? Math.min(Number(p.dueNowCents), remaining) : remaining;
-    const dueCents = roundToUnit(b.paid === 0 ? firstDue : remaining);
+    const raw = b.paid === 0 ? firstDue : remaining;
+    // imported old-site bookings carry cents (16% tax) — charge them exactly
+    const dueCents = p.legacy ? raw : roundToUnit(raw);
     if (dueCents <= 0) return null;
     return {
       kind: "stay", id: b.id, label: `TutCasa stay — ${b.title}`,

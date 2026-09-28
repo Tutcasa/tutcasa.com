@@ -1,97 +1,32 @@
 "use client";
 
 /**
- * Home hero ported 1:1 from the demo index.html: audience toggle
- * (guest/owner), Guide-me wizard with typing indicator, and the
- * classic search bar with where/who popovers.
+ * Home hero: audience toggle (guest / owner), then — for guests — the
+ * framed family film beside the headline, a one-line search pill and a
+ * trust strip reaching over the frame, and four pinned homes (the first
+ * four in the admin's Display order). Search-only by the client's choice
+ * (the old Guide-me wizard was removed 2026-09-28).
  */
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import "@/styles/home-hero.css";
 import { T, useLang } from "@/lib/i18n";
+import { useCurrency } from "@/lib/currency";
 
-/* wizard result cards — REAL published homes, passed from the server
-   (was hardcoded to 8 demo names whose "View details" links 404'd). */
-export type WizardMatch = {
+/** a pinned home card (server-built from the published listings) */
+export type HeroHome = {
   slug: string;
   name: string;
-  meta: string;
-  price: number;
+  price: number; // all-in USD per night
   city: string;
-  country: string;
-  region: string;
-  photos: string[];
-  g: string;
+  photo: string | null;
 };
-
-const WIZ_DESTS = [
-  { v: "Playa del Carmen", ic: "\u{1F3DD}\uFE0F", label: "Playa del Carmen", small: "beachfront", kw: "mexico riviera maya playa" },
-  { v: "Tulum", ic: "\u{1F6DB}", label: "Tulum", small: "jungle & villas", kw: "mexico riviera maya" },
-  { v: "Nuba, Egypt", ic: "\u{1F3DC}\uFE0F", label: "Nuba, Egypt", small: "Nile-side", kw: "egypt nubia nile aswan" },
-  { v: "Orlando", ic: "\u{1F3A2}", label: "Orlando", small: "parks & pools", kw: "usa united states america florida disney" },
-];
-
-const WIZ_VIBES = [
-  { v: "Relax", ic: "\u{1F9D8}", label: "Total relax", small: "pool & beach" },
-  { v: "Family", ic: "\u{1F46A}", label: "Family trip", small: "space & safety" },
-  { v: "Adventure", ic: "\u{1F99F}", label: "Adventure", small: "cenotes & ruins" },
-  { v: "Romantic", ic: "\u{1F305}", label: "Romantic", small: "sunsets for two" },
-  { v: "Big group", ic: "\u{1F389}", label: "Big group", small: "villas up to 20" },
-];
 
 type GuestKey = "a" | "c" | "b";
 
-function Typing() {
-  return (
-    <div className="typing"><i></i><i></i><i></i></div>
-  );
-}
-
-/* result-card photo strip: real photos when the home has them, otherwise
-   the demo gradient placeholders. Count + dots (demo photoNav). */
-function ResultCard({ r }: { r: WizardMatch }) {
-  const [idx, setIdx] = useState(0);
-  const hasPhotos = r.photos.length > 0;
-  const n = hasPhotos ? r.photos.length : 5;
-  const g = r.g && /^g[1-6]$/.test(r.g) ? r.g : "g1";
-  function nav(e: React.MouseEvent, dir: number) {
-    e.stopPropagation();
-    setIdx((i) => (i + dir + n) % n);
-  }
-  return (
-    <div className="rc">
-      <div
-        className={`ph ${hasPhotos ? "" : g}`}
-        style={hasPhotos ? {
-          backgroundImage: `url(${r.photos[idx]})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        } : undefined}
-      >
-        {n > 1 && (
-          <>
-            <button className="ph-arrow l" onClick={(e) => nav(e, -1)}>&#8249;</button>
-            <button className="ph-arrow r" onClick={(e) => nav(e, 1)}>&#8250;</button>
-          </>
-        )}
-        <span className="ph-count">{idx + 1} / {n}</span>
-        <span className="ph-dots">
-          {Array.from({ length: n }, (_, i) => (
-            <i key={i} className={`ph-dot${i === idx ? " on" : ""}`}></i>
-          ))}
-        </span>
-      </div>
-      <div className="b">
-        <h4>{r.name}</h4>
-        <p>{r.meta}</p>
-        <div className="pr"><b>${r.price}</b>/night &middot; all-in</div>
-        <Link className="rc-btn" href={`/stays/${r.slug}`}>View details &rarr;</Link>
-      </div>
-    </div>
-  );
-}
-
+const VIDEO = "https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia.mp4";
 
 /** After picking a start date, suggest the next night so the check-out
     calendar opens on the right month (guest adjusts freely). */
@@ -102,57 +37,39 @@ function suggestCheckout(ci: string, co: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
+const CITY_COUNTRY: Record<string, string> = {
+  "Playa del Carmen": "mexico", Tulum: "mexico",
+  Nuba: "egypt nubia", Cairo: "egypt",
+  Orlando: "usa united states america florida", Miami: "usa united states america florida",
+};
+
+export function HomeHero({ homes = [] }: { homes?: HeroHome[] }) {
   const router = useRouter();
   const { t } = useLang();
+  const { fromUSD } = useCurrency();
 
   const [audience, setAudience] = useState<"stay" | "own">("stay");
-  const [mode, setMode] = useState<"guide" | "search">("guide");
-
-  /* classic search bar */
   const [pop, setPop] = useState<"" | "where" | "who">("");
   const [where, setWhere] = useState("");
   const [destFilter, setDestFilter] = useState("");
   const [ci, setCi] = useState("");
   const [co, setCo] = useState("");
-
-  /* guests — shared between the who-popover and wizard step 3 (demo `guests`) */
+  const ciRef = useRef<HTMLInputElement>(null);
+  const coRef = useRef<HTMLInputElement>(null);
   const [guests, setGuests] = useState<Record<GuestKey, number>>({ a: 2, c: 0, b: 0 });
   const [decDisabled, setDecDisabled] = useState<Record<GuestKey, boolean>>({ a: false, c: false, b: false });
   const [whoText, setWhoText] = useState("");
 
-  /* wizard */
-  const [wz, setWz] = useState<{ step: 1 | 2 | 3 | 4; typing: boolean }>({ step: 1, typing: true });
-  const [dest, setDest] = useState("");
-  const [vibe, setVibe] = useState("");
-  const [wizFilter, setWizFilter] = useState("");
-  const [wCi, setWCi] = useState("");
-  const [wCo, setWCo] = useState("");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function goStep(step: 1 | 2 | 3 | 4, ms = 600) {
-    if (timer.current) clearTimeout(timer.current);
-    setWz({ step, typing: true });
-    timer.current = setTimeout(() => setWz({ step, typing: false }), ms);
-  }
-
   useEffect(() => {
-    // demo runs step1() on load: typing dots, then the question after
-    // 600ms (initial state is already step 1 + typing)
-    timer.current = setTimeout(() => setWz({ step: 1, typing: false }), 600);
-    // "click outside closes" — React delegates events at the document
-    // node, so the demo's stopPropagation trick can't shield this
-    // listener; guard by target instead
+    // click outside closes the popovers — guard by target (React delegates
+    // events at the document node, so stopPropagation can't shield this)
     const onDoc = (e: MouseEvent) => {
       const el = e.target as Element | null;
       if (el?.closest?.(".pop, [data-pop-cell]")) return;
       setPop("");
     };
     document.addEventListener("click", onDoc);
-    return () => {
-      document.removeEventListener("click", onDoc);
-      if (timer.current) clearTimeout(timer.current);
-    };
+    return () => document.removeEventListener("click", onDoc);
   }, []);
 
   function step(k: GuestKey, d: number) {
@@ -182,45 +99,11 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
     router.push("/stays?" + params.toString());
   }
 
-  function goMatches() {
-    const params = new URLSearchParams({ match: "1" });
-    if (dest) params.set("dest", dest);
-    if (vibe) params.set("vibe", vibe);
-    // carry the wizard's dates + party size into the full search (previously
-    // dropped, so the guest had to re-enter them on /stays)
-    if (wCi) params.set("ci", wCi);
-    if (wCo) params.set("co", wCo);
-    params.set("guests", String(guests.a + guests.c));
-    router.push("/stays?" + params.toString());
-  }
-
-  /* wizard results = real published homes, softly filtered by the chosen
-     destination. If nothing matches the destination we still show the whole
-     collection rather than an empty box. */
-  const destMatches = (() => {
-    if (!dest || dest === "Surprise me") return matches;
-    const key = dest.toLowerCase();
-    const hit = matches.filter((m) => {
-      const hay = `${m.city} ${m.region} ${m.country}`.toLowerCase();
-      if (key.includes("nuba") || key.includes("egypt")) return m.country === "EG";
-      if (key.includes("orlando") || key.includes("florida") || key.includes("miami")) return m.country === "US";
-      return hay.includes(key.split(",")[0].trim());
-    });
-    return hit.length ? hit : matches;
-  })();
-
-  const wzDatesOk = !!(wCi && wCo && wCo > wCi);
-  const CITY_COUNTRY: Record<string, string> = {
-    "Playa del Carmen": "mexico", Tulum: "mexico", "Cancún": "mexico cancun",
-    Nuba: "egypt nubia", Cairo: "egypt",
-    Orlando: "usa united states america florida", Miami: "usa united states america florida",
-  };
   const chipVisible = (label: string) => {
     const q = destFilter.trim().toLowerCase();
     if (!q) return true;
     return label.toLowerCase().includes(q) || (CITY_COUNTRY[label] ?? "").includes(q);
   };
-  const progress = wz.step;
 
   const stepper = (k: GuestKey, label: string, sub: string) => (
     <div className="stepper">
@@ -233,49 +116,7 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
     </div>
   );
 
-  return (
-    <section className="hero">
-      <div className="sun"></div>
-      <div className="wrap">
-        <div className="aud">
-          <button className={audience === "stay" ? "on" : undefined} onClick={() => setAudience("stay")}>
-            &#127958;&#65039; <T k="home_aud_stay" />
-          </button>
-          <button className={audience === "own" ? "on own" : "own"} onClick={() => setAudience("own")}>
-            &#128273; <T k="home_aud_own" />
-          </button>
-        </div>
-
-        {/* GUEST VIEW */}
-        <div className={audience === "stay" ? undefined : "hidden"}>
-          <h1 dangerouslySetInnerHTML={{ __html: t("home_h1") }} />
-          <T as="p" className="sub" k="home_sub" />
-
-          <div className="modes">
-            <button className={mode === "guide" ? "on" : undefined} onClick={() => setMode("guide")}>
-              &#10024; <T k="home_guide" />
-            </button>
-            <button className={mode === "search" ? "on" : undefined} onClick={() => setMode("search")}>
-              &#128269; <T k="home_search" />
-            </button>
-          </div>
-
-          {/* video | wizard/search | free-transfer banner (client-directed layout) */}
-          <div className="hero-flank">
-            <aside className="flank flank-video" aria-hidden="true">
-              <video
-                src="https://vlcbibnvhanzdklvzpdy.supabase.co/storage/v1/object/public/listing-photos/site/familia.mp4"
-                autoPlay muted loop playsInline
-              />
-            </aside>
-
-            <div className="flank-center">
-          {/* CLASSIC SEARCH BAR */}
-          <div className={`panel${mode === "search" ? "" : " hidden"}`}>
-            <div className="searchbar">
-              <div className="sb-cell" data-pop-cell onClick={(e) => { e.stopPropagation(); setPop("where"); }}>
-                <label>Where</label>
-                <div className={`val${where ? " filled" : ""}`}>{where || "Search destinations"}</div>
+  const wherePop = (
                 <div className={`pop pop-where${pop === "where" ? " open" : ""}`} onClick={(e) => e.stopPropagation()}>
                   <input
                     className="where-search"
@@ -310,152 +151,108 @@ export function HomeHero({ matches = [] }: { matches?: WizardMatch[] }) {
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="sb-cell">
-                <label>Check in</label>
-                <input type="date" value={ci} onChange={(e) => { setCi(e.target.value); setCo(suggestCheckout(e.target.value, co)); }} />
-              </div>
-              <div className="sb-cell">
-                <label>Check out</label>
-                <input type="date" min={ci || undefined} value={co} onChange={(e) => setCo(e.target.value)} />
-              </div>
-              <div className="sb-cell" data-pop-cell onClick={(e) => { e.stopPropagation(); setPop("who"); }}>
-                <label>How many</label>
-                <div className={`val${whoText ? " filled" : ""}`}>{whoText || "Add guests"}</div>
-                <div className={`pop pop-who${pop === "who" ? " open" : ""}`} onClick={(e) => e.stopPropagation()}>
-                  {stepper("a", "Adults", "13+")}
-                  {stepper("c", "Children", "2–12")}
-                  {stepper("b", "Babies", "under 2")}
+  );
+  const whoPop = (
+    <div className={`pop pop-who${pop === "who" ? " open" : ""}`} onClick={(e) => e.stopPropagation()}>
+      {stepper("a", "Adults", "13+")}
+      {stepper("c", "Children", "2–12")}
+      {stepper("b", "Babies", "under 2")}
+    </div>
+  );
+  const shortDate = (d: string) => d
+    ? new Date(`${d}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+    : "";
+  /* the client's design: one slim pill — Where · [Check-In | Check-Out] · Guests · SEARCH */
+  const searchPill = (
+    <div className="hn-bar">
+      <div className="hn-cell hn-where" data-pop-cell onClick={(e) => { e.stopPropagation(); setPop("where"); }}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+        <span className={where ? "v" : "ph"}>{where || "Where"}</span>
+        {wherePop}
+      </div>
+      <div className="hn-group">
+        <div className="hn-cell" onClick={() => ciRef.current?.showPicker?.()}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+          <span className={ci ? "v" : "ph"}>{ci ? shortDate(ci) : "Check-In"}</span>
+          <input ref={ciRef} type="date" tabIndex={-1} aria-label="Check-in date" value={ci}
+                 onChange={(e) => { setCi(e.target.value); setCo(suggestCheckout(e.target.value, co)); }} />
+        </div>
+        <i className="hn-sep" />
+        <div className="hn-cell" onClick={() => coRef.current?.showPicker?.()}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+          <span className={co ? "v" : "ph"}>{co ? shortDate(co) : "Check-Out"}</span>
+          <input ref={coRef} type="date" tabIndex={-1} aria-label="Check-out date" min={ci || undefined} value={co}
+                 onChange={(e) => setCo(e.target.value)} />
+        </div>
+      </div>
+      <div className="hn-group hn-guests" data-pop-cell onClick={(e) => { e.stopPropagation(); setPop("who"); }}>
+        <div className="hn-cell">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4.5 20c1.2-3.6 4.2-5.5 7.5-5.5s6.3 1.9 7.5 5.5" /></svg>
+          <span className={whoText ? "v" : "ph"}>{whoText || "Guests"}</span>
+          <svg className="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </div>
+        {whoPop}
+      </div>
+      <button className="hn-go" onClick={goSearch}>Search</button>
+    </div>
+  );
+
+  return (
+    <section className="hero">
+      <div className="sun"></div>
+      <div className="wrap">
+        <div className="aud">
+          <button className={audience === "stay" ? "on" : undefined} onClick={() => setAudience("stay")}>
+            &#127958;&#65039; <T k="home_aud_stay" />
+          </button>
+          <button className={audience === "own" ? "on own" : "own"} onClick={() => setAudience("own")}>
+            &#128273; <T k="home_aud_own" />
+          </button>
+        </div>
+
+        {/* GUEST VIEW */}
+        <div className={audience === "stay" ? undefined : "hidden"}>
+            <div className="hn">
+              <div className="hn-top">
+                <div className="hn-frame" aria-hidden="true">
+                  <video src={VIDEO} autoPlay muted loop playsInline />
+                </div>
+                <div className="hn-main">
+                  <h1 dangerouslySetInnerHTML={{ __html: t("home_h1") }} />
+                  <T as="p" className="sub" k="home_sub" />
+                  {searchPill}
+                  <div className="hn-trust">
+                    <div className="hn-ti">
+                      <div><b><span className="stars" aria-hidden="true">&#9733;&#9733;&#9733;&#9733;&#9733;</span> 4.9</b><small>average rating reviews</small></div>
+                    </div>
+                    <div className="hn-ti">
+                      <span className="coin" aria-hidden="true">$0</span>
+                      <div><b>$0</b><small>Hidden Fees</small></div>
+                    </div>
+                    <div className="hn-ti hn-flash">
+                      <span className="emo" aria-hidden="true">&#128661;</span>
+                      <div><b>Free Airport Pickup</b><small>Help from Booking to Departure</small></div>
+                    </div>
+                    <div className="hn-ti">
+                      <span className="emo" aria-hidden="true">&#128106;</span>
+                      <div><b>500+</b><small>Guests Hosted</small></div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="sb-cell go">
-                <button className="go-btn" onClick={goSearch}>&#128269;</button>
-              </div>
-            </div>
-          </div>
-
-          {/* GUIDED WIZARD */}
-          <div className={`panel${mode === "guide" ? "" : " hidden"}`}>
-            <div className="wizard">
-              <div className="wz-head">
-                <div className="wz-avatar">TC</div>
-                <div><b>If you need help, talk to us</b><span>&#9679; usually replies in minutes</span></div>
-                <div className="wz-progress">
-                  {[1, 2, 3, 4].map((i) => (
-                    <i key={i} className={i <= progress ? "on" : undefined}></i>
+              {homes.length > 0 && (
+                <div className="hn-picks">
+                  {homes.slice(0, 4).map((p) => (
+                    <Link key={p.slug} href={`/stays/${p.slug}`} className="hn-pick"
+                          style={p.photo ? { backgroundImage: `url(${p.photo})` } : undefined}>
+                      <b>{p.name.split(/\s*[,–]\s*/)[0]}</b>
+                      <small>{p.city}</small>
+                      <i>from {fromUSD(p.price)} / night</i>
+                    </Link>
                   ))}
                 </div>
-              </div>
-              <div className="wz-body">
-                {wz.typing ? (
-                  <Typing />
-                ) : wz.step === 1 ? (
-                  <>
-                    <div className="wz-q">Hola &#128075; Where do you want to <span className="em">wake up</span>?</div>
-                    <input
-                      className="dest-search"
-                      placeholder="Type a city or country…"
-                      value={wizFilter}
-                      onChange={(e) => setWizFilter(e.target.value)}
-                    />
-                    {/* 4 destinations → a centered 2×2, not 3+1 with a hole */}
-                    <div className={`opts${WIZ_DESTS.length === 4 ? " opts-2" : ""}`}>
-                      {WIZ_DESTS.map((d) => (
-                        <div
-                          key={d.v}
-                          className="opt"
-                          style={(d.label + " " + d.small + " " + d.kw).toLowerCase().includes(wizFilter.trim().toLowerCase()) ? undefined : { display: "none" }}
-                          onClick={() => { setDest(d.v); goStep(2); }}
-                        >
-                          <span className="ic">{d.ic}</span>{d.label}<small>{d.small}</small>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : wz.step === 2 ? (
-                  <>
-                    <div className="wz-q">Nice choice &#128525; What&rsquo;s the <span className="em">vibe</span>?</div>
-                    <div className="opts">
-                      {WIZ_VIBES.map((v) => (
-                        <div key={v.v} className="opt" onClick={() => { setVibe(v.v); goStep(3); }}>
-                          <span className="ic">{v.ic}</span>{v.label}<small>{v.small}</small>
-                        </div>
-                      ))}
-                    </div>
-                    <button className="wz-back" onClick={() => goStep(1)}>&larr; back</button>
-                  </>
-                ) : wz.step === 3 ? (
-                  <>
-                    <div className="wz-q">Last one &mdash; <span className="em">when &amp; who</span>?</div>
-                    <div className="dates-row">
-                      <div className="date-field">
-                        <label>Check in</label>
-                        <input type="date" value={wCi} onChange={(e) => { setWCi(e.target.value); setWCo(suggestCheckout(e.target.value, wCo)); }} />
-                      </div>
-                      <div className="date-field">
-                        <label>Check out</label>
-                        <input type="date" min={wCi || undefined} value={wCo} onChange={(e) => setWCo(e.target.value)} />
-                      </div>
-                    </div>
-                    <div className="who-box">
-                      {stepper("a", "Adults", "13+")}
-                      {stepper("c", "Children", "2–12")}
-                      {stepper("b", "Babies", "under 2")}
-                    </div>
-                    <button className="btn btn-rosa" style={{ width: "100%" }} disabled={!wzDatesOk} onClick={() => goStep(4, 850)}>
-                      Show my matches
-                    </button>
-                    <div className="wz-datehint" style={wzDatesOk ? { display: "none" } : undefined}>
-                      &#128197; Add your check-in &amp; check-out dates to see matches
-                    </div>
-                    <button className="wz-back" onClick={() => goStep(2)}>&larr; back</button>
-                  </>
-                ) : (
-                  <>
-                    <div className="wz-q">
-                      Perfecto &#127881; Casas made for <span className="em">{(vibe || "your trip").toLowerCase()}</span> in {dest}:
-                    </div>
-                    {destMatches.length > 0 ? (
-                      <>
-                        <div className="result-count">
-                          {destMatches.length} {destMatches.length === 1 ? "casa matches" : "casas match"} &mdash; scroll to see {destMatches.length === 1 ? "it" : "them all"}
-                        </div>
-                        <div className="result-cards scroll">
-                          {destMatches.map((r) => (
-                            <ResultCard key={r.slug} r={r} />
-                          ))}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="result-count" style={{ padding: "10px 0 4px" }}>
-                        We&rsquo;re adding homes to our collection &mdash; message us and we&rsquo;ll match you personally. &#128172;
-                      </div>
-                    )}
-                    <div className="wz-cta">
-                      <button className="btn btn-rosa" style={{ width: "100%" }} onClick={goMatches}>See all my matches</button>
-                    </div>
-                    <button className="wz-back" onClick={() => goStep(1)}>&#8635; start over</button>
-                  </>
-                )}
-              </div>
+              )}
             </div>
-            <button className="see-all" onClick={() => router.push("/stays")}>See all our properties &rarr;</button>
-          </div>
-            </div>
-
-            {/* the trust cards, stacked to match the box height — flashing
-                free-pickup offer on top (client-picked layout B) */}
-            <aside className="flank-stack">
-              <div className="t-card flash-card">
-                <div className="big"><span className="s">Free Airport Pickup</span></div>
-                <div className="fc-sub">Up to 4 People</div>
-                <p>Help from Booking to Departure</p>
-              </div>
-              <div className="t-card"><div className="big"><span className="r">&#9733; 4.9</span></div><p>average rating, 100+ five-star reviews</p></div>
-              <div className="t-card"><div className="big"><span className="t">$0</span></div><p>hidden fees &mdash; the price you see is what you pay</p></div>
-              <div className="t-card"><div className="big"><span className="c">500+</span></div><p>guests hosted</p></div>
-            </aside>
-          </div>
         </div>
 
         {/* OWNER VIEW */}
