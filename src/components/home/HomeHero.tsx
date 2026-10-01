@@ -19,7 +19,7 @@ import { useCurrency } from "@/lib/currency";
 export type HeroHome = {
   slug: string;
   name: string;
-  price: number; // all-in USD per night
+  price: number; // USD per night, before taxes
   city: string;
   photo: string | null;
 };
@@ -247,7 +247,7 @@ export function HomeHero({ homes = [] }: { homes?: HeroHome[] }) {
                           style={p.photo ? { backgroundImage: `url(${p.photo})` } : undefined}>
                       <b>{p.name.split(/\s*[,–]\s*/)[0]}</b>
                       <small>{p.city}</small>
-                      <i>from {fromUSD(p.price)} / night</i>
+                      <i>from {fromUSD(p.price)} / night + taxes</i>
                     </Link>
                   ))}
                 </div>

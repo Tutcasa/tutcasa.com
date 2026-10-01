@@ -220,7 +220,7 @@ export async function referFriend(input: {
     `- Your $100 coupon code: ${ref.code}`,
     `- Browse the homes: ${link}`,
     "",
-    "Enter the code at checkout on any home — beachfront condos with private pools in Playa del Carmen, all-in pricing, no hidden fees.",
+    "Enter the code at checkout on any home — beachfront condos with private pools in Playa del Carmen, clear pricing, no hidden fees.",
     "",
     "— The TutCasa family",
   ].join("\n");

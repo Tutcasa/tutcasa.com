@@ -53,8 +53,8 @@ function SimilarCard({ l }: { l: Listing }) {
         <h4>{l.title}</h4>
         <div className="m">&#128205; {displayCityCountry(l)} &middot; {l.bedrooms} bd</div>
         <div className="pr">
-          ${Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100).toLocaleString("en-US")}{" "}
-          <span style={{ color: "var(--grey)", fontWeight: 500, fontSize: 12 }}>/ night</span>
+          ${Math.round(l.nightlyCents / 100).toLocaleString("en-US")}{" "}
+          <span style={{ color: "var(--grey)", fontWeight: 500, fontSize: 12 }}>/ night + taxes</span>
         </div>
       </div>
     </Link>
@@ -110,7 +110,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
     .sort((a, b) => (a.city === listing.city ? 0 : 1) - (b.city === listing.city ? 0 : 1))
     .slice(0, 4);
 
-  // pre-tax nightly for the static breakdown; all-in for the headline
+  // the headline shows the price BEFORE taxes (client rule); the breakdown shows how tax is added
   const pretax = adv?.minCents ?? listing.nightlyCents;
   const taxPct = adv?.taxPct ?? listing.taxPct;
   const allIn = Math.round(pretax * (1 + taxPct / 100));
@@ -123,7 +123,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
     beds: listing.bedrooms,
     baths: listing.bathrooms,
     guests: listing.maxGuests,
-    priceLabel: Math.round(allIn / 100).toLocaleString("en-US"),
+    priceLabel: Math.round(pretax / 100).toLocaleString("en-US"),
     allInNightly: Math.round(allIn / 100),
     priceVaries: adv?.varies ?? false,
     nightlyPretax: Math.round(pretax / 100),

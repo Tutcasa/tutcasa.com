@@ -45,7 +45,7 @@ function toCard(l: Listing, feature?: string, g?: string): CasaCardData {
     name: l.title,
     meta: `${city} · ${bedsOf(l)} beds · ${feature ?? `sleeps ${l.maxGuests}`}`,
     wishMeta: city,
-    price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100), // all-in, like the label says
+    price: Math.round(l.nightlyCents / 100), // before taxes — tax is added at checkout
     rate: l.rating.toFixed(2),
     tag: l.headline,
     g: grad,
@@ -85,7 +85,7 @@ export default async function HomePage() {
   const heroHomes: HeroHome[] = listings.slice(0, 4).map((l) => ({
     slug: l.slug,
     name: l.title,
-    price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100),
+    price: Math.round(l.nightlyCents / 100),
     city: displayCity(l),
     photo: l.photos[0]?.url ?? null,
   }));

@@ -22,7 +22,7 @@ export function WishlistClient() {
       <section className="results wrap">
         <div className="res-head">
           <h2><span>{all.length}</span> saved</h2>
-          <span className="muted">All prices are all-in &mdash; no hidden fees</span>
+          <span className="muted">Prices shown before taxes &mdash; taxes are added at checkout</span>
         </div>
         <div className="casa-grid">
           {all.map((p) => (
@@ -42,7 +42,7 @@ export function WishlistClient() {
               <div className="casa-b">
                 <div className="casa-top"><h4>{p.name}</h4>{p.rate ? <span className="rate">&#9733; {p.rate}</span> : null}</div>
                 {p.meta ? <div className="loc">&#128205; {p.meta}</div> : null}
-                {p.price ? <div className="casa-pr"><b>${p.price}</b> <span>/ night &middot; all-in</span></div> : null}
+                {p.price ? <div className="casa-pr"><b>${p.price}</b> <span>/ night + taxes</span></div> : null}
                 <div className="casa-actions">
                   <Link className="mini rosa" href={`/stays/${p.id}`} style={{ textDecoration: "none", textAlign: "center", lineHeight: 1.9 }}>
                     View in collection

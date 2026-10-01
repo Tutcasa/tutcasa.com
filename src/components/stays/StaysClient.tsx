@@ -253,7 +253,7 @@ export function StaysClient({
   }, []);
 
   const matched = props.filter((p) => matchProp(p, activeFilter, moreFilters));
-  // price sort on the all-in "from" price shown on each card; ties keep the admin's order
+  // price sort on the "from" price shown on each card (before taxes); ties keep the admin's order
   const list = moreFilters.sort === "rec" ? matched
     : [...matched].sort((a, b) => moreFilters.sort === "low" ? a.price - b.price : b.price - a.price);
   const draftCount = props.filter((p) => matchProp(p, activeFilter, draft)).length;

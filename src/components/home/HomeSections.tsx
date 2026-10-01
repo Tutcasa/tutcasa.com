@@ -104,7 +104,7 @@ function CasaCard({ c }: { c: CasaCardData }) {
         </div>
         <p>{c.meta}</p>
         <div className="casa-pr">
-          <b>{fromUSD(c.price)}</b> <span>/ night &middot; all-in</span>
+          <b>{fromUSD(c.price)}</b> <span>/ night + taxes</span>
         </div>
       </div>
     </article>

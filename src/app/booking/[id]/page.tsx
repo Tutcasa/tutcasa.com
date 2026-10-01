@@ -100,7 +100,7 @@ export default async function BookingPage({
             </>
           )}
           <div className={`flex justify-between font-display text-base font-extrabold ${b ? "mt-2 border-t border-line pt-2" : ""}`}>
-            <span>Total — all-in</span>
+            <span>Total (taxes included)</span>
             <span>{fmtMoney(booking.totalCents)}</span>
           </div>
         </div>

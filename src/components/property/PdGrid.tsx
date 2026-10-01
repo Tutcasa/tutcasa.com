@@ -24,7 +24,7 @@ export interface PdData {
   beds: number;
   baths: number;
   guests: number;
-  priceLabel: string; // advertised all-in nightly, whole dollars (USD text)
+  priceLabel: string; // advertised nightly BEFORE taxes, whole dollars (USD text)
   allInNightly: number; // same value as a number, for currency conversion
   priceVaries: boolean; // upcoming periods priced differently → "from $X"
   nightlyPretax: number; // whole dollars, before taxes (static breakdown)
@@ -278,7 +278,7 @@ export function PdGrid({ p }: { p: PdData }) {
             <div className="row"><span>Security deposit</span><span>{d(q.securityDepositCents)}</span></div>
           )}
           {warn}
-          <div className="tot"><span>Total (all-in)</span><span>{fromUSD(Math.round((total + q.securityDepositCents) / 100))}</span></div>
+          <div className="tot"><span>Total (taxes included)</span><span>{fromUSD(Math.round((total + q.securityDepositCents) / 100))}</span></div>
           {quote.quote.schedule.balanceCents > 0 && (
             <div className="row" style={{ color: "var(--cactus)" }}>
               {/* the deposit splits 50/50 with the balance, like the stay */}
@@ -305,7 +305,7 @@ export function PdGrid({ p }: { p: PdData }) {
     }
     return (
       <>
-        <div className="row"><span>Calculating your all-in total&hellip;</span></div>
+        <div className="row"><span>Calculating your total&hellip;</span></div>
         {warn}
       </>
     );

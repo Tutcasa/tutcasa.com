@@ -30,7 +30,7 @@ function toCard(l: Listing): StayCard {
     baths: l.bathrooms,
     rate: l.rating.toFixed(2),
     reviews: l.reviewCount,
-    price: Math.round((l.nightlyCents * (1 + l.taxPct / 100)) / 100), // all-in, like the label says
+    price: Math.round(l.nightlyCents / 100), // before taxes — tax is added at checkout
     lat: l.lat,
     lng: l.lng,
     // approximate pin only — never the street address (shared after booking)
