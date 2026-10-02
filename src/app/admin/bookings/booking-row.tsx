@@ -81,6 +81,7 @@ export function BookingRow({
           {(b.amountPaidCents ?? 0) > 0 && (
             <div className="text-[10px] font-semibold text-cactus">paid {money(b.amountPaidCents ?? 0)}</div>
           )}
+          <PaymentDue b={b} money={money} />
         </td>
         <td className="p-3">
           <span className={`rounded-pill px-2.5 py-1 text-xs font-bold ${BADGE[b.status]}`}>{b.status}</span>
@@ -192,5 +193,30 @@ export function BookingRow({
         </tr>
       )}
     </>
+  );
+}
+
+/** Second payment at a glance: what's left and when it's due. */
+function PaymentDue({ b, money }: { b: Booking; money: (c: number) => string }) {
+  if (b.status === "cancelled" || b.totalCents <= 0) return null;
+  const paid = b.amountPaidCents ?? 0;
+  const left = b.totalCents - paid;
+  if (left <= 0) return <div className="text-[10px] font-semibold text-cactus">paid in full</div>;
+  const p = b.priceBreakdown ?? ({} as Booking["priceBreakdown"]);
+  const due = p.balanceDueDate ? String(p.balanceDueDate).slice(0, 10) : null;
+  const when = due
+    ? new Date(`${due}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })
+    : null;
+  const overdue = !!due && due < new Date().toISOString().slice(0, 10);
+  const depositOpen = paid === 0 && p.dueNowCents != null && p.dueNowCents < b.totalCents;
+  return (
+    <div className="mt-0.5 text-[10px] font-semibold leading-snug">
+      {depositOpen && <div className="text-terra">deposit {money(p.dueNowCents!)} due now</div>}
+      {when
+        ? <div className={overdue ? "text-rosa-deep" : "text-terra"}>
+            {depositOpen ? "2nd payment" : "balance"} {money(depositOpen ? b.totalCents - p.dueNowCents! : left)} due {when}{overdue ? " · overdue" : ""}
+          </div>
+        : !depositOpen && <div className="text-terra">{money(left)} due</div>}
+    </div>
   );
 }

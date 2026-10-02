@@ -38,6 +38,10 @@ export interface Booking {
     accommodationCents: number;
     cleaningCents: number;
     taxCents: number;
+    /** payment split (website, admin-made and imported bookings) */
+    dueNowCents?: number | null;
+    balanceCents?: number | null;
+    balanceDueDate?: string | null;
   };
   guestName: string;
   guestEmail: string;
