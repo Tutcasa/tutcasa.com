@@ -250,7 +250,10 @@ export default async function InvoicePage({
               <span>Paid so far</span><span>{money(inv.amountPaidCents)}</span>
             </div>
             <div className="flex justify-between font-extrabold text-rosa">
-              <span>Amount due</span><span>{money(inv.totalCents - inv.amountPaidCents)} {inv.currency}</span>
+              {/* same rule as the Pay button: the deposit first, then whatever remains */}
+              {inv.amountPaidCents === 0 && inv.dueNowCents != null && inv.dueNowCents < inv.totalCents
+                ? <><span>Due now</span><span>{money(inv.dueNowCents)} {inv.currency}</span></>
+                : <><span>Amount due</span><span>{money(inv.totalCents - inv.amountPaidCents)} {inv.currency}</span></>}
             </div>
             <PayNow invoiceId={id} paypal={paypalConfigured()} />
           </div>
