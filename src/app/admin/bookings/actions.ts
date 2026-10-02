@@ -4,6 +4,18 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/lib/db";
 import type { BookingStatus } from "@/modules/bookings";
 import { requireAdmin } from "@/lib/admin-auth";
+import { paymentSchedule } from "@/modules/pricing/engine";
+
+/** The home's deposit split for a booking made/edited in admin — same rule
+    as the website (deposit % now, balance N days before check-in). */
+async function scheduleFor(listingId: string, totalCents: number, checkIn: string, bookedAt = new Date()) {
+  const cfg = (await getDb().query<{ deposit_pct: string | null; second_payment_days: number | null }>(
+    "select deposit_pct, second_payment_days from listing_pricing where listing_id=$1", [listingId])).rows[0];
+  const s = paymentSchedule(totalCents, new Date(`${checkIn}T00:00:00Z`),
+    Number(cfg?.deposit_pct ?? 100), Number(cfg?.second_payment_days ?? 0), bookedAt);
+  return { dueNowCents: s.dueNowCents, balanceCents: s.balanceCents,
+           balanceDueDate: s.balanceDueDate ? s.balanceDueDate.toISOString() : null };
+}
 
 export interface BookingFormState { ok: boolean; message: string }
 
@@ -242,6 +254,10 @@ export async function createManualBookingAction(
     totalCents = 0; // unreachable (totalRaw handled above) — keeps TS happy
   }
 
+  // the home's 50/50 (or other) split — previously missing here, so the
+  // invoice's Pay button charged the full amount
+  if (breakdown) breakdown = { ...breakdown, ...(await scheduleFor(listingId, totalCents, checkIn)) };
+
   try {
     await db.query(
       `insert into bookings
@@ -308,6 +324,15 @@ export async function updateBookingAction(
        String(formData.get("guestPhone") ?? "").trim() || null,
        checkIn, checkOut, guests, Math.round(totalUSD * 100)],
     );
+    // keep the deposit split in step with the edited total / dates (booking
+    // time stays the original one); imported old-site bookings keep theirs
+    const cur = (await getDb().query<{ created_at: Date; legacy: boolean }>(
+      "select created_at, coalesce((price_breakdown->>'legacy')::boolean,false) as legacy from bookings where id=$1", [id])).rows[0];
+    if (cur && !cur.legacy) {
+      const s = await scheduleFor(listingId, Math.round(totalUSD * 100), checkIn, new Date(cur.created_at));
+      await getDb().query("update bookings set price_breakdown = coalesce(price_breakdown,'{}'::jsonb) || $2::jsonb where id=$1",
+        [id, JSON.stringify(s)]);
+    }
   } catch (e) {
     if (isOverlap(e)) {
       return { ok: false, message: "Those dates collide with another booking on that home." };

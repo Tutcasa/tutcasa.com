@@ -178,6 +178,26 @@ function addonTotal(a: AddonSelection, nights: number, guests: number): number {
   }
 }
 
+/**
+ * Deposit now, balance N days before check-in — the ONE rule for website
+ * quotes and bookings created or edited in admin. No split for last-minute
+ * bookings: when the balance-due date has already passed at booking time,
+ * everything is due now.
+ */
+export function paymentSchedule(
+  totalCents: number, checkIn: Date, depositPct: number, secondPaymentDays: number, bookedAt: Date,
+): PaymentSchedule {
+  let dueNowCents = depositPct >= 100 ? totalCents : Math.round(totalCents * (depositPct / 100));
+  let balanceCents = totalCents - dueNowCents;
+  let balanceDueDate = balanceCents > 0 ? new Date(checkIn.getTime() - secondPaymentDays * DAY_MS) : null;
+  if (balanceDueDate && balanceDueDate.getTime() <= bookedAt.getTime()) {
+    dueNowCents = totalCents;
+    balanceCents = 0;
+    balanceDueDate = null;
+  }
+  return { dueNowCents, balanceCents, balanceDueDate };
+}
+
 export function computeQuote(input: QuoteInput): Quote {
   const { nights, guests, config, checkIn } = input;
   const n = nights.length;
@@ -284,23 +304,9 @@ export function computeQuote(input: QuoteInput): Quote {
   );
   const totalCents = taxableCents + taxCents;
 
-  // 8. payment schedule — no split for last-minute bookings: when the
-  // balance-due date (N days before check-in) has already passed at
-  // booking time, the guest simply pays everything now
-  let dueNowCents =
-    config.depositPct >= 100
-      ? totalCents
-      : Math.round(totalCents * (config.depositPct / 100));
-  let balanceCents = totalCents - dueNowCents;
-  let balanceDueDate =
-    balanceCents > 0
-      ? new Date(checkIn.getTime() - config.secondPaymentDays * DAY_MS)
-      : null;
-  if (balanceDueDate && balanceDueDate.getTime() <= bookedAt.getTime()) {
-    dueNowCents = totalCents;
-    balanceCents = 0;
-    balanceDueDate = null;
-  }
+  // 8. payment schedule (shared with admin-made bookings)
+  const { dueNowCents, balanceCents, balanceDueDate } =
+    paymentSchedule(totalCents, checkIn, config.depositPct, config.secondPaymentDays, bookedAt);
 
   return {
     nights: n,
