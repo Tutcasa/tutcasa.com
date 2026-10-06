@@ -135,14 +135,14 @@ export default async function AdminInvoices({
                   <div className="text-xs text-grey">{inv.guestEmail}</div>
                 </td>
                 <td className="p-3 font-bold">{fmtMoney(inv.totalCents, inv.currency === "MXN" ? "MXN" : "USD")} {inv.currency}</td>
-                <td className={`p-3 text-xs font-bold ${inv.status === "cancelled" ? "opacity-40" : ""}`}>
+                <td className="p-3 font-bold">
                   {inv.inCents > 0 && (
                     <div className="text-cactus">+{fmtMoney(inv.inCents, inv.currency === "MXN" ? "MXN" : "USD")} · {inv.inPct}%
-                      <span className="block font-normal text-[10px]">owed to TutCasa</span></div>
+                      <span className="block text-xs font-semibold">owed to TutCasa</span></div>
                   )}
                   {inv.outCents > 0 && (
                     <div className="text-rosa-deep">&minus;{fmtMoney(inv.outCents, inv.currency === "MXN" ? "MXN" : "USD")} · {inv.outPct}%
-                      <span className="block font-normal text-[10px]">TutCasa pays</span></div>
+                      <span className="block text-xs font-semibold">TutCasa pays</span></div>
                   )}
                   {inv.inCents <= 0 && inv.outCents <= 0 && <span className="text-grey">—</span>}
                 </td>
