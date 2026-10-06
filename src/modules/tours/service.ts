@@ -120,6 +120,7 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
       nights: 0, // stay-only rules (min nights) make the coupon invalid here
       totalCents: total,
       guestEmail: email,
+      currency: tour.currency,
     });
     if (!cp.ok) return { ok: false, error: "COUPON_INVALID" };
     if (!(await tryRedeemCoupon(cp.code))) return { ok: false, error: "COUPON_INVALID" };

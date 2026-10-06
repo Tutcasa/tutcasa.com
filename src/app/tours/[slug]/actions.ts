@@ -45,7 +45,7 @@ export async function validateTourCouponAction(
   const q = await quoteTourTotal(tourSlug, Math.max(1, groupSize), addons);
   if (!q) return { ok: false, message: "This tour can't be priced — contact us instead." };
   const { checkCoupon } = await import("@/modules/coupons");
-  const cp = await checkCoupon(code, { nights: 0, totalCents: q.totalCents, guestEmail });
+  const cp = await checkCoupon(code, { nights: 0, totalCents: q.totalCents, guestEmail, currency: q.tour.currency });
   if (!cp.ok) {
     const msg =
       cp.reason === "EXPIRED" ? "That coupon has expired."

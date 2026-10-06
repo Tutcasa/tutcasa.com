@@ -28,6 +28,8 @@ export interface CouponContext {
   guestEmail?: string;
   /** cents of sale discounts already in the quote (length/early-bird) */
   saleDiscountCents?: number;
+  /** currency of totalCents — fixed coupons are written in USD (default USD) */
+  currency?: string;
 }
 
 interface CouponRow {
@@ -86,11 +88,19 @@ export async function checkCoupon(rawCode: string, ctx: CouponContext): Promise<
     if (Number(used.rows[0].n) >= c.per_user_limit) return no("USER_LIMIT");
   }
 
+  // fixed coupons are USD amounts; a peso-priced booking (tours) converts
+  // them at the site's own rate (Admin → Content), the one prices display with
+  let fixedCents = c.amount_cents ?? 0;
+  if (c.kind === "fixed" && ctx.currency === "MXN") {
+    const { getSetting } = await import("@/modules/settings");
+    const fx = await getSetting("fx");
+    fixedCents = Math.round(fixedCents * (fx.mxnPerUsd > 0 ? fx.mxnPerUsd : 17));
+  }
   const discountCents = Math.min(
     ctx.totalCents,
     c.kind === "percent"
       ? Math.round(ctx.totalCents * (Number(c.percent_off) / 100))
-      : (c.amount_cents ?? 0),
+      : fixedCents,
   );
   return { ok: true, code, discountCents, commissionPct: Number(c.commission_pct ?? 0) || undefined };
 }
