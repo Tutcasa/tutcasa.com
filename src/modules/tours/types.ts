@@ -31,6 +31,23 @@ export interface Tour {
     (commissions/shared.ts there): 5% for groups up to 2, 10% for 3+. */
 export const amanahTutcasaPct = (people: number) => (people >= 3 ? 10 : 5);
 
+/** A tour booking's commissions — the ONE calculation used by the invoice
+    page and the invoices list. out = third-party commission TutCasa pays
+    (on the charged total); in = Amanah tours only, TutCasa's cut, taken on
+    the tour price before TutCasa's own coupon. Cents in the tour's currency. */
+export function tourCommissions(b: {
+  totalCents: number; couponDiscountCents?: number | null; commissionPct?: number | string | null;
+  partnerPct?: number | string | null; groupSize: number; source?: string | null;
+}): { outPct: number; outCents: number; inPct: number | null; inCents: number; amanahOwedCents: number } {
+  const outPct = Number(b.commissionPct ?? 0);
+  const outCents = Math.round(b.totalCents * outPct / 100);
+  if (b.source !== "amanah") return { outPct, outCents, inPct: null, inCents: 0, amanahOwedCents: 0 };
+  const priceCents = b.totalCents + Number(b.couponDiscountCents ?? 0);
+  const inPct = b.partnerPct != null ? Number(b.partnerPct) : amanahTutcasaPct(b.groupSize);
+  const inCents = Math.round(priceCents * inPct / 100);
+  return { outPct, outCents, inPct, inCents, amanahOwedCents: priceCents - inCents };
+}
+
 /** Total group price in MXN for `pax` people from the tier map, clamping to
     the nearest offered tier (below-minimum pays the minimum-group price).
     Null when the tour has no tiers. */

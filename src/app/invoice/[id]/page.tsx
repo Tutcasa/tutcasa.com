@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { isAdmin } from "@/lib/admin-auth";
 import { fmtMoney } from "@/modules/pricing";
-import { amanahTutcasaPct } from "@/modules/tours/types";
+import { tourCommissions } from "@/modules/tours/types";
 import { InvoiceActions } from "./invoice-actions";
 import { PayNow } from "./pay-now";
 import { paypalConfigured } from "@/lib/paypal";
@@ -122,11 +122,9 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
   );
   if (tour.rows[0]) {
     const b = tour.rows[0];
-    const commissionPct = Number(b.commission_pct ?? 0);
     // Amanah is owed its full tour price (our coupon is our cost) minus TutCasa's cut
-    const priceCents = b.total_cents + (b.coupon_discount_cents ?? 0);
-    const amanahPct = b.partner_pct != null ? Number(b.partner_pct) : amanahTutcasaPct(b.group_size);
-    const amanahCut = Math.round(priceCents * amanahPct / 100);
+    const tc = tourCommissions({ totalCents: b.total_cents, couponDiscountCents: b.coupon_discount_cents,
+      commissionPct: b.commission_pct, partnerPct: b.partner_pct, groupSize: b.group_size, source: b.source });
     return {
       invoiceNo: String(b.invoice_no ?? ""), createdAt: b.created_at, status: b.status,
       guestName: b.guest_name, guestEmail: b.guest_email,
@@ -138,11 +136,11 @@ async function loadInvoice(id: string): Promise<InvoiceData | null> {
       dueNowCents: null, balanceCents: null, balanceDueDate: null,
       securityDepositCents: 0,
       amountPaidCents: b.amount_paid_cents ?? 0,
-      commissionCents: Math.round(b.total_cents * commissionPct / 100), commissionPct,
+      commissionCents: tc.outCents, commissionPct: tc.outPct,
       provider: b.payment_provider,
       stripeFeeCents: Number(b.stripe_fee_cents ?? 0),
       amanah: b.source === "amanah"
-        ? { pct: amanahPct, cutCents: amanahCut, owedCents: priceCents - amanahCut }
+        ? { pct: tc.inPct ?? 0, cutCents: tc.inCents, owedCents: tc.amanahOwedCents }
         : undefined,
     };
   }
