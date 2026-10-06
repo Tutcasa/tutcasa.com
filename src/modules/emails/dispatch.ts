@@ -1,6 +1,7 @@
 import "server-only";
 import { getDb } from "@/lib/db";
 import { getAutomation, fillVars, renderEmailHtml } from "./index";
+import { teamEmails } from "@/lib/team-emails";
 
 /**
  * M3 dispatch — turns the admin-editable automations into real email:
@@ -173,7 +174,7 @@ export async function sendAutomationForBooking(
   const recipients =
     a.audience === "guest"
       ? [ctx.guestEmail].filter(Boolean)
-      : [...new Set([...ctx.notifyEmails, process.env.TUTCASA_NOTIFY_EMAIL].filter(Boolean))] as string[];
+      : [...new Set([...ctx.notifyEmails, ...teamEmails()].filter(Boolean))] as string[];
 
   for (const to of recipients) {
     await deliver(key, bookingId, to, subject, html, text);

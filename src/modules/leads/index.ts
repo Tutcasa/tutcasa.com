@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "@/lib/db";
+import { teamEmails } from "@/lib/team-emails";
 
 /**
  * Lead capture — every guest-facing form submission (contact,
@@ -45,8 +46,8 @@ export async function createLead(input: {
 
   // team notification — best effort, never blocks the guest
   const apiKey = process.env.RESEND_API_KEY;
-  const to = process.env.TUTCASA_NOTIFY_EMAIL;
-  if (apiKey && to) {
+  const to = teamEmails();
+  if (apiKey && to.length) {
     const detail = Object.entries(input.payload ?? {})
       .map(([k, v]) => `${k}: ${v}`).join("\n");
     const send = () => fetch("https://api.resend.com/emails", {
@@ -54,7 +55,7 @@ export async function createLead(input: {
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>",
-        to: [to],
+        to,
         subject: `${KIND_LABEL[input.kind]}${input.name ? ` — ${input.name.trim()}` : ""}`,
         text: [
           KIND_LABEL[input.kind],

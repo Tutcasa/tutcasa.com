@@ -2,6 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { getDb } from "@/lib/db";
 import { renderEmailHtml, getAutomation, fillVars } from "@/modules/emails";
+import { teamEmails } from "@/lib/team-emails";
 
 /**
  * Growth features: the newsletter 10%-coupon signup and loyalty referral
@@ -18,7 +19,7 @@ function shortCode(prefix: string): string {
   return `${prefix}-${randomBytes(4).toString("hex").toUpperCase().slice(0, 6)}`;
 }
 
-async function sendBranded(to: string, subject: string, body: string): Promise<boolean> {
+async function sendBranded(to: string | string[], subject: string, body: string): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return false;
   const res = await fetch("https://api.resend.com/emails", {
@@ -26,7 +27,7 @@ async function sendBranded(to: string, subject: string, body: string): Promise<b
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from: process.env.EMAIL_FROM ?? "TutCasa <admin@tutcasa.com>",
-      to: [to],
+      to: Array.isArray(to) ? to : [to],
       subject,
       html: renderEmailHtml({ subject, body }),
       text: body,
@@ -37,8 +38,8 @@ async function sendBranded(to: string, subject: string, body: string): Promise<b
 
 /** Team heads-up for a new signup (the lead row is the source of truth). */
 function notifyTeam(email: string, phone: string, coupon: string): void {
-  const to = process.env.TUTCASA_NOTIFY_EMAIL;
-  if (!to) return;
+  const to = teamEmails();
+  if (!to.length) return;
   void sendBranded(to, "Newsletter signup", [
     "New newsletter signup:",
     "",

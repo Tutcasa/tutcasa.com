@@ -1,5 +1,6 @@
 import "server-only";
 import { getDb } from "@/lib/db";
+import { teamEmails } from "@/lib/team-emails";
 
 /**
  * Notifications module. Every outbound message is recorded in
@@ -12,7 +13,6 @@ import { getDb } from "@/lib/db";
 
 const AMANAH_EMAIL = process.env.AMANAH_NOTIFY_EMAIL || "booking@amanahvacations.com";
 const AMANAH_WHATSAPP = (process.env.AMANAH_WHATSAPP || "+529903516948").replace(/[^\d]/g, "");
-const TUTCASA_EMAIL = process.env.TUTCASA_NOTIFY_EMAIL || "";
 const FROM_EMAIL = process.env.NOTIFY_FROM_EMAIL || process.env.EMAIL_FROM || "TutCasa <admin@tutcasa.com>";
 
 interface EmailJob {
@@ -145,10 +145,10 @@ export async function notifyTourBooking(n: TourBookingNotification): Promise<voi
     }, "manual");
 
     // 3. internal email → TutCasa
-    if (TUTCASA_EMAIL) {
+    for (const teamTo of teamEmails()) {
       await sendEmail({
         kind: "tour_booking_tutcasa_email",
-        to: TUTCASA_EMAIL,
+        to: teamTo,
         subject: `Tour booked ${n.ref}: ${n.tourTitle} · ${n.tourDate} · ${n.groupSize}p`,
         body: `New tour booking on the platform.\n\n${summary}`,
         tourBookingId: n.tourBookingId,
