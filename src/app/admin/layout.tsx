@@ -17,7 +17,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-6">
       <div className="flex flex-col gap-6 md:flex-row md:items-start">
-        <aside className="md:sticky md:top-6 md:w-[236px] md:shrink-0">
+        {/* sticks below the 72px site header and scrolls on its own when the
+            menu is taller than the window (before, its bottom was only
+            reachable by scrolling the whole page to the end) */}
+        <aside className="md:sticky md:top-[92px] md:max-h-[calc(100vh-112px)] md:w-[236px] md:shrink-0 md:overflow-y-auto md:overscroll-contain md:rounded-2xl">
           <div className="rounded-2xl bg-ink p-3">
             <div className="mb-3 px-3 pt-1">
               <span className="text-xs font-extrabold uppercase tracking-wide text-white/60">
