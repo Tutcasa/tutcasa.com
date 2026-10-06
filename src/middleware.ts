@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifyUserSession, USER_COOKIE } from "@/lib/admin-session";
 
 /**
- * Cookie-gated /admin. The login page sets an httpOnly cookie holding
- * a SHA-256 of the admin password; the middleware recomputes and
- * compares. Admin is disabled entirely when ADMIN_PASSWORD is unset.
+ * Cookie-gated /admin. Owner login: an httpOnly cookie holding a SHA-256 of
+ * the admin password. Team members: a signed, expiring tc_user cookie (the
+ * admin layout then confirms the member is still active). Admin is disabled
+ * entirely when ADMIN_PASSWORD is unset.
  */
 
 async function expectedToken(): Promise<string | null> {
@@ -22,6 +24,7 @@ export async function middleware(req: NextRequest) {
 
   const cookie = req.cookies.get("tc_admin")?.value;
   if (cookie === expected) return NextResponse.next();
+  if (await verifyUserSession(req.cookies.get(USER_COOKIE)?.value)) return NextResponse.next();
 
   const login = new URL("/admin-login", req.url);
   login.searchParams.set("next", req.nextUrl.pathname);

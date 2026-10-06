@@ -8,14 +8,28 @@ import { cookies } from "next/headers";
  * admin mutation must verify the cookie itself. Throws on failure so a
  * forged action call dies before touching data.
  */
-export async function requireAdmin(): Promise<void> {
+export type AdminIdentity = { kind: "owner"; name: string } | { kind: "user"; id: string; name: string; email: string };
+
+/** Who is signed in: the owner (shared ADMIN_PASSWORD) or an ACTIVE team
+    member (signed tc_user cookie + still active in the database). */
+export async function currentAdmin(): Promise<AdminIdentity | null> {
   const password = process.env.ADMIN_PASSWORD;
-  const given = (await cookies()).get("tc_admin")?.value ?? "";
-  if (!password) throw new Error("admin auth unavailable");
+  if (!password) return null;
+  const jar = await cookies();
+  const given = jar.get("tc_admin")?.value ?? "";
   const want = createHash("sha256").update(`tutcasa-admin:${password}`).digest();
   const got = Buffer.from(given, "hex");
-  const ok = got.length === want.length && timingSafeEqual(got, want);
-  if (!ok) throw new Error("not authorized");
+  if (got.length === want.length && timingSafeEqual(got, want)) return { kind: "owner", name: "Owner" };
+  const { verifyUserSession, USER_COOKIE } = await import("./admin-session");
+  const uid = await verifyUserSession(jar.get(USER_COOKIE)?.value);
+  if (!uid) return null;
+  const { getActiveAdminUser } = await import("@/modules/admin-users");
+  const u = await getActiveAdminUser(uid);
+  return u ? { kind: "user", id: u.id, name: u.name, email: u.email } : null;
+}
+
+export async function requireAdmin(): Promise<void> {
+  if (!(await currentAdmin())) throw new Error("not authorized");
 }
 
 /** Non-throwing variant for form actions that want to show a friendly
