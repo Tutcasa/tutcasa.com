@@ -153,6 +153,7 @@ export function ListingForm({ listing }: { listing: AdminListing }) {
             <option value="house">House</option>
             <option value="apartment">Apartment</option>
             <option value="penthouse">Penthouse</option>
+            <option value="hotel">Hotel</option>
           </select>
         </label>
       </div>

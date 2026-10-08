@@ -9,7 +9,7 @@ export interface Listing {
   region: string | null;
   lat: number;
   lng: number;
-  propertyType: "condo" | "villa" | "house" | "apartment" | "penthouse";
+  propertyType: "condo" | "villa" | "house" | "apartment" | "penthouse" | "hotel";
   maxGuests: number;
   bedrooms: number;
   bathrooms: number;

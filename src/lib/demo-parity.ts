@@ -164,6 +164,7 @@ export function propertyTypeLabel(l: Listing): string {
     house: "Entire home",
     apartment: "Entire apartment",
     penthouse: "Entire penthouse",
+    hotel: "Hotel room",
   };
   return DEMO_TYPE_LABEL[l.slug] ?? map[l.propertyType];
 }

@@ -76,7 +76,7 @@ const AMENS: { k: string; feat: string }[] = [
   { k: "st_am_wifi", feat: "wifi" },
   { k: "st_am_ac", feat: "ac" },
 ];
-const HOME_TYPES = ["condo", "villa", "house", "apartment", "penthouse"];
+const HOME_TYPES = ["condo", "villa", "house", "apartment", "penthouse", "hotel"];
 const GUEST_STEPS = [0, 2, 4, 6, 8, 12];
 
 interface Filters {
