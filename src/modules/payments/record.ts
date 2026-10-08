@@ -48,21 +48,27 @@ export async function recordPayment(p: {
     return true;
   }
 
-  const upd = await db.query(
-    `update tour_bookings set
+  const upd = await db.query<{ prev_status: string }>(
+    `with old as (select status from tour_bookings where id = $1)
+     update tour_bookings set
        amount_paid_cents = coalesce(amount_paid_cents,0) + $2,
        payment_provider = $4,
        payment_ref = $3,
        status = case when status = 'pending' then 'paid' else status end
      where id = $1 and status <> 'cancelled'
        and (payment_ref is distinct from $3)
-     returning id`,
+     returning (select status from old) as prev_status`,
     [p.id, p.paidCents, p.ref, p.provider],
   );
   if (!upd.rows[0]) return false;
   await recordFee("tour_bookings", p);
-  const { sendTourPaidGuestEmail } = await import("@/modules/notifications");
-  await sendTourPaidGuestEmail(p.id);
+  const { sendTourPaidGuestEmail, notifyPaidTourBooking } = await import("@/modules/notifications");
+  // first payment = the moment Amanah + the team hear of an instant tour,
+  // and the guest gets "you're booked" (later payments don't repeat them)
+  if (upd.rows[0].prev_status === "pending") {
+    await notifyPaidTourBooking(p.id);
+    await sendTourPaidGuestEmail(p.id);
+  }
   return true;
 }
 

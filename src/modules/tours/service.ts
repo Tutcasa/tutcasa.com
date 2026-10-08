@@ -152,20 +152,27 @@ export async function createTourBooking(req: TourBookingRequest): Promise<TourRe
     throw e;
   }
 
-  await notifyTourBooking({
-    tourBookingId: id,
-    tourTitle: tour.title,
-    tourDate: req.tourDate,
-    groupSize: req.groupSize,
-    totalLabel: tour.currency === "MXN" ? fmtMXN(chargeCents) : `$${Math.round(chargeCents / 100).toLocaleString("en-US")} ${tour.currency}`,
-    guestName: name,
-    guestEmail: email,
-    guestPhone: req.guestPhone,
-    notes: req.notes,
-    ref: id.slice(0, 8).toUpperCase(),
-    partnerTour: tour.source === "amanah",
-    instantPay: tour.source === "amanah" || tour.instantBook,
-  });
+  // Instant-pay tours (Amanah + "Instant booking") notify Amanah and the
+  // team only once PAID (payments/record.ts → notifyPaidTourBooking) — an
+  // abandoned checkout must not land in Amanah's queue. Request-first tours
+  // notify now: nothing is charged until the team accepts.
+  const instant = tour.source === "amanah" || tour.instantBook;
+  if (!instant) {
+    await notifyTourBooking({
+      tourBookingId: id,
+      tourTitle: tour.title,
+      tourDate: req.tourDate,
+      groupSize: req.groupSize,
+      totalLabel: tour.currency === "MXN" ? fmtMXN(chargeCents) : `$${Math.round(chargeCents / 100).toLocaleString("en-US")} ${tour.currency}`,
+      guestName: name,
+      guestEmail: email,
+      guestPhone: req.guestPhone,
+      notes: req.notes,
+      ref: id.slice(0, 8).toUpperCase(),
+      partnerTour: tour.source === "amanah",
+      instantPay: tour.source === "amanah" || tour.instantBook,
+    });
+  }
 
   // Amanah tours are always instant-pay; our own tours choose per tour
   // (Instant booking toggle) and default to request-first

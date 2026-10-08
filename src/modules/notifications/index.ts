@@ -194,6 +194,41 @@ const tourRow = async (id: string) => (await getDb().query(
 const tourMoney = (cents: number, cur: string) =>
   `$${Math.round(cents / 100).toLocaleString("en-US")} ${cur}`;
 
+/**
+ * Instant-pay tours (all Amanah tours + our own "Instant booking" tours):
+ * Amanah and the TutCasa team hear about the booking only once it's PAID —
+ * an abandoned checkout must not reach Amanah's queue. Called by the payment
+ * recorder on the FIRST payment. Request-first tours already notified at
+ * request time, so they're skipped here.
+ */
+export async function notifyPaidTourBooking(tourBookingId: string): Promise<void> {
+  const b = (await getDb().query(
+    `select tb.id, tb.guest_name, tb.guest_email, tb.guest_phone, tb.notes, tb.group_size,
+            tb.total_cents, tb.currency, to_char(tb.tour_date,'YYYY-MM-DD') as tour_date,
+            t.title, t.source, coalesce(t.instant_book,false) as instant_book
+       from tour_bookings tb join tours t on t.id = tb.tour_id where tb.id = $1`, [tourBookingId],
+  )).rows[0];
+  if (!b) return;
+  const partnerTour = b.source === "amanah";
+  if (!partnerTour && !b.instant_book) return;
+  await notifyTourBooking({
+    tourBookingId: b.id,
+    tourTitle: b.title,
+    tourDate: b.tour_date,
+    groupSize: b.group_size,
+    totalLabel: b.currency === "MXN"
+      ? `${(b.total_cents / 100).toLocaleString("en-US")} MXN`
+      : `$${Math.round(b.total_cents / 100).toLocaleString("en-US")} ${b.currency}`,
+    guestName: b.guest_name,
+    guestEmail: b.guest_email,
+    guestPhone: b.guest_phone,
+    notes: b.notes,
+    ref: String(b.id).slice(0, 8).toUpperCase(),
+    partnerTour,
+    instantPay: true,
+  });
+}
+
 /** Instant (Amanah) tours: fired by the Stripe webhook once payment lands. */
 export async function sendTourPaidGuestEmail(tourBookingId: string): Promise<void> {
   try {
