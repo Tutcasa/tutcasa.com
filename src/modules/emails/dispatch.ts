@@ -27,7 +27,9 @@ interface BookingCtx {
   notifyEmails: string[];
 }
 
-async function bookingCtx(bookingId: string): Promise<BookingCtx | null> {
+/** paymentCents: the payment that just happened (receipts) — defaults to
+    everything paid so far, which is the same thing on a first payment. */
+async function bookingCtx(bookingId: string, paymentCents?: number): Promise<BookingCtx | null> {
   const res = await getDb().query(
     `select b.id, b.source, b.status, b.guest_name, b.guest_email, b.guests,
             b.total_cents, b.currency, b.amount_paid_cents, b.invoice_no,
@@ -68,6 +70,8 @@ async function bookingCtx(bookingId: string): Promise<BookingCtx | null> {
       balance: money(Math.max(0, (p.balanceCents ?? 0))),
       balance_due_date: p.balanceDueDate ? String(p.balanceDueDate).slice(0, 10) : "",
       amount_paid: money(b.amount_paid_cents ?? 0),
+      payment_amount: money(paymentCents ?? b.amount_paid_cents ?? 0),
+      balance_left: money(Math.max(0, b.total_cents - (b.amount_paid_cents ?? 0))),
       invoice_link: `${SITE}/invoice/${b.id}`,
       checkin_message: b.checkin_message,
       checkout_message: b.checkout_message,
@@ -152,10 +156,11 @@ export async function sendAutomationForBooking(
   key: string,
   bookingId: string,
   extraVars?: Record<string, string>,
+  paymentCents?: number,
 ): Promise<void> {
   const a = await getAutomation(key);
   if (!a || !a.enabled) return;
-  const ctx = await bookingCtx(bookingId);
+  const ctx = await bookingCtx(bookingId, paymentCents);
   if (!ctx) return;
   // Amanah owns guest communication for partner bookings
   if (a.audience === "guest" && ctx.source === "amanah") return;
@@ -244,10 +249,10 @@ async function sendTourAutomation(key: string, tourBookingId: string): Promise<b
  * alive until the emails are actually sent — a bare detached promise can
  * be frozen with the lambda before Resend is ever called.
  */
-export function fireAutomations(keys: string[], bookingId: string): void {
+export function fireAutomations(keys: string[], bookingId: string, opts?: { paymentCents?: number }): void {
   const work = async () => {
     for (const key of keys) {
-      await sendAutomationForBooking(key, bookingId).catch(() => {});
+      await sendAutomationForBooking(key, bookingId, undefined, opts?.paymentCents).catch(() => {});
     }
   };
   void (async () => {

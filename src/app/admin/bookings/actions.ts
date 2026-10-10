@@ -128,7 +128,7 @@ export async function recordPaymentAction(
   const row = res.rows[0];
   if (!row) return { ok: false, message: "Booking not found (or cancelled)." };
   const { fireAutomations } = await import("@/modules/emails/dispatch");
-  fireAutomations(["guest_payment_receipt", "admin_payment_receipt"], id);
+  fireAutomations(["guest_payment_receipt", "admin_payment_receipt"], id, { paymentCents: Math.round(amountUSD * 100) });
   revalidate();
   const paid = Math.round(row.amount_paid_cents / 100);
   const total = Math.round(row.total_cents / 100);

@@ -77,6 +77,8 @@ const SAMPLE: Record<string, string> = {
   balance: "$1,974 USD",
   balance_due_date: "2026-09-21",
   amount_paid: "$846 USD",
+  payment_amount: "$423 USD",
+  balance_left: "$423 USD",
   invoice_link: "https://tutcasa.com/invoice/…",
   checkin_message: "The key box code and directions are below — the pool towels are in the hallway closet!",
   checkout_message: "Please leave the keys in the box and let us know when you head out.",

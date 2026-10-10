@@ -43,7 +43,7 @@ const DAYS_LABEL: Record<string, string> = {
   deposit_unpaid: "days after booking (still unpaid)",
 };
 
-const VARS = "{{guest_name}} {{guest_email}} {{listing}} {{tour}} {{tour_date}} {{check_in}} {{check_out}} {{guests}} {{total}} {{balance}} {{balance_due_date}} {{amount_paid}} {{invoice_link}} {{tours_link}} {{checkin_message}} {{checkout_message}} {{checkin_from}} {{checkout_until}} {{booking_kind}} {{source}}";
+const VARS = "{{guest_name}} {{guest_email}} {{listing}} {{tour}} {{tour_date}} {{check_in}} {{check_out}} {{guests}} {{total}} {{balance}} {{balance_due_date}} {{payment_amount}} {{amount_paid}} {{balance_left}} {{invoice_link}} {{tours_link}} {{checkin_message}} {{checkout_message}} {{checkin_from}} {{checkout_until}} {{booking_kind}} {{source}}";
 
 function AutomationCard({ a }: { a: EmailAutomation }) {
   const [open, setOpen] = useState(false);
