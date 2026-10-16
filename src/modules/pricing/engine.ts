@@ -150,6 +150,16 @@ export function defaultPricingConfig(
 }
 
 /** Saturday or Sunday night (UTC calendar day of the night's date). */
+/** A night's price after the weekend rule — a fixed weekend nightly wins
+    over the % markup. Shared by quotes and the guest calendar, so the price
+    shown on a day is exactly what that night is charged (before taxes). */
+export function weekendRate(rate: number, date: string, cfg: { weekendCents: number; weekendPct: number }): number {
+  if (!isWeekendNight(date)) return rate;
+  if (cfg.weekendCents > 0) return cfg.weekendCents;
+  if (cfg.weekendPct > 0) return rate + Math.round(rate * (cfg.weekendPct / 100));
+  return rate;
+}
+
 export function isWeekendNight(date: string): boolean {
   const dow = new Date(`${date}T00:00:00Z`).getUTCDay();
   return dow === 0 || dow === 6;
@@ -210,17 +220,8 @@ export function computeQuote(input: QuoteInput): Quote {
   let accommodationCents = 0;
   let weekendUpliftCents = 0;
   for (const night of nights) {
-    let rate = night.nightlyCents;
-    if (isWeekendNight(night.date)) {
-      if (config.weekendCents > 0) {
-        weekendUpliftCents += config.weekendCents - rate;
-        rate = config.weekendCents;
-      } else if (config.weekendPct > 0) {
-        const uplift = Math.round(rate * (config.weekendPct / 100));
-        weekendUpliftCents += uplift;
-        rate += uplift;
-      }
-    }
+    const rate = weekendRate(night.nightlyCents, night.date, config);
+    weekendUpliftCents += rate - night.nightlyCents;
     accommodationCents += rate;
   }
 

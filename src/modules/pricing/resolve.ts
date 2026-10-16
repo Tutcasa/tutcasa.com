@@ -4,8 +4,7 @@ import {
   defaultPricingConfig,
   type FeeMode,
   type NightRate,
-  type Quote,
-} from "./engine";
+  type Quote, weekendRate } from "./engine";
 
 /**
  * Server-side quote resolver — the bridge between the admin's pricing
@@ -223,6 +222,51 @@ export async function adjacentNightsFree(
     [listingId, checkIn, checkOut],
   );
   return { before: !r.rows[0].before_busy, after: !r.rows[0].after_busy };
+}
+
+/**
+ * The guest calendar's day prices: what each bookable night costs BEFORE
+ * taxes — same order as quotes (per-date/PriceLabs → season → base) plus the
+ * weekend rule. Blocked days are left out. Also each upcoming season's real
+ * "from" price over its dates (on PriceLabs homes that's PriceLabs' price,
+ * not the season number typed in admin).
+ */
+export async function guestCalendarPrices(listingId: string, days = 730): Promise<{
+  days: Record<string, number>;
+  seasons: { label: string; from: string; to: string; minCents: number; maxCents: number }[];
+}> {
+  const db = getDb();
+  const [eff, cfg, seasons] = await Promise.all([
+    db.query<{ day: string; n: number }>(
+      `with base as (select nightly_cents from listing_rates where listing_id=$1 and season is null)
+       select to_char(gs.day,'YYYY-MM-DD') as day, coalesce(pd.nightly_cents, sr.nightly_cents, b.nightly_cents) as n
+         from generate_series(current_date, current_date + ($2 || ' days')::interval, interval '1 day') gs(day)
+        cross join base b
+         left join listing_price_days pd on pd.listing_id=$1 and pd.day = gs.day::date
+         left join lateral (
+                select r.nightly_cents from listing_rates r
+                 where r.listing_id=$1 and r.season is not null and r.season @> gs.day::date
+                 order by lower(r.season) desc limit 1) sr on true
+        where not coalesce(pd.is_blocked, false)`,
+      [listingId, String(days)]),
+    db.query<{ weekend_cents: number | null; weekend_pct: string | null }>(
+      "select weekend_cents, weekend_pct from listing_pricing where listing_id=$1", [listingId]),
+    db.query<{ label: string | null; f: string; t: string }>(
+      `select label, to_char(greatest(lower(season), current_date),'YYYY-MM-DD') as f,
+              to_char(upper(season) - 1,'YYYY-MM-DD') as t
+         from listing_rates where listing_id=$1 and season is not null and upper(season) > current_date
+        order by lower(season)`, [listingId]),
+  ]);
+  const wk = { weekendCents: Number(cfg.rows[0]?.weekend_cents ?? 0), weekendPct: Number(cfg.rows[0]?.weekend_pct ?? 0) };
+  const daysMap: Record<string, number> = {};
+  for (const r of eff.rows) if (r.n != null) daysMap[r.day] = weekendRate(Number(r.n), r.day, wk);
+  const out = [];
+  for (const s of seasons.rows) {
+    const prices = Object.entries(daysMap).filter(([d]) => d >= s.f && d <= s.t).map(([, c]) => c);
+    if (!prices.length) continue; // fully booked/blocked or beyond the window
+    out.push({ label: s.label || "Season", from: s.f, to: s.t, minCents: Math.min(...prices), maxCents: Math.max(...prices) });
+  }
+  return { days: daysMap, seasons: out };
 }
 
 export interface AdvertisedNightly {

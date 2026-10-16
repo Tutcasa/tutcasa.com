@@ -14,6 +14,7 @@ import { T, useLang } from "@/lib/i18n";
 import { getQuoteAction, type QuoteResult } from "@/app/stays/[slug]/actions";
 import { useCurrency } from "@/lib/currency";
 import { RichText } from "@/components/site/RichText";
+import "@/styles/property-prices.css";
 
 export interface PdData {
   slug: string;
@@ -50,6 +51,10 @@ export interface PdData {
   allowParty: boolean;
   allowPets: boolean;
   unavailable: { from: string; to: string }[];
+  /** night price per day, cents BEFORE taxes (bookable days only) */
+  dayPrices: Record<string, number>;
+  /** upcoming seasons with their real from/to night price */
+  seasons: { label: string; from: string; to: string; minCents: number; maxCents: number }[];
   /** published guest reviews — when present they replace the samples */
   guestReviews: { n: string; d: string; t: string; r: number }[];
   /** active extra options guests can add to the booking */
@@ -311,6 +316,14 @@ export function PdGrid({ p }: { p: PdData }) {
     );
   }
 
+  // "$200" (no currency code — it must fit a calendar cell); follows the currency switcher
+  const shortMoney = (cents: number) => fromUSD(Math.round(cents / 100)).replace(/ [A-Z]{3}$/, "");
+  const seasonDates = (f: string, t: string) => {
+    const d = (iso: string, y: boolean) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US",
+      { month: "short", day: "numeric", ...(y ? { year: "numeric" } : {}), timeZone: "UTC" });
+    return `${d(f, f.slice(0, 4) !== t.slice(0, 4))} – ${d(t, true)}`;
+  };
+
   /* availability calendar — demo buildCal with real blocked days. Shared
      by the main "Availability" section AND the booking-box popover, so
      blocked dates are visibly grayed and unclickable in both. */
@@ -333,11 +346,14 @@ export function PdGrid({ p }: { p: PdData }) {
       else if (iso === ci || iso === co) cls = "pd-day sel";
       else if (ci && co && iso > ci && iso < co) cls = "pd-day inrange";
       if (iso === co && off) cls = "pd-day sel";
+      // the night's price under each bookable day (before taxes), like the old site
+      const night = !past && !off ? p.dayPrices[iso] : undefined;
       cells.push(
         <div key={iso} className={cls}
           onClick={past || (off && !checkoutOk) ? undefined : () => onPick(iso)}
           style={checkoutOk ? { cursor: "pointer" } : undefined}>
           {dd}
+          {night != null && <span className="pd-pr">{shortMoney(night)}</span>}
         </div>
       );
     }
@@ -442,6 +458,20 @@ export function PdGrid({ p }: { p: PdData }) {
           </div>
           <div className="pd-cal">{months}</div>
           <T as="div" className="pd-caltip" k="pd_caltip" />
+          <T as="div" className="pd-caltip" k="pd_daynote" />
+          {p.seasons.length > 0 && (
+            <div className="pd-seasons">
+              <T as="h3" k="pd_seasons" />
+              {p.seasons.map((s) => (
+                <div key={s.label + s.from} className="pd-season">
+                  <div><b>{s.label === s.label.toUpperCase() ? s.label.charAt(0) + s.label.slice(1).toLowerCase() : s.label}</b><span>{seasonDates(s.from, s.to)}</span></div>
+                  <b className="pr">
+                    {s.minCents === s.maxCents ? "" : <T k="pd_from" />} {shortMoney(s.minCents)}<small><T k="pd_pernight_short" /></small>
+                  </b>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="pd-sec">
           <T as="h2" k="pd_where" />
@@ -554,7 +584,7 @@ export function PdGrid({ p }: { p: PdData }) {
           <b>${p.priceLabel}</b> <T k="pd_pernight" />
         </div>
         <div style={{ fontSize: 12.5, color: "var(--grey)", margin: "-4px 0 10px" }}>
-          All-in price &mdash; taxes &amp; cleaning included.
+          Before taxes &mdash; taxes &amp; cleaning are added at checkout.
           {p.priceVaries ? " Rates vary by date — pick your dates for the exact total." : " Pick your dates below for the full breakdown."}
         </div>
         <div style={{ position: "relative" }}>

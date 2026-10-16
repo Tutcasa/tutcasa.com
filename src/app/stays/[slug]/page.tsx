@@ -70,7 +70,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const repo = getListingsRepo();
   const listing = await repo.bySlug(slug);
   if (!listing) notFound();
-  const [unavailable, all, contact, adv, addonRows, feeRows, reviewRows] = await Promise.all([
+  const [unavailable, all, contact, adv, addonRows, feeRows, reviewRows, calPrices] = await Promise.all([
     getUnavailableRanges(listing.id),
     repo.listPublished(),
     getSetting("contact"),
@@ -91,6 +91,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
         order by created_at desc limit 40`,
       [listing.id],
     ),
+    (await import("@/modules/pricing/resolve")).guestCalendarPrices(listing.id)
+      .catch(() => ({ days: {} as Record<string, number>, seasons: [] })),
   ]);
 
   // channel feeds older than a few hours re-pull in the background, so
@@ -159,6 +161,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
     allowParty: listing.allowParty,
     allowPets: listing.allowPets,
     unavailable,
+    dayPrices: calPrices.days,
+    seasons: calPrices.seasons,
     guestReviews: reviewRows.rows.map((r) => ({
       n: r.guest_name as string,
       d: r.when_label as string,

@@ -1,0 +1,11 @@
+/* Guest calendar: night price under each bookable day + seasonal prices list */
+.pd-day .pd-pr{display:block;margin-top:3px;font-size:10px;font-weight:700;line-height:1;color:var(--rosa);letter-spacing:-.01em}
+.pd-day.sel .pd-pr{color:#fff}
+.pd-day:has(.pd-pr){padding-top:7px;padding-bottom:7px}
+.pd-seasons{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.pd-seasons h3{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:18px;margin:0 0 6px}
+.pd-season{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px dashed var(--line)}
+.pd-season:last-child{border-bottom:none}
+.pd-season > div > span{display:block;font-size:13px;color:var(--grey)}
+.pd-season .pr{color:var(--rosa);font-size:16px;white-space:nowrap}
+.pd-season .pr small{font-size:12px;font-weight:600;color:var(--grey)}
