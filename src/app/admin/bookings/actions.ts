@@ -263,7 +263,7 @@ export async function createManualBookingAction(
       `insert into bookings
          (listing_id, guest_name, guest_email, guest_phone, stay, guests,
           status, total_cents, currency, price_breakdown, source, payment_provider, no_block)
-       values ($1,$2,$3,$4, daterange($5::date,$6::date,'[)'), $7, $8, $9,'USD',$10,'manual',$11)`,
+       values ($1,$2,$3,$4, daterange($5::date,$6::date,'[)'), $7, $8, $9,'USD',$10,'manual',null,$11)`,
       [listingId, guestName, guestEmail || "manual@tutcasa.com",
        String(formData.get("guestPhone") ?? "").trim() || null,
        checkIn, checkOut, guests, status, totalCents,
