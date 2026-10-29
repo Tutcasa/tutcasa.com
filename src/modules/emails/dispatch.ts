@@ -106,18 +106,19 @@ async function deliver(
   subject: string,
   html: string,
   text: string,
+  eventRef?: string, // repeatable events (one receipt per payment); null = once per booking
 ): Promise<void> {
   const db = getDb();
   const claim = await db.query<{ id: string }>(
-    `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status)
-     values ($1,'email',$2,$3,$4,$5,'sending')
-     on conflict (kind, booking_id, recipient) where booking_id is not null
+    `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status, event_ref)
+     values ($1,'email',$2,$3,$4,$5,'sending',$6)
+     on conflict (kind, booking_id, recipient, (coalesce(event_ref, ''))) where booking_id is not null
      do update set status='sending', error=null
        where notifications_log.status = 'failed'
           or (notifications_log.status = 'sending'
               and notifications_log.created_at < now() - interval '15 minutes')
      returning id`,
-    [key, to, subject, text.slice(0, 4000), bookingId],
+    [key, to, subject, text.slice(0, 4000), bookingId, eventRef ?? null],
   );
   if (!claim.rows[0]) return; // already sent (or another process is on it)
 
@@ -157,6 +158,7 @@ export async function sendAutomationForBooking(
   bookingId: string,
   extraVars?: Record<string, string>,
   paymentCents?: number,
+  eventRef?: string,
 ): Promise<void> {
   const a = await getAutomation(key);
   if (!a || !a.enabled) return;
@@ -182,7 +184,7 @@ export async function sendAutomationForBooking(
       : [...new Set([...ctx.notifyEmails, ...teamEmails()].filter(Boolean))] as string[];
 
   for (const to of recipients) {
-    await deliver(key, bookingId, to, subject, html, text);
+    await deliver(key, bookingId, to, subject, html, text, eventRef);
   }
 }
 
@@ -249,10 +251,12 @@ async function sendTourAutomation(key: string, tourBookingId: string): Promise<b
  * alive until the emails are actually sent — a bare detached promise can
  * be frozen with the lambda before Resend is ever called.
  */
-export function fireAutomations(keys: string[], bookingId: string, opts?: { paymentCents?: number }): void {
+export function fireAutomations(keys: string[], bookingId: string, opts?: { paymentCents?: number; paymentRef?: string }): void {
   const work = async () => {
     for (const key of keys) {
-      await sendAutomationForBooking(key, bookingId, undefined, opts?.paymentCents).catch(() => {});
+      // receipts go out once PER PAYMENT; everything else once per booking
+      const eventRef = key.endsWith("_payment_receipt") ? opts?.paymentRef : undefined;
+      await sendAutomationForBooking(key, bookingId, undefined, opts?.paymentCents, eventRef).catch(() => {});
     }
   };
   void (async () => {

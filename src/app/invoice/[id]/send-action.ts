@@ -76,8 +76,9 @@ export async function emailInvoiceAction(
   });
   if (!send.ok) return { ok: false, message: "Sending failed — try again in a minute." };
   await getDb().query(
-    `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status)
-     values ('invoice_email','email',$1,$2,$3,$4,'sent')`,
+    // each send is its own event — a re-send to the same address must log, not collide
+    `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status, event_ref)
+     values ('invoice_email','email',$1,$2,$3,$4,'sent',gen_random_uuid()::text)`,
     [to.trim(), subject, body.slice(0, 4000), bookingId],
   );
   return { ok: true, message: `Invoice sent to ${to.trim()}.` };

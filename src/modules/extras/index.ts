@@ -104,7 +104,7 @@ async function mail(to: string, subject: string, body: string, bookingId: string
   await db.query(
     `insert into notifications_log (kind, channel, recipient, subject, body, booking_id, status)
      values ($1,'email',$2,$3,$4,$5,$6)
-     on conflict (kind, booking_id, recipient) where booking_id is not null do nothing`,
+     on conflict (kind, booking_id, recipient, (coalesce(event_ref, ''))) where booking_id is not null do nothing`,
     [kind, to, subject, body.slice(0, 4000), bookingId, status],
   ).catch(() => {});
 }

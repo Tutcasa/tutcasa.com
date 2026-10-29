@@ -42,7 +42,7 @@ export async function recordPayment(p: {
         ? ["guest_booking_confirmed", "guest_payment_receipt", "admin_payment_receipt"]
         : ["guest_payment_receipt", "admin_payment_receipt"],
       p.id,
-      { paymentCents: p.paidCents },
+      { paymentCents: p.paidCents, paymentRef: p.ref },
     );
     const { rewardReferrerForBooking } = await import("@/modules/growth");
     void rewardReferrerForBooking(p.id).catch(() => {});
