@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-auth";
 
-export interface GiftFormState { ok: boolean; message: string }
+export interface GiftFormState { ok: boolean; message: string; code?: string }
 
 export async function createGiftCardAction(
   _prev: GiftFormState,
@@ -15,14 +15,18 @@ export async function createGiftCardAction(
     return { ok: false, message: "Enter an amount between $1 and $100,000." };
   }
   const { createGiftCard } = await import("@/modules/giftcards");
-  const { code } = await createGiftCard({
+  const recipient = String(formData.get("recipientEmail") ?? "").trim();
+  const { code, emailed } = await createGiftCard({
     amountUSD,
-    recipientEmail: String(formData.get("recipientEmail") ?? "").trim() || undefined,
+    recipientEmail: recipient || undefined,
     message: String(formData.get("message") ?? "").trim() || undefined,
   });
   revalidatePath("/admin/gift-cards");
   // the code is shown ONCE — only its hash is stored
-  return { ok: true, message: `Card created — the code is ${code} — copy it NOW, it can never be shown again.` };
+  const sent = emailed === null ? ""
+    : emailed ? ` Emailed to ${recipient}.`
+    : ` ⚠️ The email to ${recipient} didn't go out — copy the code and send it yourself.`;
+  return { ok: true, code, message: `Card created.${sent} Copy the code now — it can't be shown again.` };
 }
 
 export async function setGiftCardStatusAction(id: string, status: "active" | "void"): Promise<void> {

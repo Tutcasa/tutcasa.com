@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import type { GiftCardRow } from "@/modules/giftcards";
 import { createGiftCardAction, setGiftCardStatusAction, deleteGiftCardAction, type GiftFormState } from "./actions";
 
@@ -13,6 +13,7 @@ const money = (c: number) => `$${Math.round(c / 100).toLocaleString("en-US")}`;
 export function GiftClient({ cards }: { cards: GiftCardRow[] }) {
   const [state, action, pending] = useActionState(createGiftCardAction, initial);
   const [busy, start] = useTransition();
+  const [copied, setCopied] = useState<string | null>(null);
 
   return (
     <div className="grid gap-6">
@@ -20,7 +21,7 @@ export function GiftClient({ cards }: { cards: GiftCardRow[] }) {
         <div className="mb-3 text-[11px] font-extrabold uppercase tracking-wider text-grey">Issue a gift card</div>
         <form action={action} className="grid gap-2 sm:grid-cols-[130px_1fr_1fr_auto]">
           <input name="amountUSD" type="number" min="1" step="1" required placeholder="Amount USD" className={inputCls} />
-          <input name="recipientEmail" type="email" placeholder="Recipient email (optional, your note)" className={inputCls} />
+          <input name="recipientEmail" type="email" placeholder="Recipient email (optional — we email them the code)" className={inputCls} />
           <input name="message" placeholder="Note (optional, e.g. Birthday gift from Ana)" className={inputCls} />
           <button disabled={pending}
             className="rounded-pill bg-rosa px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
@@ -28,9 +29,19 @@ export function GiftClient({ cards }: { cards: GiftCardRow[] }) {
           </button>
         </form>
         {state.message && (
-          <p className={`mt-2 rounded-xl p-3 text-sm font-bold ${state.ok ? "bg-cactus/10 text-cactus" : "text-rosa-deep"}`}>
-            {state.message}
-          </p>
+          <div className={`mt-2 rounded-xl p-3 text-sm font-bold ${state.ok ? "bg-cactus/10 text-cactus" : "text-rosa-deep"}`}>
+            <p>{state.message}</p>
+            {state.code && (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <span className="select-all rounded-lg bg-white px-3 py-1.5 font-mono text-base tracking-wider text-ink">{state.code}</span>
+                <button type="button"
+                  onClick={() => navigator.clipboard.writeText(state.code!).then(() => setCopied(state.code!))}
+                  className="rounded-pill border-[1.5px] border-cactus px-4 py-1.5 text-xs font-bold text-cactus hover:bg-cactus hover:text-white">
+                  {copied === state.code ? "Copied ✓" : "Copy code"}
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 

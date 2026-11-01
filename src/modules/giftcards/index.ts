@@ -34,12 +34,13 @@ export interface GiftCardRow {
   createdAt: string;
 }
 
-/** Admin: issue a card. Returns the plain code — shown exactly once. */
+/** Admin: issue a card. Returns the plain code — shown exactly once — and
+    emails it to the recipient when one is given. */
 export async function createGiftCard(input: {
   amountUSD: number;
   recipientEmail?: string;
   message?: string;
-}): Promise<{ code: string; id: string }> {
+}): Promise<{ code: string; id: string; emailed: boolean | null }> {
   const code = newCode();
   const res = await getDb().query<{ id: string }>(
     `insert into gift_cards (code_hash, code_last4, initial_cents, balance_cents, currency,
@@ -52,7 +53,18 @@ export async function createGiftCard(input: {
     "insert into gift_card_ledger (gift_card_id, delta_cents, note) values ($1,$2,'issued')",
     [res.rows[0].id, Math.round(input.amountUSD * 100)],
   );
-  return { code, id: res.rows[0].id };
+  const to = input.recipientEmail?.trim();
+  if (!to) return { code, id: res.rows[0].id, emailed: null };
+  const cents = Math.round(input.amountUSD * 100);
+  const emailed = await giftEmail(
+    to,
+    `🎁 You've received a TutCasa gift card — ${usd(cents)}!`,
+    `Hola! 👋\n\nYou've received a TutCasa gift card worth ${usd(cents)}` +
+    ` for a stay on the Riviera Maya.\n\n` +
+    (input.message?.trim() ? `Message:\n"${input.message.trim()}"\n\n` : "") +
+    `Your gift card code:\n${code}\n\n${howTo(cents)}\n\n— The TutCasa family`,
+  );
+  return { code, id: res.rows[0].id, emailed };
 }
 
 export interface GiftCardCheck {
@@ -120,7 +132,14 @@ export async function listGiftCards(): Promise<GiftCardRow[]> {
 
 const SITE = process.env.SITE_URL ?? "https://tutcasa-platform.vercel.app";
 
-async function giftEmail(to: string, subject: string, body: string): Promise<void> {
+const usd = (cents: number) => `$${Math.round(cents / 100).toLocaleString("en-US")} USD`;
+const howTo = (cents: number) =>
+  `How to use it:\n` +
+  `- Pick a home at ${SITE}/stays\n` +
+  `- At checkout, enter the code in the "Gift card code" box\n` +
+  `- It covers up to ${usd(cents)} — anything left stays on the card for next time`;
+
+async function giftEmail(to: string, subject: string, body: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const db = getDb();
   if (!key) {
@@ -128,7 +147,7 @@ async function giftEmail(to: string, subject: string, body: string): Promise<voi
       `insert into notifications_log (kind, channel, recipient, subject, body, status, error)
        values ('gift_card_email','email',$1,$2,$3,'manual','RESEND_API_KEY not configured')`,
       [to, subject, body.slice(0, 4000)]).catch(() => {});
-    return;
+    return false;
   }
   const { renderEmailHtml } = await import("@/modules/emails");
   const res = await fetch("https://api.resend.com/emails", {
@@ -145,6 +164,7 @@ async function giftEmail(to: string, subject: string, body: string): Promise<voi
     `insert into notifications_log (kind, channel, recipient, subject, body, status)
      values ('gift_card_email','email',$1,$2,$3,$4)`,
     [to, subject, body.slice(0, 4000), res?.ok ? "sent" : "failed"]).catch(() => {});
+  return !!res?.ok;
 }
 
 /**
@@ -175,12 +195,7 @@ export async function fulfillGiftPurchase(input: {
     "insert into gift_card_ledger (gift_card_id, delta_cents, note) values ($1,$2,'purchased online')",
     [ins.rows[0].id, input.amountCents]).catch(() => {});
 
-  const amount = `$${Math.round(input.amountCents / 100).toLocaleString("en-US")} USD`;
-  const howTo =
-    `How to use it:\n` +
-    `- Pick a home at ${SITE}/stays\n` +
-    `- At checkout, enter the code in the "Gift card code" box\n` +
-    `- It covers up to ${amount} — anything left stays on the card for next time`;
+  const amount = usd(input.amountCents);
 
   const to = input.recipientEmail?.trim();
   if (to) {
@@ -190,7 +205,7 @@ export async function fulfillGiftPurchase(input: {
       `Hola! 👋\n\nSomeone special sent you a TutCasa gift card worth ${amount}` +
       ` for a stay on the Riviera Maya.\n\n` +
       (input.message?.trim() ? `Their message:\n"${input.message.trim()}"\n\n` : "") +
-      `Your gift card code:\n${code}\n\n${howTo}\n\n— The TutCasa family`,
+      `Your gift card code:\n${code}\n\n${howTo(input.amountCents)}\n\n— The TutCasa family`,
     );
     await giftEmail(
       input.buyerEmail,
@@ -204,7 +219,7 @@ export async function fulfillGiftPurchase(input: {
       input.buyerEmail,
       `Your TutCasa gift card 🎁 (${amount})`,
       `Hola! 👋\n\nPayment received — here is your ${amount} TutCasa gift card.\n\n` +
-      `Gift card code:\n${code}\n\n${howTo}\n\n` +
+      `Gift card code:\n${code}\n\n${howTo(input.amountCents)}\n\n` +
       `Keep or forward this email — the code is shown nowhere else.\n\n— The TutCasa family`,
     );
   }
