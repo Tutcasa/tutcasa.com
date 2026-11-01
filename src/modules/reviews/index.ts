@@ -25,40 +25,37 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
     return { ok: false, message: "No Place ID saved yet — paste the business's Google Place ID and save." };
   }
 
-  const url =
-    `https://maps.googleapis.com/maps/api/place/details/json` +
-    `?place_id=${encodeURIComponent(placeId.trim())}` +
-    `&fields=rating,user_ratings_total,reviews&reviews_sort=newest&key=${apiKey}`;
-  const res = await fetch(url, { cache: "no-store" }).catch(() => null);
-  if (!res?.ok) return { ok: false, message: "Google Places request failed — try again in a minute." };
+  // Places API (New) — Google no longer enables the legacy Place Details
+  // API on new Cloud projects
+  const res = await fetch(`https://places.googleapis.com/v1/places/${encodeURIComponent(placeId.trim())}`, {
+    headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": "rating,userRatingCount,reviews" },
+    cache: "no-store",
+  }).catch(() => null);
+  if (!res) return { ok: false, message: "Google Places request failed — try again in a minute." };
 
-  const data = (await res.json()) as {
-    status: string;
-    error_message?: string;
-    result?: {
-      rating?: number;
-      user_ratings_total?: number;
-      reviews?: {
-        author_name: string;
-        rating: number;
-        text: string;
-        relative_time_description: string;
-        profile_photo_url?: string;
-      }[];
-    };
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: { status?: string; message?: string };
+    rating?: number;
+    userRatingCount?: number;
+    reviews?: {
+      rating: number;
+      text?: { text: string };
+      relativePublishTimeDescription?: string;
+      authorAttribution?: { displayName?: string; photoUri?: string };
+    }[];
   };
-  if (data.status !== "OK" || !data.result) {
-    return { ok: false, message: `Google said: ${data.status}${data.error_message ? ` — ${data.error_message}` : ""}` };
+  if (!res.ok || data.error) {
+    return { ok: false, message: `Google said: ${data.error?.status ?? res.status}${data.error?.message ? ` — ${data.error.message}` : ""}` };
   }
 
-  const reviews = (data.result.reviews ?? [])
-    .filter((r) => r.rating >= 4 && r.text?.trim()) // only show the good, non-empty ones
+  const reviews = (data.reviews ?? [])
+    .filter((r) => r.rating >= 4 && r.text?.text?.trim()) // only show the good, non-empty ones
     .map((r) => ({
-      author: r.author_name,
+      author: r.authorAttribution?.displayName ?? "Google user",
       rating: r.rating,
-      text: r.text.trim(),
-      when: r.relative_time_description,
-      photo: r.profile_photo_url ?? null,
+      text: r.text!.text.trim(),
+      when: r.relativePublishTimeDescription ?? "",
+      photo: r.authorAttribution?.photoUri ?? null,
     }));
 
   if (reviews.length === 0) {
@@ -70,9 +67,9 @@ export async function syncGoogleReviews(): Promise<SyncResult> {
   }
   await setSetting("google_reviews_cache", {
     fetchedAt: new Date().toISOString(),
-    rating: data.result.rating ?? 0,
-    total: data.result.user_ratings_total ?? 0,
+    rating: data.rating ?? 0,
+    total: data.userRatingCount ?? 0,
     reviews,
   });
-  return { ok: true, message: `Synced ${reviews.length} reviews (rating ${data.result.rating ?? "?"} from ${data.result.user_ratings_total ?? 0}).`, count: reviews.length };
+  return { ok: true, message: `Synced ${reviews.length} reviews (rating ${data.rating ?? "?"} from ${data.userRatingCount ?? 0}).`, count: reviews.length };
 }
