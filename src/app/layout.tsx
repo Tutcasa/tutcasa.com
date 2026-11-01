@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import "@/styles/demo/base.css";
 import "@/styles/demo/chrome-fallback.css";
@@ -10,6 +11,11 @@ import { SiteFooter } from "@/components/site/SiteFooter";
 import { ChatMay } from "@/components/site/ChatMay";
 import { CaptureRef } from "@/components/site/CaptureRef";
 import { getSetting } from "@/modules/settings";
+
+// Google Analytics 4 (client's property). Live site only — local dev
+// visits must not count. ponytail: no consent banner yet (client's call);
+// add Consent Mode + banner if they want Canada/EU-grade consent.
+const GA_ID = process.env.NODE_ENV === "production" ? "G-4G2J866PCC" : null;
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://tutcasa.com"),
@@ -52,6 +58,14 @@ export default async function RootLayout({
             <CaptureRef />
           </CurrencyProvider>
         </LangProvider>
+        {GA_ID && (
+          <>
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+            <Script id="ga4" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}');`}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );
