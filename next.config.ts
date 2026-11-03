@@ -7,6 +7,11 @@ const nextConfig: NextConfig = {
     serverActions: { bodySizeLimit: "12mb" },
   },
   images: {
+    // Serve photos as-is: Vercel Hobby's monthly image-optimization quota ran
+    // out (Nov 2026 → 402 OPTIMIZED_IMAGE_REQUEST_PAYMENT_REQUIRED = blank
+    // photos). Uploads are already compressed (median ~275 KB, max <1 MB).
+    // ponytail: re-enable optimization if the project moves to Vercel Pro.
+    unoptimized: true,
     // listing photos live in Supabase storage; tour/park photos on Amanah
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co", pathname: "/storage/v1/object/public/**" },
