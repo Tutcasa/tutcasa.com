@@ -274,6 +274,9 @@ export function StaysClient({
     });
   }
 
+  // availability is checked on the server, so dates must travel in the URL
+  const staysUrl = () => (ci && co && co > ci ? `/stays?ci=${ci}&co=${co}` : "/stays");
+
   function applySearch() {
     const w = where.trim().toLowerCase();
     // destination: exact map first (covers Orlando/Nuba), then chip tokens
@@ -285,6 +288,7 @@ export function StaysClient({
       setMoreFilters((mf) => ({ ...mf, guests: party }));
       setDraft((d) => ({ ...d, guests: party }));
     }
+    router.replace(staysUrl(), { scroll: false });
     resultsRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
@@ -294,7 +298,7 @@ export function StaysClient({
     setActiveFilter("all");
     setMoreFilters(freshFilters());
     setDraft(freshFilters());
-    router.replace("/stays");
+    router.replace(staysUrl());
   }
 
   const stepper = (k: "a" | "c" | "b", labelKey: string, sub: React.ReactNode) => (
