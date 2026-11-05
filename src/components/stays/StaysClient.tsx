@@ -37,6 +37,8 @@ export interface StayCard {
   tag: string;
   /** real photo URLs — when present the card shows them instead of gradients */
   photos: string[];
+  /** set when the searched stay is shorter than this home's minimum for those dates */
+  minStay?: number;
 }
 
 /* filter chips: label i18n key, filter token, icon (demo FILTERS) */
@@ -169,6 +171,7 @@ function StayCasa({ p, dates }: { p: StayCard; dates: { ci: string; co: string }
         <div className="casa-top"><h4 className="casa-title-clamp" title={p.name}>{p.name}</h4>{p.reviews > 0 && <span className="rate">&#9733; {p.rate}</span>}</div>
         <div className="loc">&#128205; {p.city}</div>
         <div className="casa-meta">{p.beds} <span dangerouslySetInnerHTML={{ __html: t("st_beds") }} /> &middot; {p.tag}</div>
+        {p.minStay && <div className="casa-min"><span aria-hidden>&#127769;</span> {t("st_minstay").replace("{n}", String(p.minStay))}</div>}
         <div className="casa-pr"><b>{fromUSD(p.price)}</b> <span dangerouslySetInnerHTML={{ __html: t("st_night") }} /></div>
         <div className="casa-actions">
           <button
